@@ -1,0 +1,516 @@
+NextJS
+
+
+
+#***Hiểu bản chất CSR, SSG, SSR, static web và hosting
+CSR là client fetch toàn bộ. Còn SSG thì build ra html đã fetch trước 1 số data lưu vào cache, cache stale thì nó tự fetch tiếp. Khi tạo SSG bằng Gatsby có thể tùy chỉnh thoải mái.
+SSG thì phải fetch sẵn 1 phần data render từ lúc build, client vẫn có thể fetch 1 chút data hiện ra. Khác với React nó có mỗi cục root, k hề fetch trước mà về browser r fetch cả đống.
+=> Tức React k là SSG nhưng vẫn là 1 static website nên gọi là CSR static website cho đỡ nhầm với SSG. 
+
+Nếu ta dùng NextJS mặc định thì nó là Universal SSR hay k xét phần client request thì coi là SSR ok, mặc định nó gửi cho ta phần text có chỗ trống và client vẫn phải tự fetch để fill chỗ trống đó. Universal SSR là cả SSR và CSR, là phiên bản hoàn hảo nhất vì SSR các chỗ cần SEO, CSR các data cần realtime.
+
+Éo cần biết mẹ gì nhưng ta có thể tùy biến theo ý mình dù là Universal SSR hay SSG chơi được hết. Thực tế tất cả type dự án, ta đều có thể code fetch API bên trong component để lấy data gán vào, tức là 1 phần CSR => tùy biến
+
+-> Firebase cho phép host file html js css lên. Tức là nó có thể host CSR, SSG. SSR k dùng firebase vì server fetch toàn bộ.
+VD ta export file thành HTML và host lên firebase thì nó là SSG vì nó fetch trước data thành nhiều page html rồi k cần server vẫn chạy được, mỗi tội cache không tự động stale để fetch lại, file html fix cứng k đổi.
+
+Vercel platform hỗ trợ host đủ loại SSR, SSG, CSR, Universal SSR.
+Nếu không dùng vercel, để host website SSR, ta phải dùng 1 express server cho frontend (NextJS có sẵn), sau đó host cái server đó trên nền tảng khác như là heroku chẳng hạn.
+
+=> ref tới "# Firebase / NextJS hosting"
+=> Refer tới "# SSR của NextJS"
+
+-> 1 điểm lợi đặc biệt khi dùng SSR là che giấu thông tin, thay vì mọi thứ public hết ở client.
+Vd: server cookies cản k thể truy cập với httponly thì server của SSR lại call được. Vd các biến môi trường secret ở client cần che giấu thì phải dùng SSR mới ẩn được.
+
+
+
+# Basic
+-> Cài: VSC, NodeJS, NPM, YARN
+npx create-next-app firstapp
+
+Có thể dùng manual setup trong docs tự code mọi thứ
+
+Chạy app có 3 cách cơ bản nhất:
+1) npm run build + npm run start => nó build từng page sẵn ra dạng HTML và lệnh start sẽ chạy 1 server, server này serve file html có route tuân theo cấu trúc thư mục. Là kiểu chạy chuẩn SSR.
+2) npm run dev => nó k build ra html sẵn, kiểu này ta có thể hiểu là để test cho nhanh chứ chả có ý nghĩa gì sất. Khi phân tích về loại web SSR CSR phải dùng lệnh build + start cơ
+3) npm run build + npm run export => nó build từng page sẵn và dạng html và xuất đống đó thành tĩnh fix cứng luôn. 
+
+=> Chạy cách 1 sẽ được 1 dự án Universal SSR. Vì từng router của server được config sẵn theo cấu trúc thư mục và khi chuyển sang router khác, ta sẽ request server gửi lại cho ta, nhưng vẫn có file js client để fetch API được ở client browser nếu thích
+
+Mỗi khi 1 client vào trang, server sẽ chạy qua tất cả 1 lần để serve cho client nên các console.log ở các component sẽ hiển thị trên cả console của server nhưng chỉ 1 lần, về sau client thao tác gì khác in ra thì đó là độc lập phía browser và k in ra gì ở server nữa.
+
+-> Các câu lệnh next:
+next dev => chạy app trong môi trường development
+next build => tạo optimized production build of your app
+next start => chạy app trên production mode thì app cần chạy next build trước đó r. Mỗi lần muốn update chạy bằng cái này thì phải build lại
+next export => export app thành static HTML cứng mà có thể run standalone without NodeJS server. Dùng như React CSR static web v
+
+-> Tạo constructor giống class component(ReactJS)
+Điều quan trọng là ta tạo cho nó chạy trước khi render, khác với useEffect() với deps trống là chạy 1 lần nhưng sau khi render. Mà nextjs khi chạy sẽ chạy 1 server mà sẽ chạy qua 1 lần component trước khi render, nên console.log ngay trong component được chạy cả ở server, còn useEffect chỉ chạy sau khi render nên server sẽ k chạy nó
+
+--> Bth nó chỉ gọi 1 lần các hàm set giá trị default, ta có thể tạo 1 đoạn code luôn chỉ chạy 1 lần như constructor class component bằng 1 biến cờ ngoài component => đã là global thì cũng có thể thế bằng useRef
+--> Dùng useMemo() với dependencies là trống [] và k cần return gì cả. Khác với useEffect nó sẽ chạy theo thứ tự gọi tới luôn trước khi render DOM nên giống như constructor bth.
+--> Dùng custom hook useConstructor
+
+-> Môi trường development: npm run dev klq gì đến kiến thức thực tế. Nó tạo ra 1 server cho ta và mỗi khi có client request, nó sẽ chạy lại các hàm của server và load các component client luôn 1 lần
+
+-> Setup project NextJS
+Set up các tool tương tự như reactjs
+Setup thêm các thứ như postcss, cssnano, autoprefixer, chakra ui, tailwind, tsconfig.json, next.config.js
+Setup dùng ảnh thoải mái, setup react context, font chữ, style global, các loại env, cấu trúc thư mục và đường dẫn, set up các file 404 500 _document, thư mục utils, SEO, theme mode, static file.
+
+-> NextJS tự động xác định page static và thực hiện Automatic Static Optimization. Nó generatte sẵn static page và chỉ cần dùng. Điều này được thực hiện nếu k có getServerSideProps và getInitialProps. 
+=> Đây là lý do getStaticProps được dùng nhiều hơn getInitialProps
+
+
+
+# Routing
+K đổi được cấu trúc thư mục có sẵn của next. Nó đã được cấu hình sẵn trong thư mục pages tạo ra routing lồng theo cấu trúc file
+Next 13 chính thức dùng App Router thay cho Pages Router, mặc định là đang dùng App Router rồi. Có thể đặt tên file thoải mái, chỉ file page.js mới có tác dụng routing frontend, route.js để có routing api backend
+URL: https://nextjs.org/docs/app/building-your-application/routing
+
+-> Dùng next/router
+--> useRouter chỉ dùng với FC dưới dạng 1 hook. Có thể làm được mọi thứ như react-router-dom
+--> withRouter dùng với cả FC và CC => ít dùng hơn, search trong docs
+
+-> Chuyển trang
+--> Dùng thẻ a sẽ reload lại trang nên => thg dùng để refer tới link ngoài thôi
+--> Dùng useRouter với push thì nó là chuẩn CSR chỉ render ra component khác chứ k reload lại => thg dùng khi thực hiện gì đó thì chuyển trang. Tương tự với withRouter
+--> Dùng next/link cung component <Link/> có href để chuyển trang CSR k load lại. 
+Nếu dùng trống thì nó giống thẻ a nhưng chuyển trang CSR. Có thể cho nó bao 1 component khác như button ok => thg dùng khi chuyển trang bằng 1 component nào như ấn 1 button hay click vào dòng text
+
+Dùng thuộc tính as của thẻ Link để rewrite url => nhưng dùng as có hậu quả là sẽ reload lại trang => version hiện tại chả cần dùng as nữa vì next cải tiến r
+
+--> Dùng Router của next/router mà k dùng hook, giống hook CSR
+
+-> Dùng file [param]:
+Ngày xưa lúc chưa có cái này, ta phải tạo hẳn 1 file server express riêng để xử lý điều này
+
+-> prefetch
+Nếu 1 pages dùng <Link> từ next/link, nó sẽ tự động prefetch pages trong href đó cho ta luôn để người dùng ấn phát là có luôn => Tăng tốc nextJS, nên dùng <Link> trong mọi TH có thể
+
+Dùng useRouter và withRouter đều cung dùng biến router.prefetch(url, as, options) để tùy biến prefetch với mọi trang. url là trang muốn prefetch bao gồm cả router fix or dynamic routes như /product/[id]
+Có thể chặn khi dùng Link với prefetch={false} để cản với các trang ít khi người dùng vào
+
+=> prefetch chỉ có tác dụng trên production build(build r start), k test được ở dev
+
+-> Custom page 404
+Sửa pages/404.js
+
+
+
+# Typescript
+Trong next có sẵn các type dành cho các thứ request, response mà có thể import dùng
+Package @types/react tự cài khi cài typescript giúp dùng được type component của React
+Phải dùng đúng tên file ts hay tsx. 
+Khi tạo custom hook hay custom components bằng typescript, nó sẽ tự gợi ý rất tốt khi dùng
+
+Dùng với redux, promise, useRef, input element,...
+
+Dùng typescript mà k khai báo kiểu dữ liệu nó tự hiểu ngầm, nhưng nếu gán string xong lại gán số cho cùng 1 biến, nó sẽ báo lỗi sai kiểu rất khó chịu khiến ta phải sửa cho đúng type.
+
+Kp lúc nào cũng cần specific type. Để tránh phức tạp, ta cứ làm xong r add vào chỗ nào cảm thấy ok, or dùng ở chỗ nào bắt buộc thôi
+
+-> Có thể dùng từ ban đầu or tích hợp vào nextjs có sẵn
+Tích hợp vào nextjs có sẵn: thêm tsconfig.json trống => có thể dùng kêt hợp JS thuần và Typescript ok -> Chạy tiếp sẽ tự cài mọi thú
+
+-> Thêm // @ts-ignore bên trên dòng code nào để bỏ check lỗi typescript cho nó tạm thời
+
+-> Dùng ReturnType để tạo ra 1 type mới:
+VD: type T1 = ReturnType<(s: string) => void>; => T1 mang type string
+VD: type T2 = ReturnType<<T>() => T>; => (generic) T2 có type unknown vì chưa biết T là gì
+VD: declare function f1(): { a: number; b: string };
+type T4 = ReturnType<typeof f1>; => thì type T4 = { a: number; b: string; }
+
+-> Phải dùng as ở nh TH khi thao tác với HTMLElement
+
+-> Dùng tsconfig.json:
+Dùng baseUrl để import gọn hơn. Kết hợp paths có thể đổi cấu trúc thư mục, nhét mọi folder vào src
+=> Ref tới file "Tất cả tsconfig thg dùng cho next"
+
+
+
+# Package next có sẵn khác
+-> next/head: 
+Có <Head/> để custom như thẻ head trong html => có thể thêm trực tiếp font chữ luôn
+Để hiện thumbnail bth nên có 2 thuộc tính og:image và og:title trong thẻ head
+VD muốn thay đổi thẻ title mà dựa vào 1 biến, ta phải tạo 1 biến string title và truyền vào chứ k nên dùng {<biến>} vì ta muốn truyền vào 1 node nhưng nếu dùng {} nó sẽ tách ra thành nhiều node. VD: Hello {"World"} nó sẽ sinh ra Hello <!----!> World tức <text><comment><text> là 3 node k nên như v => cứ view source page xem có đúng tên title k là được
+
+K được dùng stylesheet trong <Head/> kiểu <link rel="stylesheet" .../> vì có thể bị break khi dùng các tính năng Suspense or streaming. Nếu muốn thì ta chỉ được dùng trong file _document.tsx thì để kiểu gì cũng được
+
+-> kết hợp next/head với next-seo giúp viết các thẻ seo chuyên nghiệp hơn
+
+-> Dùng _document: để chỉnh bố cục to của web là các thẻ header, main, script 
+=> Thg dùng tạo layout thay vì viết component layout riêng
+
+-> Dùng next/font: 
+Có thể thêm font chữ dựa vào CDN thẻ link như bth trong từng page. Trong page global thì nên nhét vào file _document.tsx hay hơn. 
+Có thể dùng next/font cung sẵn vài font của google thì sẽ có font tĩnh và k cần gửi API tới CDN
+
+
+
+# Dùng eslint với nextjs
+Chỉ cần config với js file và ts file là được
+Eslint nó chỉ bắt lỗi lúc build nên phải build thử r fix hết lỗi
+
+Chỉ cần eslint + prettier + eslint-config-prettier tránh xung đột là đủ r, k cần eslint-plugin-prettier. Cái mà có prettier/recommended thực chất là eslint-plugin-prettier k cần dùng
+
+
+
+# Static file serving
+-> Đặt file static trong thư mục public -> truy xuất đến nó từ bất cứ file nào với /<đường dẫn kể từ thư mục public>.
+--> Chú ý truy xuất k được có relative ở đầu kiểu: ./abc.png vì như này nó k tìm trong thư mục public mà tính từ đường dẫn router hiện tại. VD: https://localhost:3000/user/abc.png và trong public k có user/abc.png nên sai
+
+VD: Có thể dùng để thêm file css tĩnh cho web. Khi thêm file css qua thẻ link thì thêm ở component nào sẽ chỉ có tác dụng trong component đó. Vì mỗi khi 1 page được render, mọi phần head và body sẽ được thay mới của riêng component đó nên đống thẻ link đó sẽ k có tác dụng ở component khác
+
+-> Static chỉ có tác dụng trong các TH link hay ref, còn import thì ta cứ import thoải mái theo relative thư mục.
+
+Ta thg import relative ảnh khi ảnh chỉ dùng ở trong từng router chứ kp là static file trong thư mục public là dùng cho cả web. Nhưng import ảnh relative theo dạng module như v chưa được config trong nextjs. NextJS mặc định chỉ config mấy cái file jsx, ts,... thôi => k cần thiết
+--> Cách config webpack nhận ảnh:
+Để config webpack thì trong file config, ta cần export ra 1 object có chứa 1 trường webpack, giá trị của trường này phải là 1 function có tham số 1 là config, và return ra biến config đó. Trong hàm đó ta tùy ý chỉnh sửa biến config.modules.rules để cài đặt và thêm các package rule cho webpack. Toàn bộ cấu hình webpack sẽ được chạy lần dầu tiên ở phía server trước khi ứng dụng được render.
+
+Để load dược ảnh dạng module, phải thêm url-loader or file-loader cài với npm i url-loader -> vào trang chủ của webpack và search rồi chỉ cần dùng config.module.rules.push(<rule mới của url-loader>) là xong => Ta thêm thủ công v cũng hiện được nhưng gặp nhiều vấn đề như ảnh nó ở dạng base64 chứ kp static, phải sửa cả cấu hình của typescript, cách dùng này mới chỉ xử lý development nên chạy next build sẽ lỗi. Ngày xưa ta sẽ phải thủ công như v or dùng package next-images của vercel để làm điều đó.
+
+=> NextJS phiên bản mới tung ra next/image có component <Image/> chấp nhận đường dẫn kiểu module. Khi dùng buộc phải có src và alt. Bản build phải thêm: 
+images: {
+    unoptimized: true,
+}, 
+vào next.config.js
+=> "Refer tới "Dùng next/image"
+
+=> Cách tốt nhất bh là dùng ảnh static trong thư mục public
+
+
+
+#***Dùng robots.txt:
+Crawler đi qua file này đầu tiên trước khi crawl bất cứ thứ gì trong domain. Cứ vứt vào public thôi
+VD ta có thể bảo vệ 1 vài phần trong website tránh bị crawl như admin or user account or CMS, API route
+VD: truy cập vào http://localhost:3000/robots.txt được sau khi tạo xong
+
+
+
+# Dùng next/image
+=> Refer tới "# Static file serving"
+
+Cung <Image> giúp tối ưu hóa hình ảnh. VD ảnh 2000x2000 nhưng trên màn hình mobile, ta chỉ cần tải kích thước 100x100 pixel là đủ rồi thì sẽ giảm tải vc load ảnh, giúp tăng performace. Nó cũng tự động lazy loading, preloading xác định kích thước ảnh tương ứng với thiết bị.
+Có thể chỉnh sửa trong file next.config.js về images như deviceSizes or imageSizes sẽ override defautlt behavior => ít dùng, refer trong docs
+
+Dùng Image của next/Image tuy cái khó chịu là ép có width và height nhưng lại chạy được các tính năng: placeholder, blurDataURL, onError giúp hiển thị image khi có lỗi và hiển thị image placeholder khi loading. Nó thay thế hoàn toàn thẻ img của html thuần
+Có thư viện plaiceholder giúp tạo blur image placeholder dynamic cho mọi ảnh nhưng sử dụng với next có vẻ k ổn
+
+
+
+# Style
+-> Dùng css style dưới dạng component: chỉ style component này
+<style jsx>{``}</style>
+
+-> Style global
+Thực tế next nó tự sinh ra component <App/> bao tất cả phần content bên trong mà ta có thể custom nó chính là file pages/_app.js (đuôi jsx tsx thoải mái). Do bao mọi component nên hiểu được phần code của nó là <Component {...pageProps} /> tức đang nhét component con bên trong vào trong <MyApp> có thể thấy bằng extension
+Tức là thao tác với file này là ta đang thao tác với 1 component bao tất cả
+
+Để tạo style global:
+- Dùng provider và setup global style tùy thư viện UI ta dùng
+- Dùng thẻ link static file css (đặt trong thư mục public) nhưng ít khi làm như v mà người ta thường dùng import file ở trong dự án luôn mà chả cần thư mục public gì cả và dùng được với tên bất kỳ để import vào _app.tsx, đôi khi ta có thể import vào các file component bth mà k cần là file _app.tsx
+
+=> Cơ chế thực tế khác nhau: dùng thẻ link nó sẽ link file như 1 static file, còn dùng import relative nó sẽ tự động biến thành thẻ <style> đặt trong <head> cho ta
+
+-> Style component
+C1: Có thể dùng style trong link stylesheets trong thẻ <Head> với tên bất kỳ nhưng phải là static file => chỉ style component này
+C2: Dùng import relative => phải tuân thủ quy tắc đặt tên khi import <Component>.module.css và phải import dạng biến và dùng cho từng className
+=> Họ thg dùng import relative, k dùng file css là static file nữa
+
+-> Các style css từ các thư viện bên thứ 3 ta có thể import thoải mái như bth ở mọi nơi
+
+-> Dùng sass: npm install --save-dev sass 
+import relative như css, tuân thủ quy tắc đặt tên bth
+
+-> Next cũng hỗ trợ sẵn styled-components: Xem trong docs => npm install styled-components
+Có thể dùng nó để tạo component custom như 1 bộ thư viện riêng cho mình
+
+
+
+#***Hiểu SSR của NextJS
+Các hàm thực hiện phía server sẽ k gửi gì về cho client nên là an toàn như 1 trang SSR bth.
+
+-> Dùng getInitialProps: K dùng mà thay thế bằng getStaticProps và getServerSideProps, được gọi khi build lần đầu và khi truy cập các lần sau.
+Chỉ dùng được trong /pages ở từng file component, k được dùng ở các thư mục ngoài pages như components cũng k được, chỉ được thực hiện bởi server
+Hàm này dùng để server fetch data nhét vào DOM r gửi lại cho client html đã hoàn chỉnh thỏa mãn SSR. Mỗi khi có request, server sẽ lại chạy nó để có data nhét vào html gửi cho client.
+
+--> Thử tùy biến
+Nếu ta host cả server này lên thì nó là Universal SSR.
+
+Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Như ta đã biết hàm này chỉ thực hiện phía server mà export ra thì k còn server nữa mà file html thành fix cứng. Do đó khi ta chạy next build, server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export nó sẽ chạy qua getInitialProps sinh ra data ngay lập tức. Vì ta expect hàm này được gọi vào runtime nhưng export ra tĩnh bắt buộc chỉ được chạy 1 lần lúc build time nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi và hàm này trở nên vô dụng vì k có server => Như 1 CSR
+
+-> Dùng getStaticProps:
+Hàm chuyên dùng cho SSG, dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
+Thế tại nếu chỉ chạy 1 lần tức là data fix cứng, tại sao ta k viết cứng cho nó luôn? => Vì nếu có 1 triệu data thì ta đâu thể gõ cứng vào mà phải fetch r in ra chứ. Nó sẽ fetch trước mọi trang ta xác định, kể cả dynamic params page.
+
+Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ dùng web sẽ cực kỳ nhanh, cộng với bộ cache lớn thì tốc độ sẽ cực kỳ nhanh.
+Chỉ được dùng 1 loại, k được dùng kèm getInitialProps
+
+--> Dùng với dynamic params:
+Ta cần tạo ra nhiều trang static với đường dẫn động từ dữ liệu tại thời điểm build. Ta dùng getStaticPaths định nghĩa các url muốn pre-render ngay từ lúc build.
+Vì dynamic thì built time nó k rõ url có giá trị gì để prefetch nên hàm này chỉ giúp điều đó thôi. Lúc build sẽ fetch tất cả và cho ra hàng loạt file html là trang tĩnh.
+
+---> Hàm getStaticPaths trả ra object có:
+Trường paths: là list các dynamic params.
+VD: pages/posts/[postId]/[commentId] thì trả về kiểu {params:{postId:1,commentId:2}} 
+VD: pages/[...slug] thì trả kiểu {params:{slug:["hello","world"]}} và sinh ra page /hello/world
+Mọi route kiểu null, [], undefined, false, VD slug:false thì Next tự cho ra "/"
+
+Trường fallback:
+- false thì mọi path k trả ra bởi getStaticPaths sẽ ra 404 page (next build chỉ build các path xđ trong getStaticPaths) => thg dùng kiểu có ít page ban đầu, dùng như v thì sau này thêm page vào thì next build phát là xong
+- true thì page k có trong getStaticPaths sẽ được fetch và trong lúc chờ loading sẽ hiển thị ra fallback page, fetch xong mới hiển thị ra page bth => thg dùng khi có rất nhiều page. VD có 1 triệu page nếu ta fetch hết sẽ có 1 triệu file html mà đâu cần mức đấy. Ta có thể fetch 3 item page đầu, các page sau ta để loading or skeleton ok. 
+
+Quy trình: dùng getStaticProps và getStaticPaths cho 1 vài pages thôi, trong component check nếu router.isFallback==true là đang loading 1 page chưa từng fetch, nếu !router.isFallback&&!data thì là vào trang k tồn tại. Còn lại là vào đúng.
+fallback page ta nói ở đây chính là cái page gốc nhưng data truyền vào k có gì cả và router.isFallback là true
+=> 1 tính chất quan trọng của cái này là ta thấy ở thư mục build ra (.next) thì nó build ra từng page của trang web, nhưng khi 1 request tới 1 page k có trong getStaticPaths và nó bắt đầu fetch lần đầu tiên thì server sẽ fetch và tự rendered trong server, sau đó gửi lại cho client file html đó. File html đó được lưu lại trong server nên vào thư mục .next sẽ thấy có file mới, và kể từ lần sau trở đi tốc độ sẽ cực kỳ nhanh vì nó coi đã fetch rồi
+
+'blocking': Y hệt true fallback nhưng page k có trong getStaticPaths thì server sẽ tự fetch ngầm và nhảy lag đến chứ k có loading gì cả, khi đó router.isFallback cũng k có gì
+K hỗ trợ next export
+=> Có thể kiểm chứng bằng tab network, khi query 1 page mới lần đầu mà server chưa có thấy tốc độ hơn 100ms, lúc đó nó được lưu lại tại server file html đó r nên khi query lần 2 page sẽ thấy tốc độ còn vài chục ms thôi.
+
+Trường revalidate 
+=> SSG chính là giải pháp load page cực nặng với tốc độ cực nhanh. Nếu có 1000 page prefetch thì nó cũng fetch trước 1000 page đó lúc build time nên rất lâu nhưng trải nghiệm người dùng lại nhanh
+
+--> Incremental Static Regeneration
+SSG thì cơ chế cũng chỉ là html được sinh ra ngay từ build time và nó fix cứng mãi, từ đó có thể bắn lên CDN k cần tới server. Trong next ta dùng server chạy nó bằng npm run start cũng chỉ để cung website ra thôi. Nhưng nhược điểm lớn là thời gian build tỉ lệ thuận với số page của ứng dụng; 1 page có thể bị stale trước khi ta rebuild. V nên static generation chỉ dùng làm mấy cái trang docs thôi, nhưng trong thực tế, ta vẫn cần dữ liệu real time hơn 1 chút, nên có Incremental Static Regeneration. 
+PP này đã giúp tạo được web tĩnh tốc độ cực kỳ nhanh và có real time(nếu k cần real time quá chuẩn), phù hợp các app e-comerce bth. Nó giúp ta update data của page cần thiết mà k cần rebuild lại toàn bộ ứng dụng
+
+=> Trường revalidate của getStaticProps VD set là 10 tức là: cứ mỗi 10s trôi qua, request đầu tiên tới tiếp theo sẽ trigger regenerate page đó đồng thời gửi lại page cũ cho request đó. Sau khi regenerate xong, thì các request đằng sau sẽ được serve page mới và cứ thế chu kỳ lặp lại
+Đó là lý do vì sao data được update -> sau 10s request page -> vẫn nhận về page cũ -> request lại phát nữa -> nhận về page mới. Vì cái lần nhận page cũ trước đó chỉ trigger cái regenerate chứ chưa có data nên vẫn nhận stale. Có page cho revalidate sau 1s vì tính quan trọng của real time, có page thì tận 60s
+
+Nếu regeneration bị lỗi, sẽ serve page cũ ok.
+
+=> Nhanh:
+getStaticProps fetch data lúc build time
+getStaticPaths fetch data ở mỗi initial request rồi cached vĩnh viễn
+ISR fetch data khi có request sau mỗi 1 ktg cố định nhưng chưa thực sự real time. Kể cả ta có để 1s thì nó vẫn stale-while-revalidate 
+Có thể fetch data tại client thành CSR có thể đảm bảo fetch data ở mỗi request và trả về data mới luôn nhưng SEO kém
+SSR fetch data r rerender page ở mỗi request mới và trả ra data mới luôn và đảm bảo SEO: getInitialProps, getServerSideProps
+
+-> Dùng getServerSideProps:
+Chỉ được gọi ở server, phần code viết trogn getServerSideProps k được included trong JS bundle gửi tới browser. Nó là code thuần túy phía server nên rất an toàn, có thể viết cả API key thoải mái. Ta có thể code như hàm xử lý middleware trong server nodejs như đọc file hay truy xuất database
+Tuân thủ theo đúng cú pháp trả về. getServerSideProps thay thế hoàn toàn getInitialProps
+Do SSR chậm hơn SSG nên chỉ dùng khi cần thiết
+
+Cái getStaticProps k truy cập được vào biến request và response ở trong hàm nhưng getServerSideProps thì ok
+Khi dùng SSR, nó k build trước html ở build time như SSG và luôn regenerate lại ở mọi request nên k cần lưu lại html trong server như SSG
+
+--> Giải quyết vđ nếu 1 page fetch lần đầu data lớn gây loading lâu. Mà để chuẩn SEO thì phải dùng SSR. Mà như thế thì mỗi lần vào page, server đều fetch chạy lại getServerSideProps rất tốn. Có nhiều cách fix tùy TH:
+Có thể dùng CSR thuần riêng cho nó vì giả sử có 1000 items thì việc SEO cho cả 1000 items rất hiếm khi xảy ra, nếu các item giống nhau thì k cần thiết, nếu các items khác nhau thì SEO rất tạp nham chả vào chủ đề gì. Do đó có thể fix thẻ meta cho page đó, còn lại list data fetch dùng CSR.
+getStaticProps + ISR revalidate tầm 60s cho pages đó vì sẽ k có nh sự thay đổi. Thg thì data thay đổi nhiều mà SEO tất cả thì rất khó xảy ra vì SEO k có ý nghĩa. Nếu dynamic data + SEO cả page 1 lần thì chỉ có getServerSideProps chịu load lâu thôi
+Chia page, 1 cách để SEO tất cả là phân trang, mỗi trang là 1 router khác nhau thì SEO cho cả trang được, lượng data giảm nên fetch nhanh
+
+VD: Ta lấy 1 list data lớn và dùng filter data đó cho từng page
+Giải pháp khi code server nên tối ưu cho phép người dùng chọn số lượng lấy (tất cả hay lấy vài items), cho phép thêm các tham số filter (bất kể dù api này có lấy tất cả hay không để tăng tính tái sử dụng)
+Khi đó client side có thể tận dụng SSR fetch vài data đầu tiên trong list cho SEO, còn CSR sẽ fetch tất cả data như bth
+
+=> Cách 1 thật ra k tệ vì ta k fetch detail mà chỉ fetch qua tên và type thôi nên tốc độ nhanh vì số lượng collection cũng k có nhiều 
+
+--> Dùng với dynamic params
+=> 1 ứng dụng có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG(generate as static HTML+JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) ok hết => xem khi build ra có ký hiệu rõ route nào dùng kiểu nào
+=> 1 dự án thông thường cứ chơi SSR hay CSR tùy hứng thôi, page lớn có thể CSR hết. Nếu SSR mà thấy fetch lớn quá thì dùng revalidate với ISR cũng được.
+
+
+
+# Loading state của getServerSideProps
+-> Ta chơi kiểu: data.length <= 0 tức k có gì thì in ra empty box, data có thì in ra data. Nhưng nếu lần đầu tiên vào quá nhanh và nó nảy empty box r nhảy cóc hiện data rất k ổn => do đó người ta thg set trạng thái ban đầu của data là undefined chứ kp là [] để tránh các lỗi tiềm năng
+
+-> K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì các component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k do getServerSideProps gây ra thì nó vẫn chạy loading.
+=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events
+=> ref tới "Projects / MoveWorld"
+
+
+
+# Dynamic import
+-> Khi compile, mỗi page của app được NextJS compile thành từng file riêng gọi là chunk, khác với ReactJS khi chỉ sinh ra 1 file html và js duy nhất
+
+Khi browser request 1 pages, lần lượt:
+Nó nhận về file html
+Nó request tải tất cả các file js còn lại của cả web
+Nó đồng thời đọc file html hiển thị ra và request tiếp các data cần cho file html hiện tại thôi
+=> Vc dùng lazy load sẽ cản việc request tải các file js không liên quan đến page hiện tại. Tránh nhầm là nó k cản trở việc request data cho các file js khác vì bình thường nó cũng chả làm điều này => next tương tự có dynamic import
+
+-> Trong next có cả server và client:
+Khi client request vào 1 url, server sẽ chạy trước quét qua tất cả 1 lần, bao gồm cả import hay các thứ sẽ làm hết r gửi lại file js mà client yêu cầu. 
+Khi dùng dynamic import cho 1 component, server vẫn làm đầy đủ như v và chạy qua cả file dynamic import, nhưng client sẽ k load các file dynamic import nữa nếu component đó chưa cần hiển thị.
+VD: ta dùng dynamic import cho component Hello mà file chứa nó chưa được load, khi ta ấn nút nó mới hiển thị, để ý tab Network sẽ thấy nó tải file thêm JS lúc đó. Còn nếu component Hello mà import bth thì vào phát client tải luôn, ấn nút hiện ra sẽ k thấy tải thêm file js nx vì nó đã tải trước r.
+
+Vc dùng prefetch sẽ khiến phía server tiếp tục prefetch data ở trong các pages router khác, nó hoàn toàn k liên quan bên trên vì ở đây là server xử lý (server chơi hết dù là dynamic hay gì). Còn dynamic import hay lazy loading là phía client browser k load các file js chưa dùng mà thôi
+
+--> Server luôn load file js bất cứ lúc nào có kể cả dynamic import, nhưng đôi component cần dùng window hay document mà chỉ có ở browser thì có thể chặn lại với ssr: false
+
+-> Có thể thêm loading
+
+
+
+#***Dùng global state management cho SSR
+-> VD Dùng redux-toolkit cho next
+Ta hiểu là redux là 1 cái global store được lưu ở phía client, k lưu ở server.
+Hiểu bản chất: nextjs là SSR tức là mọi request được gửi tới server và nó trả lại cho ta page html mới. Khi chuyển sang page khác, mọi page cũ đều bị nhét vào cache, kèm đống data.
+Chính vì redux nằm ở phía client, là file js mà client lấy, tức là server gửi lại page thực chất data vẫn thế nhưng khi client nhận html đó, nó sẽ xử lý tiếp nhét data redux vào đúng vị trí
+VD: ta đang ở page Home, chỉnh sửa biến counter từ mặc định là 0 thành 1 trong redux, ta <Link/> sang page User, ta thực sự gửi request tới server và nó render lại cả page HTML gửi lại cho ta page user và browser hiển thị ra màn hình, lúc này page User có sử dụng biến counter được server gửi lại là 0, browser nhận về và thực hiện js thêm vào giá trị thành 1 => hiện chuẩn => sau đó navigate lại trang Home -> do chưa ra khỏi app nên redux k bị reset lại mặc định và giá trị vẫn là 1
+
+=> Dùng redux đảm bảo mọi component có 1 store chung trong suốt quá trình sử dụng app, ta có thể dùng CSR thực hiện hàm bất đồng bộ. Ta hoàn toàn có thể dùng nó như là react CSR bth, điểm khác biệt duy nhất là phần fetch data ban đầu thay thế bằng getServerSideProps để lấy SEO và giá trị nó nhận về được coi là initialState cho app
+
+Hàm getServerSideProps thực tế mỗi khi <Link> tới trang sẽ chạy lại từ đầu vì mỗi khi server chạy sẽ thực hiện phần code phía server mà. Ta buộc phải chấp nhận điều này vì server cần thực hiện để render lại HTML chuẩn SEO chứa data gửi lại cho user. Ta k thể làm kiểu, client đã có data rồi thì server k cần fetch nữa. Nó buộc phải fetch.
+Chuyện gì xảy ra khi 2 component cùng dùng 1 data mà data rất lớn, loading sẽ ngốn time. Thực tế điều này xử lý rất khó vì SEO thì phải là data động realtime gửi đi thì front end mới hiển thị SEO tốt, nếu client fetch thì k ổn mà server fetch thì lâu cũng phải chịu.
+
+
+
+# Dùng pages/api
+Cấu hình sẵn, trong thư mục pages/api sẽ tạo đường link tương ứng là /api/<tên file>
+Các file trong pages/api sẽ là url endpoint API chứ kp là các page. Nó là server-side bundles only và k tăng client-side bundle khi sử dụng
+
+Usecase: nó chính là API FE server cho website SSR, dù vẫn bảo mật như server bth nhưng dự án lớn tách 1 server API BE riêng.  
+Ta cũng có thể dùng để masking URL tới external service và bảo vệ nó với env. VD: thay vì gọi vào https://company.com/secret-url thì có thể gọi vào /api/secret r chuyển hướng sang url trong env
+
+Cần hiểu bản chất là API router ở đây k thể dùng với next export vì khi export ra thì nó k có server nữa, khi đó thành file html js thuần CSR thôi. Để có nó thì ta phải host server or chạy server duy trì liên tục. Lệnh next export chỉ dùng khi chơi static web
+
+-> Request Helper
+Mặc định nó k xử lý cors mà ta có thể tự thêm có next-example. Có example dùng cookies nx.
+Có thể override config default API router
+
+-> Response Helper:
+Dùng res.status json send redirect revalidate 
+
+-> Edge API Route
+Có 2 loại là NodeJS based API Routes và Edge API Routes. Edge API Routes sử dụng Edge Runtime nhanh hơn NodeJS based API Routes(dùng NodeJS runtime) và được build trên standard web APIs => Đại loại là cho performance tốt hơn
+
+-> Thao tác server side
+VD viết export default function handler trong pages/api/hello.ts 
+Khi ta call http://localhost:3000/api/hello sẽ chạy vào hàm xử lý đó
+URL custom api route: https://nextjs.org/docs/pages/building-your-application/routing/api-routes
+
+
+
+# Custom code server nextjs
+3 cách: Dùng nextjs có sẵn server với next start; Nếu ta có sẵn server backend khác thì vẫn có thể dùng song song với server nextjs; Ta cũng có thể dùng server ngoài nhưng server nextjs sẽ là proxy server forward tới.
+
+Dùng server của next mặc định đã ok với dự án nhỏ, nhưng muốn custom nhiều thứ khác thì có thể tạo riêng nhưng nó sẽ k có các tính năng quan trọng được setup sẵn như serverless functions, Automatic Static Optimization
+
+-> Tạo server.js ở ngoài cùng: nó k đi qua tool babel or webpack nên phải đảm bảo tạo 1 server chuẩn như nodejs bth
+Chỉ có vài điểm khác là server liên kết với nextjs app qua: 
+const next = require('next'); const app = next({});
+Và app server được tạo trong app.prepapre().then(<>) như bth
+
+Phải chỉnh sửa cả package.json => scripts dev và start chỉ là chạy server ở 2 môi trường khác nhau thôi
+
+-> Disable file-system routing: Mặc định Next tuân theo cấu trúc folder pages để làm server nên nếu dùng custom server, nó lại serve 1 dữ liệu ở multiple paths ảnh hưởng SEO và UX 
+Disable nó với useFileSystemPublicRoutes: false => client route có thể vẫn access được và phải xử lý bằng navigation thủ công
+
+-> Dùng router.beforePopState
+Đôi khi ta muốn config client side route trước khi router xử lý nó => thao tác với 2 button navigate của browser
+--> (bỏ) PopState Event là event của window được kích hoạt khi user navigate qua lại giữa các page và history entry được push vào history stack. Nhưng ta test nó éo có tác dụng với SPA navigate bằng router đổi url bth. Chỉ được khi ấn tiến lùi trong browser mà thôi
+
+
+
+# Environment variables
+Định nghĩa trong .env.local -> dùng ở phía server, bất cứ chỗ nào server chạy qua như getServerSideProps hay chạy qua 1 lần trong FE components khi client request.
+Để giữ bí mật, env chỉ được tính toán vào build time và process.env kp là 1 chuẩn JS object nên k thể dùng object destructuring để lấy các trường
+
+FE sẽ k thể truy cập trực tiếp, còn để expose to browser biến môi trường, phải dùng tiền tố NEXT_PUBLIC_ đằng trước 
+
+-> Thông thường, file .env*.local luôn được để trong gitignore. Ta dùng thuận tiện 2 môi trường với .env.development.local và .env.production.local, còn .env.local dùng với mọi môi trường. Còn môi trường test nữa nhưng k xét
+=> truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env có thể chạy trực tiếp trên command nếu cài -g). Điều đặc biệt là khi dùng NODE_ENV, next tự động dùng đúng file .env developement hoặc production mà ta k cần set gì thêm 
+
+Còn các file như .env (all environments), .env.development (development environment bằng next dev), and .env.production (production environment bằng next start) được dùng để set giá trị default cho các biến .env và thường k cần cho vào .gitignore luôn
+=> .env.local always overrides the defaults set.
+
+VD: Tức file .env lưu giá trị mặc định cho biến môi trường, .env.development lưu giá trị mặc định cho biến môi trường development, .env.development.local lưu giá trị ta set cho biến môi trường development nhưng được bảo mật
+
+
+
+# Dùng next.config.js
+trailingSlash
+basePath là set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
+x-powered-by là header xàm lol cung cho client thông tin về server, ngoài ra chẳng còn ý nghĩa gì khác. Các cái có x ở đầu thg là non-standard HTTP header. Nó phần nào giúp hacker hack dễ hơn 1 chút vì có thêm thông tin về server. Setup nó với poweredByHeader: false
+Dùng eslint cho thư mục nào
+
+
+
+#***Tổng hợp state management cho FE
+-> getStaticProps và getServerSideProps để lấy initialData về page hiện tại
+
+-> Dùng useState để thao tác data trong phạm vi nhỏ là component
+
+-> Dùng React Query hoặc swr làm global state store lưu data bất đồng bộ. Bổ sung tính năng polling cho frontend dễ dàng
+
+-> Dùng localStorage để lưu data share between every component (và indexed database nữa), tự implement subscribe to change được
+Dùng React Context để lưu data share between mọi components nhưng bắt được sự thay đổi thì render lại. Nếu nhiều có thể chia ra nhiều Provider React Context được.
+
+-> Dùng redux làm global state store chỉ khi ứng dụng có nhiều global state mà React Context quá lớn. Thg thì ta ưu tiên React Context cho global state đồng bộ, React Query cho global state bất đồng bộ.
+=> ref tới "Dùng redux-toolkit"
+
+-> Redux toolkit và Zustand đều là 2 state management rất mạnh nhưng Zustand nhẹ hơn, code cũng dễ và gọn hơn
+
+
+
+# Các thư viện UI mạnh hợp với NextJS
+-> Dùng tailwind:
+Setup tailwind config rồi dùng trực tiếp bth
+
+Trong tailwind có nhiều utility class giúp animation: https://tailwindcss.com/docs/animation
+=> ref tới "Projects / Thena-Frontend"
+
+-> Dùng chakra ui: Khi dùng 1 thư viện UI, cần đảm bảo biết làm các thao tác
+Set được CSS Reset global style: ok
+Style được từng component dễ dàng, style inline: ok
+Style phức tạp hơn, truyền biến vào styles được: ok => mé ta tự custom kiểu biến classes truyền vào style thôi mà. Có thể đặt trong file css or cùng file js
+Set được global theme cũng như các thuộc tính màu/breakpoint, sửa chỉnh global vĩnh viễn 1 thẻ có sẵn của thư viện: ok
+Animation keyframe cũng như css selector được => k hỗ trợ mạnh, có mỗi trường sx props là có css selector nhưng lại là inline, lại phải custom tạo 1 object như biến style bên trên. Có thể dùng css thuần tạo nếu cần, còn k thì chịu. 1 vài component có sẵn tự cung các props hỗ trợ đó => not ok
+Darkmode: ok
+
+-> Luôn dùng kèm 3 cái autoprefixer, cssnano, postcss
+autoprefixer tự thêm các tiền tố nhà cung cấp (vendor prefixes) vào CSS khi build để tăng khả năng tương thích trên các trình duyệt khác nhau. Nó dùng dữ liệu từ Can I Use để xđ các tiền tố nào là cần cho các quy tắc CSS đang dùng
+
+PostCSS là một công cụ biến đổi CSS với API JavaScript, cho phép sử dụng các plugin để mở rộng và tối ưu hóa quy trình làm việc CSS
+CSSnano là 1 plugin của PostCSS. Nó giảm size của các tệp CSS bằng cách minify (loại bỏ các khoảng trắng, bình luận, viết gọn mã, và hợp nhất các quy tắc). Giúp tăng tốc load page bằng cách giảm lượng dữ liệu cần truyền
+
+-> Thư viện daisy: thư viện component mạnh của tailwind
+URL: https://daisyui.com/docs/install/
+
+
+
+# Hosting vercel
+Vercel giúp hosting app react nextjs đủ kiểu, phải trả phí mới dùng được thực tế và chịu tải được lượng user lớn. Có thể connect với github tạo CI/CD
+Chú ý deploy vercel phải đúng phiên bản. Nếu ứng dụng chạy React16 và dùng node phiên bản 16 chẳng hạn thì khi deploy phải chỉnh trong setting của project vercel xuống đúng v16 mới được.
+
+
+
+#***Chỉ số TTI và FID
+URL: https://pagespeed.web.dev/ giúp đo tốc độ của trang web và các thông số giống tool light house
+TTI là Time To Interactive đo từ lúc trang bắt đầu tải cho đến khi có khả năng xử lý sự kiện của người dùng. FID là First Input Delay đo ktg chờ đợi từ khi user tương tác đầu tiên với trang cho đến khi trang phản hồi tương tác đó
+
+Khi có 1 page landing page dài viết bằng nextjs thì khi gõ url r ấn enter: 
+1) HTML được load xuống browser sau khi server chạy SSR xong
+2) JS được tải xuống browser r thực thi
+3) JS chạy xong sẽ gắn đống event vào cây DOM
+=> Bước 2 và 3 là 2 bước hydrate JS khiến cho TTI và FID cao khiến web tuy được mở ra nhưng người dùng vẫn chờ lâu mới tương tác được. Bước 1 là thời gian hiện khoảng trắng lâu do server fetch API ngoài để điền vào HTML.
+
+Mặc định next nó luôn tuân thủ 3 bước đó. Nhưng thực tế, trong TH trang landing page toàn component tĩnh ít tương tác với user hoặc có tương tác nhưng ít khi người dùng tương tác mà ta muốn chơi kiểu "chỉ khi component đó hiển thị ra cho user thì mới cần hydrate để tương tác được JS" thì vẫn có thể optimize được:
+- Thư viện react-hydration-on-demand giúp mọi phần code JS vẫn được download và parsed ở bước 2 như bth nhưng đến bước 3 chỉ thực hiện khi component đó visible trên màn hình
+- Lib next-lazy-hydrate giúp cả phần download, parsed và executed JS chỉ thực hiện khi component visible
+=> Người dùng tương tác sẽ lâu hơn 1 tí ở trang landing page nhưng tốc độ load trang và performance rất nhanh. Tuy nhiên 2 thư viện này đều chỉ dùng cho React 17 và Next v1 nên k sử dụng được
+
+
+
+# Other
+-> Source Control của VSC cho phép xem giao diện diff của git. Nó tự bắt file .git trong dự án
+Trong VSC có thể chỉnh được dùng PowerShell hay Git bash trong terminal
+
+-> pb babel chuyển đổi cú pháp và webpack đóng gói mã nguồn
+
+-> Trang https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thú khác như threejs, redux thunk toolkit, tailwindcss, mui,...
+=> Dường như phần nào của nextjs cũng có example
+
+-> Series dừng (đi từ từ): https://www.youtube.com/watch?v=9P8mASSREYM&list=PLC3y8-rFHvwgC9mj0qv972IO5DmD-H0ZH, https://nextjs.org/learn/, nextjs example, https://www.youtube.com/watch?v=FTjtG3G86KY&list=PLB_Wd4-5SGAbcvGsLzncFCrh-Dyt7wr5F 
+
+-> Supabase là một nền tảng cung cấp Backend dưới dạng Dịch vụ (BaaS) cho các nhà phát triển ứng dụng. Nó được xây dựng dựa trên các công cụ mã nguồn mở và có mục tiêu cạnh tranh với Firebase của Google. 
+Supabase cung cấp các dịch vụ đám mây như cơ sở dữ liệu, xác thực, lưu trữ, không máy chủ và thời gian thực. Nó cho phép các nhà phát triển tạo ra các ứng dụng nhanh chóng và dễ dàng mà không cần quan tâm nhiều đến hạ tầng và cơ sở dữ liệu
+
+-> Cypress cũng là 1 frontend testing tool
+
+
