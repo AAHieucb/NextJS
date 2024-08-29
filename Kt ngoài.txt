@@ -1,0 +1,11 @@
+# CSR SSG SSR static web và hosting
+CSR: browser gửi request lấy htm -> render tạm loading -> download JS -> fetch data API -> render với data đủ
+SSR: browser gửi request lấy html -> page hiện luôn nhưng không tương tác được -> download JS event file -> thực hiện được actions
+SSG thì fetch data lưu vào cache rồi build ra html tĩnh, cache stale thì nó tự fetch tiếp và build lại html tĩnh.
+NextJS mặc định là Universal SSR tốt nhất vì CSR data realtime, SSR data cần SEO.
+
+SSR có nhiều điểm lợi. Vd API dùng cookies httponly cản k truy cập thì server của SSR lại call đc. Vd biến môi trường secret ở client cần che giấu thì phải dùng SSR mới ẩn được
+
+-> Firebase cho phép host file html js css lên. Tức là nó có thể host CSR static site.
+Vercel platform hỗ trợ host đủ loại SSR, SSG, CSR, Universal SSR cho nextjs luôn. Còn bth hosting SSR, phải hosting 1 server nodejs lên.
+

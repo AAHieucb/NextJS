@@ -1,0 +1,20 @@
+## FE
+-> Feature flag
+Deploy code
+
+-> Debug
+
+-> Routing
+
+-> Custom page 404, layout document
+
+-> Thêm font, head, SEO
+
+-> Setting config, eslint
+
+-> Serve static file
+
+-> Dùng robots.txt
+
+-> Tối ưu hoá ảnh
+
