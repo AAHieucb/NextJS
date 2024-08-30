@@ -49,13 +49,13 @@ URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM
 
 
 # Routing
-URL: https://nextjs.org/docs/app/building-your-application/routing
 Routing được chia theo cấu trúc file thư mục, cả be và fe. Có dynamic route như đặt tên kiểu [slug], [param].
 
 -> Page Routes: thư mục pages chứa file chia routing. 
 Fetch data qua getServerSideProps, getStaticProps, revalidate, getStaticPaths.
 
 -> App Routes: thư mục app chia tương tự nhưng khác ở chỗ fetch data => Đầy đủ: https://www.youtube.com/watch?v=gSSsZReIFRk
+Full example master routing: https://github.com/vercel/next-app-router-playground
 K cần dùng src nữa vì sẽ thành src/apps thôi, trừ khi muốn dùng cả src/apps và src/pages 1 lúc.
 
 Mặc định mọi component là server side, chỉ khi có "use client" mới là client side. Khác với page routes có thể viết client side fetching và server side fetching chung 1 file component thì ở app router, mỗi loại phải chia file riêng. Bắt đầu từ 1 server side component ở node gốc của cây, có thể import client comp vào server comp nhưng k thể ngược lại
