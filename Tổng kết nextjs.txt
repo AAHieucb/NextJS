@@ -31,16 +31,6 @@ x-powered-by là header xàm lol cung cho client thông tin về server, ngoài 
 
 
 
-//!!!!!!!
--> Deploy static site: https://nextjs.org/docs/app/building-your-application/deploying/static-exports
-Chỉ cần thêm output: "export"
-
-Có thể //!!!!!!!!
--> Khi dùng dynamic routes, có thể dùng generateStaticParams để 
-revalidatePath trong next/cache 
-
-
-
 # Static file serving
 Đặt file static trong thư mục public rồi truy xuất đến nó từ bất cứ file nào với /<đường dẫn kể từ thư mục public>
 Chú ý truy xuất k được có relative ở đầu kiểu: ./abc.png vì như này nó k tìm trong thư mục public mà tính từ đường dẫn router hiện tại.
@@ -73,8 +63,9 @@ VD server muốn truyền state cho client component, phải truyền vào props
 Để thêm loading cho server side fetching, wrap lại với Suspense fallback là được.
 URL khi nào dùng client comp hay server comp: https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns
 
-generateStaticParams dùng giúp xác định tham số cho dynamic routes ở server side, cũng là static build thôi.
+generateStaticParams dùng giúp xác định tham số cho dynamic routes ở server side.
 export const metadata giúp thay đổi meta tag trong head của component App Router, generateMetadata giúp lấy metadata đó async luôn
+Viết common component ở các vị trí mà next ignore for routing: apps/components; bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; dùng src/components cùng cấp src/apps
 
 -> Chuyển trang: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter và Router chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
 next/navigation VD xác định link có active không
@@ -151,22 +142,18 @@ VD: ta dùng dynamic import cho component Hello mà file chứa nó chưa đư�
 Chú ý server luôn load file js bất cứ lúc nào có kể cả dynamic import nhưng đôi khi component cần dùng window hay document mà chỉ có ở browser thì có thể chặn lại với ssr: false
 Cần tránh nhầm là dynamic import k cản trở việc request data cho các file js khác vì bth cũng chả tự request data. Còn khi dùng kèm prefetch mới khiến phía server tiếp tục prefetch data ở trong các pages router khác, nó hoàn toàn klq gì vì ở đây là server xử lý. Còn dynamic import là phía client browser k load các file js chưa dùng mà thôi
 
--> Có thể thêm loading cho dynamic import
+-> Có thể xử lý thêm loading cho dynamic import được
 
 
 
-//!!!!!!!!!
 #***Hiểu SSR của NextJS
 Các hàm thực hiện phía server sẽ k gửi gì về cho client nên là an toàn như 1 trang SSR bth.
 
--> Dùng getInitialProps: K dùng mà thay thế bằng getStaticProps và getServerSideProps, được gọi khi build lần đầu và khi truy cập các lần sau.
-Chỉ dùng được trong /pages ở từng file component, k được dùng ở các thư mục ngoài pages như components cũng k được, chỉ được thực hiện bởi server
-Hàm này dùng để server fetch data nhét vào DOM r gửi lại cho client html đã hoàn chỉnh thỏa mãn SSR. Mỗi khi có request, server sẽ lại chạy nó để có data nhét vào html gửi cho client.
+-> Dùng getInitialProps: K dùng mà thay thế bằng getStaticProps và getServerSideProps. Chỉ dùng được trong /pages ở từng file component, k được dùng ở các thư mục ngoài pages như components cũng k được
+Hàm này chỉ thực hiện ở server để fetch data nhét vào DOM r gửi lại cho client html đã hoàn chỉnh. Mỗi khi có request, server sẽ lại chạy nó và lại cho vào DOM.
 
---> Thử tùy biến
-Nếu ta host cả server này lên thì nó là Universal SSR.
-
-Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Như ta đã biết hàm này chỉ thực hiện phía server mà export ra thì k còn server nữa mà file html thành fix cứng. Do đó khi ta chạy next build, server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export nó sẽ chạy qua getInitialProps sinh ra data ngay lập tức. Vì ta expect hàm này được gọi vào runtime nhưng export ra tĩnh bắt buộc chỉ được chạy 1 lần lúc build time nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi và hàm này trở nên vô dụng vì k có server => Như 1 CSR
+--> Thử tùy biến: Nếu ta host cả server này lên thì nó mới là Universal SSR.
+Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Hàm này chỉ chạy phía server mà export static ra thì k còn server nữa mà thành html fix. Nên next build thì server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export sẽ chạy qua getInitialProps sinh ra data luôn. Export ra tĩnh chỉ được chạy 1 lần lúc build time rồi k cần server nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi và hàm này trở nên vô dụng vì k có server.
 
 -> Dùng getStaticProps:
 Hàm chuyên dùng cho SSG, dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
@@ -175,9 +162,8 @@ Thế tại nếu chỉ chạy 1 lần tức là data fix cứng, tại sao ta k
 Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ dùng web sẽ cực kỳ nhanh, cộng với bộ cache lớn thì tốc độ sẽ cực kỳ nhanh.
 Chỉ được dùng 1 loại, k được dùng kèm getInitialProps
 
---> Dùng với dynamic params:
-Ta cần tạo ra nhiều trang static với đường dẫn động từ dữ liệu tại thời điểm build. Ta dùng getStaticPaths định nghĩa các url muốn pre-render ngay từ lúc build.
-Vì dynamic thì built time nó k rõ url có giá trị gì để prefetch nên hàm này chỉ giúp điều đó thôi. Lúc build sẽ fetch tất cả và cho ra hàng loạt file html là trang tĩnh.
+--> Dùng với dynamic params: 
+Cần tạo nhiều trang static với đường dẫn động từ dữ liệu tại thời điểm build. Ta dùng getStaticPaths định nghĩa các url muốn pre-render ngay từ lúc build. Vì dynamic thì built time nó k rõ url có giá trị gì để prefetch nên hàm này chỉ giúp điều đó thôi. Lúc build sẽ fetch tất cả và cho ra hàng loạt file html là trang tĩnh.
 
 ---> Hàm getStaticPaths trả ra object có:
 Trường paths: là list các dynamic params.
@@ -187,27 +173,24 @@ Mọi route kiểu null, [], undefined, false, VD slug:false thì Next tự cho 
 
 Trường fallback:
 - false thì mọi path k trả ra bởi getStaticPaths sẽ ra 404 page (next build chỉ build các path xđ trong getStaticPaths) => thg dùng kiểu có ít page ban đầu, dùng như v thì sau này thêm page vào thì next build phát là xong
-- true thì page k có trong getStaticPaths sẽ được fetch và trong lúc chờ loading sẽ hiển thị ra fallback page, fetch xong mới hiển thị ra page bth => thg dùng khi có rất nhiều page. VD có 1 triệu page nếu ta fetch hết sẽ có 1 triệu file html mà đâu cần mức đấy. Ta có thể fetch 3 item page đầu, các page sau ta để loading or skeleton ok. 
+- true thì page k có trong getStaticPaths sẽ được fetch và trong lúc chờ loading sẽ hiển thị ra fallback page, fetch xong mới hiển thị ra page bth => thg dùng khi có rất nhiều page. VD có 1 triệu page nếu ta fetch hết sẽ có 1 triệu file html mà đâu cần mức đấy. Ta có thể fetch 3 item page đầu, các page sau ta để loading or skeleton ok.
 
 Quy trình: dùng getStaticProps và getStaticPaths cho 1 vài pages thôi, trong component check nếu router.isFallback==true là đang loading 1 page chưa từng fetch, nếu !router.isFallback&&!data thì là vào trang k tồn tại. Còn lại là vào đúng.
 fallback page ta nói ở đây chính là cái page gốc nhưng data truyền vào k có gì cả và router.isFallback là true
 => 1 tính chất quan trọng của cái này là ta thấy ở thư mục build ra (.next) thì nó build ra từng page của trang web, nhưng khi 1 request tới 1 page k có trong getStaticPaths và nó bắt đầu fetch lần đầu tiên thì server sẽ fetch và tự rendered trong server, sau đó gửi lại cho client file html đó. File html đó được lưu lại trong server nên vào thư mục .next sẽ thấy có file mới, và kể từ lần sau trở đi tốc độ sẽ cực kỳ nhanh vì nó coi đã fetch rồi
 
-'blocking': Y hệt true fallback nhưng page k có trong getStaticPaths thì server sẽ tự fetch ngầm và nhảy lag đến chứ k có loading gì cả, khi đó router.isFallback cũng k có gì
-K hỗ trợ next export
+'blocking': Y hệt fallback true nhưng page k có trong getStaticPaths thì server sẽ tự fetch ngầm và nhảy lag đến chứ k có loading gì cả, router.isFallback cũng k có gì
+=> getStaticProps vốn dùng cho static build, nhưng khi có getStaticPaths với options kiểu này thì phải hosting server SSG mới được vì cần fetch lại
 => Có thể kiểm chứng bằng tab network, khi query 1 page mới lần đầu mà server chưa có thấy tốc độ hơn 100ms, lúc đó nó được lưu lại tại server file html đó r nên khi query lần 2 page sẽ thấy tốc độ còn vài chục ms thôi.
 
-Trường revalidate 
-=> SSG chính là giải pháp load page cực nặng với tốc độ cực nhanh. Nếu có 1000 page prefetch thì nó cũng fetch trước 1000 page đó lúc build time nên rất lâu nhưng trải nghiệm người dùng lại nhanh
+=> SSG là giải pháp load page cực nặng với tốc độ nhanh. Nếu có 1000 page thì nó cũng prefetch 1000 page lúc build time rất lâu nhưng trải nghiệm người dùng lại nhanh
 
 --> Incremental Static Regeneration
-SSG thì cơ chế cũng chỉ là html được sinh ra ngay từ build time và nó fix cứng mãi, từ đó có thể bắn lên CDN k cần tới server. Trong next ta dùng server chạy nó bằng npm run start cũng chỉ để cung website ra thôi. Nhưng nhược điểm lớn là thời gian build tỉ lệ thuận với số page của ứng dụng; 1 page có thể bị stale trước khi ta rebuild. V nên static generation chỉ dùng làm mấy cái trang docs thôi, nhưng trong thực tế, ta vẫn cần dữ liệu real time hơn 1 chút, nên có Incremental Static Regeneration. 
-PP này đã giúp tạo được web tĩnh tốc độ cực kỳ nhanh và có real time(nếu k cần real time quá chuẩn), phù hợp các app e-comerce bth. Nó giúp ta update data của page cần thiết mà k cần rebuild lại toàn bộ ứng dụng
+SSG thì cơ chế cũng chỉ là html được sinh ra ngay từ build time và nó fix cứng mãi, từ đó có thể bắn lên CDN k cần tới server. Trong next ta dùng server chạy nó bằng npm run start cũng chỉ để cung website static ra thôi. Nhưng nhược điểm lớn là thời gian build tỉ lệ thuận với số page của ứng dụng; 1 page có thể bị stale trước khi ta rebuild. V nên static generation chỉ dùng làm mấy cái trang docs thôi, nhưng trong thực tế, ta vẫn cần dữ liệu real time hơn 1 chút, nên có Incremental Static Regeneration
+PP này giúp tạo được web tĩnh tốc độ cực kỳ nhanh và khá real time, phù hợp các app bth, giúp update data của page cần thiết mà k cần rebuild lại toàn bộ ứng dụng.
 
-=> Trường revalidate của getStaticProps VD set là 10 tức là: cứ mỗi 10s trôi qua, request đầu tiên tới tiếp theo sẽ trigger regenerate page đó đồng thời gửi lại page cũ cho request đó. Sau khi regenerate xong, thì các request đằng sau sẽ được serve page mới và cứ thế chu kỳ lặp lại
-Đó là lý do vì sao data được update -> sau 10s request page -> vẫn nhận về page cũ -> request lại phát nữa -> nhận về page mới. Vì cái lần nhận page cũ trước đó chỉ trigger cái regenerate chứ chưa có data nên vẫn nhận stale. Có page cho revalidate sau 1s vì tính quan trọng của real time, có page thì tận 60s
-
-Nếu regeneration bị lỗi, sẽ serve page cũ ok.
+=> Trường revalidate của getStaticProps VD set là 10 tức là: cứ mỗi 10s trôi qua, request đầu tiên tới tiếp theo sẽ trigger regenerate page đó đồng thời gửi lại page cũ cho request đó. Sau khi regenerate xong, thì các request đằng sau sẽ được serve page mới và cứ thế chu kỳ lặp lại. Phải hosting server SSG chứ k được static build.
+Đó là lý do vì sao data được update -> sau 10s request page -> vẫn nhận về page cũ -> request lại phát nữa -> nhận về page mới. Vì lần gọi vào đầu để trigger cái regenerate chứ chưa có data nên vẫn nhận stale. Có page set 1s, có pages set 60s tùy web. Nếu regeneration bị lỗi, sẽ serve page cũ ok.
 
 => Nhanh:
 getStaticProps fetch data lúc build time
@@ -215,38 +198,58 @@ getStaticPaths fetch data ở mỗi initial request rồi cached vĩnh viễn
 ISR fetch data khi có request sau mỗi 1 ktg cố định nhưng chưa thực sự real time. Kể cả ta có để 1s thì nó vẫn stale-while-revalidate 
 Có thể fetch data tại client thành CSR có thể đảm bảo fetch data ở mỗi request và trả về data mới luôn nhưng SEO kém
 SSR fetch data r rerender page ở mỗi request mới và trả ra data mới luôn và đảm bảo SEO: getInitialProps, getServerSideProps
+=> Tức là ta tạo CSR, SSG, SSR hay ISR tùy ý code, nhưng khi export và deploy thì phải tùy loại mới chạy được kiểu nào cụ thể.
 
--> Dùng getServerSideProps:
-Chỉ được gọi ở server, phần code viết trogn getServerSideProps k được included trong JS bundle gửi tới browser. Nó là code thuần túy phía server nên rất an toàn, có thể viết cả API key thoải mái. Ta có thể code như hàm xử lý middleware trong server nodejs như đọc file hay truy xuất database
-Tuân thủ theo đúng cú pháp trả về. getServerSideProps thay thế hoàn toàn getInitialProps
-Do SSR chậm hơn SSG nên chỉ dùng khi cần thiết
-
+-> Dùng getServerSideProps: Chỉ được gọi ở server, phần code viết trong getServerSideProps k được included trong JS bundle gửi tới browser. Có thể viết cả API key thoải mái. Ta có thể code như hàm xử lý middleware trong server nodejs như đọc file hay truy xuất database
+Do SSR chậm hơn SSG nên chỉ dùng khi cần thiết về độ realtime. SSR k build trước html ở build time như SSG và luôn regenerate lại ở mọi request, k lưu lại html ở server
 Cái getStaticProps k truy cập được vào biến request và response ở trong hàm nhưng getServerSideProps thì ok
-Khi dùng SSR, nó k build trước html ở build time như SSG và luôn regenerate lại ở mọi request nên k cần lưu lại html trong server như SSG
 
 --> Giải quyết vđ nếu 1 page fetch lần đầu data lớn gây loading lâu. Mà để chuẩn SEO thì phải dùng SSR. Mà như thế thì mỗi lần vào page, server đều fetch chạy lại getServerSideProps rất tốn. Có nhiều cách fix tùy TH:
-Có thể dùng CSR thuần riêng cho nó vì giả sử có 1000 items thì việc SEO cho cả 1000 items rất hiếm khi xảy ra, nếu các item giống nhau thì k cần thiết, nếu các items khác nhau thì SEO rất tạp nham chả vào chủ đề gì. Do đó có thể fix thẻ meta cho page đó, còn lại list data fetch dùng CSR.
-getStaticProps + ISR revalidate tầm 60s cho pages đó vì sẽ k có nh sự thay đổi. Thg thì data thay đổi nhiều mà SEO tất cả thì rất khó xảy ra vì SEO k có ý nghĩa. Nếu dynamic data + SEO cả page 1 lần thì chỉ có getServerSideProps chịu load lâu thôi
-Chia page, 1 cách để SEO tất cả là phân trang, mỗi trang là 1 router khác nhau thì SEO cho cả trang được, lượng data giảm nên fetch nhanh
-
-VD: Ta lấy 1 list data lớn và dùng filter data đó cho từng page
-Giải pháp khi code server nên tối ưu cho phép người dùng chọn số lượng lấy (tất cả hay lấy vài items), cho phép thêm các tham số filter (bất kể dù api này có lấy tất cả hay không để tăng tính tái sử dụng)
-Khi đó client side có thể tận dụng SSR fetch vài data đầu tiên trong list cho SEO, còn CSR sẽ fetch tất cả data như bth
-
+- Có thể dùng CSR thuần riêng cho nó vì giả sử có 1000 items thì việc SEO cho cả 1000 items rất hiếm khi xảy ra, nếu các item giống nhau thì k cần thiết, nếu các items khác nhau thì SEO rất tạp nham chả vào chủ đề gì. Do đó có thể fix thẻ meta cho page đó or SSR fetch vài data đầu thôi, còn lại list data fetch dùng CSR.
+- getStaticProps + ISR revalidate tầm 60s cho pages đó vì sẽ k có nh sự thay đổi. Do nếu data thay đổi nhiều mà SEO tất cả thì rất khó xảy ra vì SEO k có ý nghĩa.
+- Chia page, 1 cách để SEO tất cả là phân trang, mỗi trang là 1 router khác nhau thì SEO cho cả trang được, lượng data giảm nên fetch nhanh
 => Cách 1 thật ra k tệ vì ta k fetch detail mà chỉ fetch qua tên và type thôi nên tốc độ nhanh vì số lượng collection cũng k có nhiều 
 
 --> Dùng với dynamic params
-=> 1 ứng dụng có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG(generate as static HTML+JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) ok hết => xem khi build ra có ký hiệu rõ route nào dùng kiểu nào
+1 app có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG (static HTML + JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) => khi build hiện ra ký hiệu rõ route dùng kiểu nào
 => 1 dự án thông thường cứ chơi SSR hay CSR tùy hứng thôi, page lớn có thể CSR hết. Nếu SSR mà thấy fetch lớn quá thì dùng revalidate với ISR cũng được.
 
 
 
-# Loading state của getServerSideProps
--> Ta chơi kiểu: data.length <= 0 tức k có gì thì in ra empty box, data có thì in ra data. Nhưng nếu lần đầu tiên vào quá nhanh và nó nảy empty box r nhảy cóc hiện data rất k ổn => do đó người ta thg set trạng thái ban đầu của data là undefined chứ kp là [] để tránh các lỗi tiềm năng
+# Hiện loading khi server fetching
+-> App router nó dùng Suspense fallback rồi, hoặc viết loading.js
 
--> K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì các component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k do getServerSideProps gây ra thì nó vẫn chạy loading.
-=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events
-=> ref tới "Projects / MoveWorld"
+-> Có thể tùy biến
+Implement fetching server lưu để có thể check: Check data.length <= 0 tức data trống, data == undefined tức đang loading chẳng hạn. 
+
+-> Với pages routes: K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading
+=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
+
+
+
+# Build và deploy trong nextjs
+URL hỗ trợ 2 kiểu build: https://nextjs.org/docs/app/building-your-application/deploying
+Nếu chỉ cần static site hoặc CSR thì dùng static export. Còn dùng bất cứ TH nào cần server thì phải dùng nodejs server.
+
+-> Static export: NextJS hỗ trợ build static site ra html cứng để chạy k cần server. Rồi có thể host lên các trang hỗ trợ static site như Firebase, AWS, Vercel.
+Tùy biến việc tạo app phải tương thích với kiểu build
+VD: ta dùng getServerSideProps xong build static chắc chắn sẽ lỗi.
+VD: ta dùng server side comp fetch data r build static sẽ tự fetch 1 lần duy nhất lúc build time. 
+VD: ta dùng client side component fetch data thì static build vẫn fetch được vì k cần server để fetch ở client. Vd Ta build ra output:"export" rồi chạy live server trong phạm vi thư mục out là thấy fetch CSR.
+
+-> NodeJS server
+Khi chạy next build rồi next start tự tạo 1 node server chạy app mặc định. Nếu cần hosting cũng chỉ cần chạy như v.
+Có thể phải cấu hình next.config cho các kiểu build ISR các thứ.
+
+
+
+# Thư viện đi kèm
+-> SWR (stale-while-revalidate) cung react hook cho data fetching, cache, lưu async state. Ít tính năng hơn react-query nhưng đơn giản hơn.
+
+
+
+# NextJS v15
+
 
 
 //!!!!!!!!

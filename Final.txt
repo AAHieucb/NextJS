@@ -1,4 +1,6 @@
-# Server Actions:
+# Server Actions
+Là định nghĩa hàm api server side mà được gọi trong client side components. 
+
 URL: https://nextjs.org/docs/app/api-reference/functions/server-actions
 Setup trong next.config.js -> viết server actions -> dùng server actions trong component
 
