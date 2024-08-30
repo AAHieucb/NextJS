@@ -1,4 +1,6 @@
 NextJS
+Full tut search: https://nextjs.org/learn/dashboard-app
+
 
 
 # Basic
@@ -26,6 +28,7 @@ VD: truy cập vào http://localhost:3000/robots.txt được sau khi tạo xong
 -> Dùng next.config.js: trailingSlash
 basePath là set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
 x-powered-by là header xàm lol cung cho client thông tin về server, ngoài ra chẳng còn ý nghĩa gì khác. Các cái có x ở đầu thg là non-standard HTTP header. Nó phần nào giúp hacker hack dễ hơn 1 chút vì có thêm thông tin về server. Setup nó với poweredByHeader: false
+logging: { fetches: { fullUrl: true } }
 
 -> Vercel giúp hosting app react đủ kiểu, có thể connect với github tạo CI/CD. Chú ý phải đúng phiên bản React và Node khi deploy vercel.
 
@@ -75,6 +78,10 @@ next/navigation VD xác định link có active không
 
 -> Custom các page 404. 
 Dùng _document tạo layout thay vì viết component layout riêng. K được dùng stylesheet trong <Head/> kiểu <link rel="stylesheet" .../> vì có thể bị break khi dùng các tính năng Suspense or streaming. Nếu muốn thì ta chỉ được dùng trong file _document.tsx thì để kiểu gì cũng được
+
+-> Pb: Page Router client trigger event -> API Route xử lý -> Server update redis and return back JSON -> Client update UI
+App Router client submit form -> trigger server action run on server -> server update redis, revalidate cache, update UI and return back RSC Payload -> Client got new UI
+=> App router có thể hoạt động tốt dù trình duyệt disable JS, check tab network sẽ thấy API trả về RSC payload.
 
 
 
@@ -248,11 +255,96 @@ Có thể phải cấu hình next.config cho các kiểu build ISR các thứ.
 
 
 
-# NextJS v15
-
-
-
 //!!!!!!!!
+# Server Actions
+Là định nghĩa hàm api server side mà được gọi trong client side components, chỉ dùng được trong form
+
+URL: https://nextjs.org/docs/app/api-reference/functions/server-actions
+Setup trong next.config.js -> viết server actions -> dùng server actions trong component
+
+Bình thường nextjs trả ra html và js để tương tác là CSR còn server chỉ render html thôi. 
+Mỗi khi gọi server actions sẽ call api tới server. Dù ta k hề viết cụ thể api router các thứ nhưng nextjs tự tạo tự hiểu hết. Việc tạo api riêng ở thư mục api và call nó từ component chính là 1 cách tương tự nhưng bh thay thế hoàn toàn bằng server actions khiến nó trở nên dễ dàng hơn, code mỗi FE nhưng có cả BE.
+=> Tránh hiểu nhầm, việc gọi api từ component qua useEffect or nhấn nút là CSR, dùng server actions mới thành SSR, khi đó server sẽ render lại html và gửi bản hoàn chỉnh cho người dùng chứ kp chỉ trả data
+
+'use server' thực sự là 1 directives mới của React nhưng chỉ có tác dụng khi sử dụng các framework hỗ trợ SSR như NextJS hay Gatsby mới được. Chứ dùng React thuần thì chả có ý nghĩa.
+
+-> 2 cách định nghĩa server actions:
+1 là định nghĩa trong 1 server component, là 1 component bình thường có directive "use server", component phải tĩnh và k có hook hay tương tác JS client gì cả
+2 là định nghĩa trong 1 file riêng với directive "use server", nhờ v tái sử dụng được ở nhiều nơi. Có thể dùng ở cả client component và server component => Note là chỉ dùng được ở client side khi viết server actions ở file riêng
+
+Server Actions được call trong actions của <form> hoặc formAction của các loại thẻ khác lồng trong thẻ <form> như <button>, <input>. 
+VD khi ấn button mà gọi tới 1 hàm server actions, nó sẽ tạo request tới server bảo là chạy 1 hàm với params cụ thể và server thực thi trả về cho client response, client dùng response để cập nhật giao diện
+Mỗi khi gọi server actions từ frontend, nó sẽ đưa lệnh vào queue và tự động lấy ra gọi lần lượt có delay chứ kp click nhiều lần là gọi chồng lên nhau.
+
+-> Vd pass thêm params vào server actions:
+'use server'
+export async function updateUser(userId, formData) {
+  // ...
+}
+Trong component: const updateUserWithId = updateUser.bind(null, userId); 
+<form action={updateUserWithId}></form>
+Vì không phải lúc nào hàm call ở phía server lúc nào cũng cố định
+
+-> Tương tự ta có thể dùng redis cho server nextjs thoải mái như server nodejs bth. Dùng như 1 điểm lưu data thế là có cách tương tự như lưu data client side mà an toàn hơn localStorage. Tương tự cũng có thể manage cookie, header.Còn ở client component, lại call được localStorage như bth.
+
+
+
+#***Server action kết hợp với useTransition hoặc useOptimistic.
+-> useTransition là 1 hook có sẵn của react giúp kiểm soát việc chuyển đổi trạng thái. Nó coi hàm bên trong có thể delay mà k giảm trải nghiệm người dùng thì sẽ gọi hàm đó khi giao diện k bận rộn, tránh lag.
+import { useTransition, Suspense } from 'react';
+function MyComponent() {
+  const [resource, setResource] = useState(initialResource);
+  const [startTransition, isPending] = useTransition({
+    timeoutMs: 3000,
+  });
+  return (
+    <div>
+      <button
+        disabled={isPending}
+        onClick={() => {
+          startTransition(() => {
+            const nextResource = fetchSomething(); // giả sử fetchSomething trả về một resource
+            setResource(nextResource);
+          });
+        }}
+      >
+        Load Data
+      </button>
+      <Suspense fallback={<h1>Loading...</h1>}>
+        <SomeComponent resource={resource} />
+      </Suspense>
+    </div>
+  );
+}
+=> Nó khác debounce, ở vd trên dùng vô dụng, nếu ta cần xử lý nặng thì mới dùng thôi, call api vốn rất nhẹ.
+
+-> useOptimistic là hook có sẵn trong react. Vì bth call update tới server bị delay nên người dùng có xu hướng click button nhiều lần và ta xử lý bằng debounce throttle. 
+useOptimistic giúp mô phỏng sự thay đổi state mà server sẽ update tạo cảm giác server update tức thì. Nếu thành công thì ok, nếu thất bại, hook này sẽ tự revert data về giá trị cũ. Thg dùng khi lệnh call biết chắc sẽ success
+VD:
+const [optimisticLikes, addOptimisticLike] = useOptimistic(
+  { likeCount, sending: false },
+  (state, newLike) => ({
+    ...state,
+    likeCount: newLike,
+    sending: true
+  })
+)
+Sử dụng giá trị khi ấn like: optimisticLikes.sending, addOptimistic(optimisticLikes.likeCount + 1)
+
+--> Usecase: người dùng update xong API chưa thành công đã tắt page.
+Có thể cản lại với window.addEventListener("beforeunload");
+URL: https://www.youtube.com/watch?v=VBlSe8tvg4U
+
+--> Ta có thể update database trong server actions. Có 1 loại database tiện dụng ngay trong nextjs là vercel key value
+VD update thông tin của dogs/[id], trước kia ta viết 1 file api "api/dogs/[id].ts rồi phía "use client" fetch tới nó. Rồi dùng useTransition hook để call router.refresh() cả page.
+Vd cải thiện bằng server actions: viết server component fetch default value là giá trị hiện tại trong db -> ấn nút thì chạy server actions update db -> revalidatePath -> component đó sẽ được update
+
+Khác với các ngôn ngữ thuần SSR như PHP, server actions của nextjs khiến nó thành SSR nhưng chỉ rerender các server component chứ k render cả page. Để client update đúng component frontend, phải revalidate nó sau khi actions thực hiện xong: 
+Hàm "revalidatePath" => load lại data của server component nào 
+Hàm "redirect" => chuyển sang page khác
+
+
+
 #***Dùng global state management cho SSR
 -> VD Dùng redux-toolkit cho next
 Ta hiểu là redux là 1 cái global store được lưu ở phía client, k lưu ở server.

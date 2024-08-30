@@ -18,3 +18,5 @@ Deploy code
 
 -> Tối ưu hoá ảnh
 
+-> Master cache
+

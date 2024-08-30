@@ -22,7 +22,7 @@ Vd set {next:{revalidate:1}} và Promise.all([fetchData(), fetchData()]) sẽ th
 => Chú ý là chỉ ở server side nextjs, còn client side thì vẫn request lại hết, ta có thể custom việc xử lý với các thư viện.
 
 Lưu ý tính năng này luôn cần có, k ảnh hưởng gì tới flow chính của ứng dụng vì chỉ trong 1 single render pass.
-Thực tế đây là tính năng của React thuần có sẵn { cache }. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch, có thể tự implement với cache của React để có Request Memoization.
+Thực tế đây là tính năng của React thuần có sẵn { cache }. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch, có thể tự implement với cache của React để có Request Memoization. NextJS có tương tự { unstable_cache }
 VD: import { cache } from 'react'; const fetchWithCache = cache( async (url) => { const res = await fetch(url); return res.json(); });
 
 Dùng các thư viện như swr, react-query cũng giúp tạo Request Memoization tự cache request, xử lý deduplicate trong ktg ngắn.
@@ -45,6 +45,10 @@ Request Memoization chỉ xét tới 1 request, còn Data Cache xét toàn bộ 
 
 -> Revalidate và opt out thông qua options như trên hoặc hàm, hoặc options export ra
 Các options export quản lý cache: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
+Gọi hàm: import { unstable_noStores } from "next/cache"; y hệt option cache:"no-store", có option revalidate luôn
+=> Tức có 4 cách
+
+VD partial rendering: cả page static, có vài component cần fetch data lại liên tục thì thêm noStore vào là xong
 
 
 
@@ -84,6 +88,10 @@ router.refresh phía client sẽ invalidate Router Cache
 Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
 Request Memoization chỉ dùng cho GET request trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree.
 Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
-Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để cache, export const revalidate=60 để revalidate
+
+Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để cache, export const revalidate=60 để revalidate với request GET
+
+-> NextJS cũng là 1 server nodejs cung hàm tương tác db. 
+VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được, kể cả thêm vào server actions
 
 
