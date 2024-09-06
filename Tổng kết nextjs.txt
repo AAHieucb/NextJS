@@ -1,6 +1,6 @@
 NextJS
 Full tut search: https://nextjs.org/learn/dashboard-app
-
+URL: https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thú khác như threejs, redux thunk toolkit, tailwindcss, mui.
 
 
 # Basic
@@ -29,8 +29,6 @@ VD: truy cập vào http://localhost:3000/robots.txt được sau khi tạo xong
 basePath là set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
 x-powered-by là header xàm lol cung cho client thông tin về server, ngoài ra chẳng còn ý nghĩa gì khác. Các cái có x ở đầu thg là non-standard HTTP header. Nó phần nào giúp hacker hack dễ hơn 1 chút vì có thêm thông tin về server. Setup nó với poweredByHeader: false
 logging: { fetches: { fullUrl: true } }
-
--> Vercel giúp hosting app react đủ kiểu, có thể connect với github tạo CI/CD. Chú ý phải đúng phiên bản React và Node khi deploy vercel.
 
 
 
@@ -69,6 +67,8 @@ URL khi nào dùng client comp hay server comp: https://nextjs.org/docs/app/buil
 generateStaticParams dùng giúp xác định tham số cho dynamic routes ở server side.
 export const metadata giúp thay đổi meta tag trong head của component App Router, generateMetadata giúp lấy metadata đó async luôn
 Viết common component ở các vị trí mà next ignore for routing: apps/components; bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; dùng src/components cùng cấp src/apps
+
+--> Chú ý App Router dùng Server Component, k có chuyển đổi props là fetch lại, nó chỉ là kiểu thay thế các hàm fetch phía server của Page Router thôi.
 
 -> Chuyển trang: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter và Router chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
 next/navigation VD xác định link có active không
@@ -253,248 +253,99 @@ Có thể phải cấu hình next.config cho các kiểu build ISR các thứ.
 # Thư viện đi kèm
 -> SWR (stale-while-revalidate) cung react hook cho data fetching, cache, lưu async state. Ít tính năng hơn react-query nhưng đơn giản hơn.
 
+-> Dùng tailwind:
+Trong tailwind có nhiều utility class giúp animation: https://tailwindcss.com/docs/animation
+
+-> Dùng chakra ui: Khi dùng 1 thư viện UI, cần đảm bảo biết làm các thao tác
+
+-> autoprefixer tự thêm các tiền tố (vendor prefixes) vào CSS khi build để tăng khả năng tương thích trên các trình duyệt khác nhau. Nó dùng dữ liệu từ Can I Use để xđ các tiền tố nào là cần cho các quy tắc CSS đang dùng
+postCSS là một công cụ xử lý CSS bằng code JS, nó là nơi các plugin css được cài vào để dùng.
+CSSnano là 1 plugin của PostCSS. Nó giảm size của các tệp CSS bằng cách minify (loại bỏ các khoảng trắng, bình luận, viết gọn mã, và hợp nhất các quy tắc) giúp tăng tốc.
+
+-> daisy: thư viện component mạnh của tailwind. URL: https://daisyui.com/docs/install/
 
 
-//!!!!!!!!
+
 # Server Actions
-Là định nghĩa hàm api server side mà được gọi trong client side components, chỉ dùng được trong form
+Là định nghĩa hàm api server side mà được gọi trong client side components. Server actiosn thay thế cho việc tạo api ở thư mục API và call nó từ CSR component.
+URL: https://nextjs.org/docs/app/api-reference/functions/server-actions => Setup trong next.config.js -> viết server actions -> dùng server actions trong component
 
-URL: https://nextjs.org/docs/app/api-reference/functions/server-actions
-Setup trong next.config.js -> viết server actions -> dùng server actions trong component
+Server action chỉ là 1 hàm, có thể dùng 'use server' trong hàm or trong 1 file để bảo cả file export ra hàm là server actions.
+Server Actions chỉ được call trong actions của <form> hoặc formAction của các loại thẻ khác lồng trong thẻ <form> như <button>, <input>, useEffect, thirdparty
+VD ấn button gọi tới 1 server action sẽ tạo request tới server chạy 1 hàm với params cụ thể và server thực thi trả về cho client response, client dùng response update UI
+Mỗi khi gọi server actions từ frontend, nó sẽ đưa lệnh vào queue và tự động lấy ra gọi lần lượt có delay chứ kp click nhiều lần là gọi chồng lên nhau luôn.
 
-Bình thường nextjs trả ra html và js để tương tác là CSR còn server chỉ render html thôi. 
-Mỗi khi gọi server actions sẽ call api tới server. Dù ta k hề viết cụ thể api router các thứ nhưng nextjs tự tạo tự hiểu hết. Việc tạo api riêng ở thư mục api và call nó từ component chính là 1 cách tương tự nhưng bh thay thế hoàn toàn bằng server actions khiến nó trở nên dễ dàng hơn, code mỗi FE nhưng có cả BE.
-=> Tránh hiểu nhầm, việc gọi api từ component qua useEffect or nhấn nút là CSR, dùng server actions mới thành SSR, khi đó server sẽ render lại html và gửi bản hoàn chỉnh cho người dùng chứ kp chỉ trả data
+Server actions của nextjs khiến nó thành SSR nhưng chỉ rerender các server component chứ k render cả page. Có thể revalidate khi xong để update cả pages.
 
-'use server' thực sự là 1 directives mới của React nhưng chỉ có tác dụng khi sử dụng các framework hỗ trợ SSR như NextJS hay Gatsby mới được. Chứ dùng React thuần thì chả có ý nghĩa.
-
--> 2 cách định nghĩa server actions:
-1 là định nghĩa trong 1 server component, là 1 component bình thường có directive "use server", component phải tĩnh và k có hook hay tương tác JS client gì cả
-2 là định nghĩa trong 1 file riêng với directive "use server", nhờ v tái sử dụng được ở nhiều nơi. Có thể dùng ở cả client component và server component => Note là chỉ dùng được ở client side khi viết server actions ở file riêng
-
-Server Actions được call trong actions của <form> hoặc formAction của các loại thẻ khác lồng trong thẻ <form> như <button>, <input>. 
-VD khi ấn button mà gọi tới 1 hàm server actions, nó sẽ tạo request tới server bảo là chạy 1 hàm với params cụ thể và server thực thi trả về cho client response, client dùng response để cập nhật giao diện
-Mỗi khi gọi server actions từ frontend, nó sẽ đưa lệnh vào queue và tự động lấy ra gọi lần lượt có delay chứ kp click nhiều lần là gọi chồng lên nhau.
-
--> Vd pass thêm params vào server actions:
-'use server'
-export async function updateUser(userId, formData) {
-  // ...
-}
+-> Vd pass thêm params vào server actions: 'use server'
+export async function updateUser(userId, formData) { }
 Trong component: const updateUserWithId = updateUser.bind(null, userId); 
 <form action={updateUserWithId}></form>
-Vì không phải lúc nào hàm call ở phía server lúc nào cũng cố định
 
--> Tương tự ta có thể dùng redis cho server nextjs thoải mái như server nodejs bth. Dùng như 1 điểm lưu data thế là có cách tương tự như lưu data client side mà an toàn hơn localStorage. Tương tự cũng có thể manage cookie, header.Còn ở client component, lại call được localStorage như bth.
+-> Tương tự có thể dùng redis, cookies, db như 1 server nodejs bth. Dùng như 1 điểm lưu data mà an toàn hơn localStorage.
 
-
-
-#***Server action kết hợp với useTransition hoặc useOptimistic.
--> useTransition là 1 hook có sẵn của react giúp kiểm soát việc chuyển đổi trạng thái. Nó coi hàm bên trong có thể delay mà k giảm trải nghiệm người dùng thì sẽ gọi hàm đó khi giao diện k bận rộn, tránh lag.
-import { useTransition, Suspense } from 'react';
-function MyComponent() {
-  const [resource, setResource] = useState(initialResource);
-  const [startTransition, isPending] = useTransition({
-    timeoutMs: 3000,
-  });
-  return (
-    <div>
-      <button
-        disabled={isPending}
-        onClick={() => {
-          startTransition(() => {
-            const nextResource = fetchSomething(); // giả sử fetchSomething trả về một resource
-            setResource(nextResource);
-          });
-        }}
-      >
-        Load Data
-      </button>
-      <Suspense fallback={<h1>Loading...</h1>}>
-        <SomeComponent resource={resource} />
-      </Suspense>
-    </div>
-  );
-}
-=> Nó khác debounce, ở vd trên dùng vô dụng, nếu ta cần xử lý nặng thì mới dùng thôi, call api vốn rất nhẹ.
-
--> useOptimistic là hook có sẵn trong react. Vì bth call update tới server bị delay nên người dùng có xu hướng click button nhiều lần và ta xử lý bằng debounce throttle. 
-useOptimistic giúp mô phỏng sự thay đổi state mà server sẽ update tạo cảm giác server update tức thì. Nếu thành công thì ok, nếu thất bại, hook này sẽ tự revert data về giá trị cũ. Thg dùng khi lệnh call biết chắc sẽ success
-VD:
-const [optimisticLikes, addOptimisticLike] = useOptimistic(
-  { likeCount, sending: false },
-  (state, newLike) => ({
-    ...state,
-    likeCount: newLike,
-    sending: true
-  })
-)
-Sử dụng giá trị khi ấn like: optimisticLikes.sending, addOptimistic(optimisticLikes.likeCount + 1)
-
---> Usecase: người dùng update xong API chưa thành công đã tắt page.
-Có thể cản lại với window.addEventListener("beforeunload");
-URL: https://www.youtube.com/watch?v=VBlSe8tvg4U
-
---> Ta có thể update database trong server actions. Có 1 loại database tiện dụng ngay trong nextjs là vercel key value
-VD update thông tin của dogs/[id], trước kia ta viết 1 file api "api/dogs/[id].ts rồi phía "use client" fetch tới nó. Rồi dùng useTransition hook để call router.refresh() cả page.
-Vd cải thiện bằng server actions: viết server component fetch default value là giá trị hiện tại trong db -> ấn nút thì chạy server actions update db -> revalidatePath -> component đó sẽ được update
-
-Khác với các ngôn ngữ thuần SSR như PHP, server actions của nextjs khiến nó thành SSR nhưng chỉ rerender các server component chứ k render cả page. Để client update đúng component frontend, phải revalidate nó sau khi actions thực hiện xong: 
-Hàm "revalidatePath" => load lại data của server component nào 
-Hàm "redirect" => chuyển sang page khác
+-> Có thể update database trong server actions. Có 1 loại database tiện dụng ngay trong nextjs là vercel key value
+VD update thông tin của dogs/[id], trước kia ta viết 1 api "api/dogs/[id].ts rồi phía "use client" fetch tới nó. Rồi call router.refresh() cả page.
+Vd cải thiện bằng server actions: server component fetch default value là gt trong db -> ấn nút thì chạy server actions update db -> revalidatePath để load lại data của server component nào 
 
 
 
-#***Dùng global state management cho SSR
--> VD Dùng redux-toolkit cho next
-Ta hiểu là redux là 1 cái global store được lưu ở phía client, k lưu ở server.
-Hiểu bản chất: nextjs là SSR tức là mọi request được gửi tới server và nó trả lại cho ta page html mới. Khi chuyển sang page khác, mọi page cũ đều bị nhét vào cache, kèm đống data.
-Chính vì redux nằm ở phía client, là file js mà client lấy, tức là server gửi lại page thực chất data vẫn thế nhưng khi client nhận html đó, nó sẽ xử lý tiếp nhét data redux vào đúng vị trí
-VD: ta đang ở page Home, chỉnh sửa biến counter từ mặc định là 0 thành 1 trong redux, ta <Link/> sang page User, ta thực sự gửi request tới server và nó render lại cả page HTML gửi lại cho ta page user và browser hiển thị ra màn hình, lúc này page User có sử dụng biến counter được server gửi lại là 0, browser nhận về và thực hiện js thêm vào giá trị thành 1 => hiện chuẩn => sau đó navigate lại trang Home -> do chưa ra khỏi app nên redux k bị reset lại mặc định và giá trị vẫn là 1
+# Dùng api
+URL endpoint API chia theo cấu trúc thư mục. VD pages/api sẽ tạo đường link tương ứng là /api/<tên file>
+Usecase: dùng làm BFF server; dùng để masking URL tới external service để bảo mật. VD: thay vì gọi https://company.com/secret-url thì gọi vào /api/secret r chuyển hướng url.
+next-example có đủ VD dùng cors, cookies.
+Có thể gọi revalidate path. Có thể tạo middleware xử lý cookies như 1 nodejs server bth.
 
-=> Dùng redux đảm bảo mọi component có 1 store chung trong suốt quá trình sử dụng app, ta có thể dùng CSR thực hiện hàm bất đồng bộ. Ta hoàn toàn có thể dùng nó như là react CSR bth, điểm khác biệt duy nhất là phần fetch data ban đầu thay thế bằng getServerSideProps để lấy SEO và giá trị nó nhận về được coi là initialState cho app
+-> Dùng Edge API Route: Có 2 loại là NodeJS based API Routes và Edge API Routes. Edge API Routes sử dụng Edge Runtime nhanh hơn NodeJS based API Routes (dùng NodeJS runtime) vì nó sẽ deploy lên máy chủ biên gần với ngừoi dùng cuối hơn máy chủ trung tâm.
+Dùng next/server sẽ tự dùng Edge API Route, dùng next sẽ dùng node api route. Nó chỉ có tác dụng nếu hosting lên nền tảng hỗ trợ edge function. VD vercel deploy sẽ tự hiểu và chạy edge api route trên máy chủ biên của họ. Nếu hosting trên nền tảng k hỗ trợ edge function sẽ k chạy được và phải convert về node api routes.
 
-Hàm getServerSideProps thực tế mỗi khi <Link> tới trang sẽ chạy lại từ đầu vì mỗi khi server chạy sẽ thực hiện phần code phía server mà. Ta buộc phải chấp nhận điều này vì server cần thực hiện để render lại HTML chuẩn SEO chứa data gửi lại cho user. Ta k thể làm kiểu, client đã có data rồi thì server k cần fetch nữa. Nó buộc phải fetch.
-Chuyện gì xảy ra khi 2 component cùng dùng 1 data mà data rất lớn, loading sẽ ngốn time. Thực tế điều này xử lý rất khó vì SEO thì phải là data động realtime gửi đi thì front end mới hiển thị SEO tốt, nếu client fetch thì k ổn mà server fetch thì lâu cũng phải chịu.
-
-
-
-# Dùng pages/api
-Cấu hình sẵn, trong thư mục pages/api sẽ tạo đường link tương ứng là /api/<tên file>
-Các file trong pages/api sẽ là url endpoint API chứ kp là các page. Nó là server-side bundles only và k tăng client-side bundle khi sử dụng
-
-Usecase: nó chính là API FE server cho website SSR, dù vẫn bảo mật như server bth nhưng dự án lớn tách 1 server API BE riêng.  
-Ta cũng có thể dùng để masking URL tới external service và bảo vệ nó với env. VD: thay vì gọi vào https://company.com/secret-url thì có thể gọi vào /api/secret r chuyển hướng sang url trong env
-
-Cần hiểu bản chất là API router ở đây k thể dùng với next export vì khi export ra thì nó k có server nữa, khi đó thành file html js thuần CSR thôi. Để có nó thì ta phải host server or chạy server duy trì liên tục. Lệnh next export chỉ dùng khi chơi static web
-
--> Request Helper
-Mặc định nó k xử lý cors mà ta có thể tự thêm có next-example. Có example dùng cookies nx.
-Có thể override config default API router
-
--> Response Helper:
-Dùng res.status json send redirect revalidate 
-
--> Edge API Route
-Có 2 loại là NodeJS based API Routes và Edge API Routes. Edge API Routes sử dụng Edge Runtime nhanh hơn NodeJS based API Routes(dùng NodeJS runtime) và được build trên standard web APIs => Đại loại là cho performance tốt hơn
-
--> Thao tác server side
-VD viết export default function handler trong pages/api/hello.ts 
-Khi ta call http://localhost:3000/api/hello sẽ chạy vào hàm xử lý đó
-URL custom api route: https://nextjs.org/docs/pages/building-your-application/routing/api-routes
-
-
-
-# Custom code server nextjs
-3 cách: Dùng nextjs có sẵn server với next start; Nếu ta có sẵn server backend khác thì vẫn có thể dùng song song với server nextjs; Ta cũng có thể dùng server ngoài nhưng server nextjs sẽ là proxy server forward tới.
-
-Dùng server của next mặc định đã ok với dự án nhỏ, nhưng muốn custom nhiều thứ khác thì có thể tạo riêng nhưng nó sẽ k có các tính năng quan trọng được setup sẵn như serverless functions, Automatic Static Optimization
-
--> Tạo server.js ở ngoài cùng: nó k đi qua tool babel or webpack nên phải đảm bảo tạo 1 server chuẩn như nodejs bth
-Chỉ có vài điểm khác là server liên kết với nextjs app qua: 
-const next = require('next'); const app = next({});
-Và app server được tạo trong app.prepapre().then(<>) như bth
-
-Phải chỉnh sửa cả package.json => scripts dev và start chỉ là chạy server ở 2 môi trường khác nhau thôi
-
--> Disable file-system routing: Mặc định Next tuân theo cấu trúc folder pages để làm server nên nếu dùng custom server, nó lại serve 1 dữ liệu ở multiple paths ảnh hưởng SEO và UX 
-Disable nó với useFileSystemPublicRoutes: false => client route có thể vẫn access được và phải xử lý bằng navigation thủ công
-
--> Dùng router.beforePopState
-Đôi khi ta muốn config client side route trước khi router xử lý nó => thao tác với 2 button navigate của browser
---> (bỏ) PopState Event là event của window được kích hoạt khi user navigate qua lại giữa các page và history entry được push vào history stack. Nhưng ta test nó éo có tác dụng với SPA navigate bằng router đổi url bth. Chỉ được khi ấn tiến lùi trong browser mà thôi
+-> URL custom api route: https://nextjs.org/docs/pages/building-your-application/routing/api-routes
 
 
 
 # Environment variables
-Định nghĩa trong .env.local -> dùng ở phía server, bất cứ chỗ nào server chạy qua như getServerSideProps hay chạy qua 1 lần trong FE components khi client request.
-Để giữ bí mật, env chỉ được tính toán vào build time và process.env kp là 1 chuẩn JS object nên k thể dùng object destructuring để lấy các trường
+Định nghĩa trong .env.local với NEXT_PUBLIC_, FE k thể truy cập, chỉ dùng ở phía BE. Nó được gọi bất cứ chỗ nào server chạy qua như getServerSideProps hay chạy qua 1 lần trong FE components khi client request. Để giữ bí mật, env chỉ được tính toán vào build time và process.env
 
-FE sẽ k thể truy cập trực tiếp, còn để expose to browser biến môi trường, phải dùng tiền tố NEXT_PUBLIC_ đằng trước 
-
--> Thông thường, file .env*.local luôn được để trong gitignore. Ta dùng thuận tiện 2 môi trường với .env.development.local và .env.production.local, còn .env.local dùng với mọi môi trường. Còn môi trường test nữa nhưng k xét
-=> truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env có thể chạy trực tiếp trên command nếu cài -g). Điều đặc biệt là khi dùng NODE_ENV, next tự động dùng đúng file .env developement hoặc production mà ta k cần set gì thêm 
-
-Còn các file như .env (all environments), .env.development (development environment bằng next dev), and .env.production (production environment bằng next start) được dùng để set giá trị default cho các biến .env và thường k cần cho vào .gitignore luôn
+-> Thông thường, file .env*.local luôn để trong gitignore. Ta dùng 2 môi trường với .env.development.local và .env.production.local, còn .env.local dùng với mọi môi trường.
+VD truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env có thể chạy trực tiếp trên command nếu cài -g) => Điều đặc biệt là khi dùng NODE_ENV, next tự động dùng đúng file .env developement hoặc production mà ta k cần set gì thêm 
+Còn có .env là mọi môi trường, .env.development và .env.production được dùng để set gía trị default cho các biến và k cần cho vào gitignore luôn
 => .env.local always overrides the defaults set.
-
 VD: Tức file .env lưu giá trị mặc định cho biến môi trường, .env.development lưu giá trị mặc định cho biến môi trường development, .env.development.local lưu giá trị ta set cho biến môi trường development nhưng được bảo mật
 
 
 
-#***Tổng hợp state management cho FE
--> getStaticProps và getServerSideProps để lấy initialData về page hiện tại
+# Custom code server nextjs
+Dùng next start tự chạy server nodejs để serve dự án. Ta có thể custom server này: https://nextjs.org/docs/pages/building-your-application/configuring/custom-server
 
--> Dùng useState để thao tác data trong phạm vi nhỏ là component
+-> Tạo server.js ở ngoài cùng: 
+Chỉ có vài điểm khác là server liên kết với nextjs app qua: const next = require('next'); const app = next({ }); Và app server được tạo trong app.prepapre().then(<>) như bth
+Phải chỉnh sửa cả package.json "node server.js" thay cho scripts dev và start chỉ là chạy server ở 2 môi trường khác nhau thôi
 
--> Dùng React Query hoặc swr làm global state store lưu data bất đồng bộ. Bổ sung tính năng polling cho frontend dễ dàng
+-> Disable file-system routing: Mặc định Next tuân theo cấu trúc folder pages để làm server nên nếu dùng custom server có thể disable nó với useFileSystemPublicRoutes: false => client route có thể vẫn access được và phải xử lý bằng navigation thủ công
 
--> Dùng localStorage để lưu data share between every component (và indexed database nữa), tự implement subscribe to change được
-Dùng React Context để lưu data share between mọi components nhưng bắt được sự thay đổi thì render lại. Nếu nhiều có thể chia ra nhiều Provider React Context được.
-
--> Dùng redux làm global state store chỉ khi ứng dụng có nhiều global state mà React Context quá lớn. Thg thì ta ưu tiên React Context cho global state đồng bộ, React Query cho global state bất đồng bộ.
-=> ref tới "Dùng redux-toolkit"
-
--> Redux toolkit và Zustand đều là 2 state management rất mạnh nhưng Zustand nhẹ hơn, code cũng dễ và gọn hơn
+-> PopState Event là event của window được kích hoạt khi user navigate qua lại giữa các page và history entry được push vào history stack.
+Dùng router.beforePopState có thể thao tác với 2 button navigate của browser
 
 
 
-# Các thư viện UI mạnh hợp với NextJS
--> Dùng tailwind:
-Setup tailwind config rồi dùng trực tiếp bth
+# Hosting nextjs
+-> Vercel giúp hosting app react đủ kiểu, có thể connect với github tạo CI/CD. Chú ý phải đúng phiên bản React và Node khi deploy vercel.
 
-Trong tailwind có nhiều utility class giúp animation: https://tailwindcss.com/docs/animation
-=> ref tới "Projects / Thena-Frontend"
-
--> Dùng chakra ui: Khi dùng 1 thư viện UI, cần đảm bảo biết làm các thao tác
-Set được CSS Reset global style: ok
-Style được từng component dễ dàng, style inline: ok
-Style phức tạp hơn, truyền biến vào styles được: ok => mé ta tự custom kiểu biến classes truyền vào style thôi mà. Có thể đặt trong file css or cùng file js
-Set được global theme cũng như các thuộc tính màu/breakpoint, sửa chỉnh global vĩnh viễn 1 thẻ có sẵn của thư viện: ok
-Animation keyframe cũng như css selector được => k hỗ trợ mạnh, có mỗi trường sx props là có css selector nhưng lại là inline, lại phải custom tạo 1 object như biến style bên trên. Có thể dùng css thuần tạo nếu cần, còn k thì chịu. 1 vài component có sẵn tự cung các props hỗ trợ đó => not ok
-Darkmode: ok
-
--> Luôn dùng kèm 3 cái autoprefixer, cssnano, postcss
-autoprefixer tự thêm các tiền tố nhà cung cấp (vendor prefixes) vào CSS khi build để tăng khả năng tương thích trên các trình duyệt khác nhau. Nó dùng dữ liệu từ Can I Use để xđ các tiền tố nào là cần cho các quy tắc CSS đang dùng
-
-PostCSS là một công cụ biến đổi CSS với API JavaScript, cho phép sử dụng các plugin để mở rộng và tối ưu hóa quy trình làm việc CSS
-CSSnano là 1 plugin của PostCSS. Nó giảm size của các tệp CSS bằng cách minify (loại bỏ các khoảng trắng, bình luận, viết gọn mã, và hợp nhất các quy tắc). Giúp tăng tốc load page bằng cách giảm lượng dữ liệu cần truyền
-
--> Thư viện daisy: thư viện component mạnh của tailwind
-URL: https://daisyui.com/docs/install/
-
-
-
-#***Chỉ số TTI và FID
-URL: https://pagespeed.web.dev/ giúp đo tốc độ của trang web và các thông số giống tool light house
-TTI là Time To Interactive đo từ lúc trang bắt đầu tải cho đến khi có khả năng xử lý sự kiện của người dùng. FID là First Input Delay đo ktg chờ đợi từ khi user tương tác đầu tiên với trang cho đến khi trang phản hồi tương tác đó
-
-Khi có 1 page landing page dài viết bằng nextjs thì khi gõ url r ấn enter: 
-1) HTML được load xuống browser sau khi server chạy SSR xong
-2) JS được tải xuống browser r thực thi
-3) JS chạy xong sẽ gắn đống event vào cây DOM
-=> Bước 2 và 3 là 2 bước hydrate JS khiến cho TTI và FID cao khiến web tuy được mở ra nhưng người dùng vẫn chờ lâu mới tương tác được. Bước 1 là thời gian hiện khoảng trắng lâu do server fetch API ngoài để điền vào HTML.
-
-Mặc định next nó luôn tuân thủ 3 bước đó. Nhưng thực tế, trong TH trang landing page toàn component tĩnh ít tương tác với user hoặc có tương tác nhưng ít khi người dùng tương tác mà ta muốn chơi kiểu "chỉ khi component đó hiển thị ra cho user thì mới cần hydrate để tương tác được JS" thì vẫn có thể optimize được:
-- Thư viện react-hydration-on-demand giúp mọi phần code JS vẫn được download và parsed ở bước 2 như bth nhưng đến bước 3 chỉ thực hiện khi component đó visible trên màn hình
-- Lib next-lazy-hydrate giúp cả phần download, parsed và executed JS chỉ thực hiện khi component visible
-=> Người dùng tương tác sẽ lâu hơn 1 tí ở trang landing page nhưng tốc độ load trang và performance rất nhanh. Tuy nhiên 2 thư viện này đều chỉ dùng cho React 17 và Next v1 nên k sử dụng được
+-> Còn có DigitalOcean, Netlify, Railway, AWS với EC2, Netcup, Hostinger VPS
 
 
 
 # Other
--> Source Control của VSC cho phép xem giao diện diff của git. Nó tự bắt file .git trong dự án
-Trong VSC có thể chỉnh được dùng PowerShell hay Git bash trong terminal
+-> Chỉ số TTI và FID: TTI là Time To Interactive đo từ lúc trang bắt đầu tải cho đến khi có khả năng xử lý sự kiện của người dùng. FID là First Input Delay đo ktg chờ đợi từ khi user tương tác đầu tiên cho đến khi trang phản hồi tương tác đó
+URL: https://pagespeed.web.dev/ giúp đo tốc độ của trang web và các thông số giống tool light house
 
--> pb babel chuyển đổi cú pháp và webpack đóng gói mã nguồn
+Khi có 1 landing page dài viết bằng nextjs thì khi gõ url r ấn enter: 
+1) HTML được load xuống browser sau khi server chạy SSR xong
+2) JS được tải xuống browser r thực thi
+3) JS chạy xong sẽ gắn đống event vào cây DOM
+=> Bước 2 và 3 là 2 bước hydrate JS khiến cho TTI và FID cao, web tuy được mở ra nhưng người dùng vẫn chờ lâu mới tương tác được. Bước 1 là thời gian hiện khoảng trắng lâu do server fetch API ngoài để điền vào HTML.
 
--> Trang https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thú khác như threejs, redux thunk toolkit, tailwindcss, mui,...
-=> Dường như phần nào của nextjs cũng có example
-
--> Series dừng (đi từ từ): https://www.youtube.com/watch?v=9P8mASSREYM&list=PLC3y8-rFHvwgC9mj0qv972IO5DmD-H0ZH, https://nextjs.org/learn/, nextjs example, https://www.youtube.com/watch?v=FTjtG3G86KY&list=PLB_Wd4-5SGAbcvGsLzncFCrh-Dyt7wr5F 
-
--> Supabase là một nền tảng cung cấp Backend dưới dạng Dịch vụ (BaaS) cho các nhà phát triển ứng dụng. Nó được xây dựng dựa trên các công cụ mã nguồn mở và có mục tiêu cạnh tranh với Firebase của Google. 
-Supabase cung cấp các dịch vụ đám mây như cơ sở dữ liệu, xác thực, lưu trữ, không máy chủ và thời gian thực. Nó cho phép các nhà phát triển tạo ra các ứng dụng nhanh chóng và dễ dàng mà không cần quan tâm nhiều đến hạ tầng và cơ sở dữ liệu
-
--> Cypress cũng là 1 frontend testing tool
-
+Mặc định next nó luôn tuân thủ 3 bước đó. Nhưng thực tế, trong TH trang landing page toàn component tĩnh ít tương tác với user hoặc có tương tác nhưng ít mà ta muốn chơi kiểu "chỉ khi component đó hiển thị ra cho user thì mới cần hydrate để tương tác được JS" thì vẫn có thể optimize được:
+- Thư viện react-hydration-on-demand giúp mọi phần code JS vẫn được download và parsed ở bước 2 như bth nhưng đến bước 3 chỉ thực hiện khi component đó visible trên màn hình
+- Lib next-lazy-hydrate giúp cả phần download, parsed và executed JS chỉ thực hiện khi component visible
+=> Người dùng muốn tương tác sẽ lâu hơn 1 tí ở trang landing page nhưng tốc độ load trang và performance rất nhanh.
