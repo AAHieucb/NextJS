@@ -34,6 +34,10 @@ Ta có thể tự implement hook useFetch để fetch data kèm xử lý loading
 
 
 # Data Cache
+Thứ tự: Client Side Cache HTML -> Full Router Cache HTML -> Data Cache API
+
+Data Cache cản call lại 1 API nếu đã từng call.
+
 Server nextjs nếu k có Request Memoization sẽ check trong Data Cache xem đã từng gọi API này và có trong cache chưa. Chính là cache store bth.
 Có thể custom, Cache-Control của header kiểm soát cache của browser thì options fetch kiểm soát cache của server:
 fetch('https://...', { cache: "no-store }) => luôn fetch lại
@@ -41,10 +45,10 @@ fetch('https://...', { cache: "force-cache" }) => luôn cache
 fetch('https://...', { next: { revalidate: 3600 } }) => time-based revalidate
 revalidatePath('/') và revalidateTag('a') => tự trigger revalidate bất cứ lúc nào, 1 path cụ thể hoặc 1 cache chứa tag cụ thể
 => NextJS xử lý tối ưu, trong 1 single render pass, dù store chưa có nó cũng đảm bảo k make duplicate request. 
-Request Memoization chỉ xét tới 1 request, còn Data Cache xét toàn bộ dự án ở phía server. Có thể mix trong 1 routes dùng cache và k dùng cache tùy biến
+Request Memoization chỉ xét tới 1 lần render, còn Data Cache xét toàn bộ dự án ở phía server. Có thể mix trong 1 routes dùng cache và k dùng cache tùy biến
 
--> Revalidate và opt out thông qua options như trên hoặc hàm, hoặc options export ra
-Các options export quản lý cache: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
+-> Revalidate và opt out thông qua options hoặc hàm như trên
+Hoặc dùng các options export ra. Các options export quản lý cache: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
 Gọi hàm: import { unstable_noStores } from "next/cache"; y hệt option cache:"no-store", có option revalidate luôn
 => Tức có 4 cách
 
@@ -53,7 +57,9 @@ VD partial rendering: cả page static, có vài component cần fetch data lạ
 
 
 # Full Route Cache
-Cũng chỉ là caches routes để k cần phải thực hiện render lại trên server với mỗi request.
+Cache này cản server làm bất cứ thứ gì, nếu page đã từng render sẽ hiện lại ra.
+
+Cũng chỉ là caches routes để k cần phải thực hiện lại việc call api và render trên server với mỗi request.
 Static routes luôn cache tự động lúc build và có luôn ở lần truy cập đầu tiên, dynamic routes k cache lúc build mà lần truy cập đầu mới cache.
 
 Quy trình: 
@@ -66,18 +72,22 @@ Thực tế React Server Component Payload cũng lưu ở client-side Router Cac
 -> Để invalidate, ta invalidate cái Data Cache, sẽ tự invalidate Router Cache và Full Router Cache. 
 Redeploy tuy k invalidate Data Cache, nhưng sẽ invalidate Full Route Cache.
 
-Để opt out: dùng dynamic route; dùng option exports dynamic='force-dynamic' hoặc revalidate=0 ở router config sẽ opt out Full Route Cache và cả Data Cache chỉ phía server; opt out Data Cache VD cache:"no-store" cũng sẽ opt out Full Route Cache.
+Để opt out: dùng dynamic route; dùng option export dynamic='force-dynamic' hoặc revalidate=0 ở router config sẽ opt out Full Route Cache và cả Data Cache chỉ phía server; opt out Data Cache VD cache:"no-store" cũng sẽ opt out Full Route Cache.
+=> Nếu k opt out sẽ thấy data dùng bị cũ vì nó giữ cả html thì sẽ giữ cả data đã từng fetch
 
 
 
 # Client-side Router Cache
+Cache này cản client làm thêm bất cứ thứ gì, sẽ k gọi vào server nữa luôn.
+VD trong pages router, 1 pages mà có getServerSideProps sẽ luôn fetch lại bất cứ khi nào navigate tới. Còn trong App Router, chính vì cái cache này mà chuyển pages thì server éo fetch lại, thành ra nếu muốn 1 API luôn fetch lại ở server cần phải bỏ cache này đi.
+
 URL: https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
 Chỉ là cache RSC payload ở client. Nó tự động cache layouts là cấu trúc pages trong layout.js và loading states trong loading.js
 Pages có thể setup cache với staleTimes trong config. Chú ý cache này khác với bfcache có sẵn của browser cho thao tác tiến lùi dù cơ chế như nhau, cache pages hđ riêng với nextjs server. Dù mặc định k cache nhưng vẫn đươc tái sử dụng khi browser backward, forward navigation.
 
 -> Thời hạn cache: Cache layouts và loading states tự mất khi refresh pages và cũng phụ thuộc vào cách dùng. VD set staleTimes trong config
 VD prefetch={null} or kxđ thì k cache dynamic pages, 5m cho static pages.
-VD prefetch={true} hoặc dugnf router.prefetch thì 5m cho cả static và dynamic pages.
+VD prefetch={true} hoặc dùng router.prefetch thì 5m cho cả static và dynamic pages.
 
 -> Để invalidate: dùng revalidatePath revalidateTag cho server action sẽ invalidate Router Cache ở client luôn
 router.refresh phía client sẽ invalidate Router Cache 

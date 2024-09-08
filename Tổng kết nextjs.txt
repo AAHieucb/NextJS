@@ -64,7 +64,7 @@ VD server muốn truyền state cho client component, phải truyền vào props
 Để thêm loading cho server side fetching, wrap lại với Suspense fallback là được.
 URL khi nào dùng client comp hay server comp: https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns
 
-generateStaticParams dùng giúp xác định tham số cho dynamic routes ở server side.
+generateStaticParams dùng giúp xác định tham số cho dynamic routes ở server side, VD fetch API ra list params rồi cho vào page.tsx lấy Page({params})
 export const metadata giúp thay đổi meta tag trong head của component App Router, generateMetadata giúp lấy metadata đó async luôn
 Viết common component ở các vị trí mà next ignore for routing: apps/components; bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; dùng src/components cùng cấp src/apps
 
@@ -304,7 +304,9 @@ Dùng next/server sẽ tự dùng Edge API Route, dùng next sẽ dùng node api
 
 
 # Environment variables
-Định nghĩa trong .env.local với NEXT_PUBLIC_, FE k thể truy cập, chỉ dùng ở phía BE. Nó được gọi bất cứ chỗ nào server chạy qua như getServerSideProps hay chạy qua 1 lần trong FE components khi client request. Để giữ bí mật, env chỉ được tính toán vào build time và process.env
+Định nghĩa trong .env.local chỉ dùng cho BE, nếu có tiền tố NEXT_PUBLIC_ thì FE mới có thể truy cập. Nó được gọi bất cứ chỗ nào server chạy qua như getServerSideProps hay chạy qua 1 lần trong FE components khi client request. Để giữ bí mật, env chỉ được tính toán vào build time và process.env
+
+-> Thứ tự ưu tiên load env: process.env > .env.$(NODE_ENV).local > .env.local (Not checked when NODE_ENV is test) > .env.$(NODE_ENV) > .env
 
 -> Thông thường, file .env*.local luôn để trong gitignore. Ta dùng 2 môi trường với .env.development.local và .env.production.local, còn .env.local dùng với mọi môi trường.
 VD truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env có thể chạy trực tiếp trên command nếu cài -g) => Điều đặc biệt là khi dùng NODE_ENV, next tự động dùng đúng file .env developement hoặc production mà ta k cần set gì thêm 

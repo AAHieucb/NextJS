@@ -11,7 +11,7 @@ function NewsArticleList(props) {
         refetchOnMount: false,
         refetchOnWindowFocus: false,
     })
-    console.log(articles);
+    // console.log(articles);
 
     return(
         <>
@@ -35,8 +35,9 @@ function NewsArticleList(props) {
 export default NewsArticleList;
 
 const getData = async () => {
-    const response = await fetch("http://localhost:4000/news")
-    const data = await response.json();
+    // const response = await fetch("http://localhost:4000/news");
+    // const data = await response.json();
+    const data = [];
     console.log("UUU");
     return data;
 }
