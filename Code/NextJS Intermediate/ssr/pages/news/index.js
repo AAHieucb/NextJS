@@ -11,7 +11,6 @@ function NewsArticleList(props) {
         refetchOnMount: false,
         refetchOnWindowFocus: false,
     })
-    // console.log(articles);
 
     return(
         <>

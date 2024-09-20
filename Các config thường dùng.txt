@@ -1,46 +1,41 @@
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "module": "esnext",
-    "moduleResolution": "node",
-    "resolveJsonModule": true,
-    "removeComments": true,
-    "preserveConstEnums": true,
-    "strict": true,
-    "alwaysStrict": true,
-    "strictNullChecks": true,
-    "noUncheckedIndexedAccess": true,
-
-    "noImplicitAny": true,
-    "noImplicitReturns": true,
-    "noImplicitThis": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "allowUnreachableCode": false,
-    "noFallthroughCasesInSwitch": true,
-
-    "target": "es5",
-    "outDir": "out",
-    "declaration": true,
-    "sourceMap": true,
-
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "allowJs": false,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-
-    "jsx": "preserve",
-    "noEmit": true,
-    "isolatedModules": true,
-    "incremental": true,
-
-    "baseUrl": ".",
+    "lib": ["dom", "dom.iterable", "esnext"], // Specifies the library files to be included in the compilation.
+    "module": "esnext", // Specifies the module code generation: 'esnext' for modern JavaScript modules.
+    "moduleResolution": "node", // Determines how modules are resolved: 'node' mimics Node.js module resolution.
+    "resolveJsonModule": true, // Allows importing JSON files as modules.
+    "removeComments": true, // Removes comments from the output.
+    "preserveConstEnums": true, // Typescript có enum sang JS chuyển thành số. Config giữ `const enum` declarations in the output.
+    "strict": true, // Enables all strict type-checking options.
+    "alwaysStrict": true, // Ensures 'use strict' is always emitted.
+    "strictNullChecks": true, // Ensures `null` and `undefined` are only assignable to themselves and `any`.
+    "noUncheckedIndexedAccess": true, // Adds `undefined` to the type of an indexed access when the index signature is not present.
+    "noImplicitAny": true, // Raises an error on expressions and declarations with an implied `any` type.
+    "noImplicitReturns": true, // Raises an error on functions that do not return a value in all code paths.
+    "noImplicitThis": true, // Raises an error on `this` expressions with an implied `any` type.
+    "noUnusedLocals": true, // Raises an error on unused local variables.
+    "noUnusedParameters": true, // Raises an error on unused parameters.
+    "allowUnreachableCode": false, // Disallows unreachable code.
+    "noFallthroughCasesInSwitch": true, // Disallows fallthrough cases in switch statements.
+    "target": "es5", // Specifies the target JavaScript version: 'es5' for ECMAScript 5.
+    "outDir": "out", // Redirects output structure to the directory.
+    "declaration": true, // Generates corresponding `.d.ts` files.
+    "sourceMap": true, // Generates source map files.
+    "esModuleInterop": true, // Enables interoperability between CommonJS and ES Modules.
+    "allowSyntheticDefaultImports": true, // Allows default imports from modules with no default export.
+    "allowJs": false, // Disallows JavaScript files to be compiled.
+    "skipLibCheck": true, // Skips type checking of declaration files.
+    "forceConsistentCasingInFileNames": true, // Disallows inconsistently-cased references to the same file.
+    "jsx": "preserve", // Preserves JSX as part of the output.
+    "noEmit": true, // Disables emitting files from the compilation.
+    "isolatedModules": true, // Ensures each file can be safely transpiled without relying on other imports.
+    "incremental": true, // Enables incremental compilation for faster builds.
+    "baseUrl": ".", // Specifies the base directory to resolve non-relative module names.
     "paths": {
-      "@/*": ["./src/*"],
-      "@/public/*": ["./public/*"]
+      "@/*": ["./src/*"], // Maps `@/*` to `./src/*` for module resolution.
+      "@/public/*": ["./public/*"] // Maps `@/public/*` to `./public/*` for module resolution.
     }
   },
-  "exclude": ["./out/**/*", "./node_modules/**/*", "**/*.cy.ts"],
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"]
+  "exclude": ["./out/**/*", "./node_modules/**/*", "**/*.cy.ts"], // Excludes specified files and directories from the compilation.
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"] // Includes specified files and directories in the compilation.
 }

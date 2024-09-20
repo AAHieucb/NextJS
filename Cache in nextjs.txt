@@ -95,13 +95,11 @@ router.refresh phía client sẽ invalidate Router Cache
 
 
 # Route Handlers
+Route Handlers của App Router giống API Route của Page Router. Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
 Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
 Request Memoization chỉ dùng cho GET request trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree.
-Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
 
 Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để cache, export const revalidate=60 để revalidate với request GET
-
--> NextJS cũng là 1 server nodejs cung hàm tương tác db. 
 VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được, kể cả thêm vào server actions
 
 

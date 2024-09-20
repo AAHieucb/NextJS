@@ -1,20 +1,16 @@
 import React, { useState, useCallback, useRef } from "react";
 
-const Button = () => {
-    // # Basic
+const Button = () => {\
     const [counter, setCounter] = useState(0);
     console.log("Client vào trang thì server cũng chạy");
     console.log(counter);
 
-    // ## ReactJS / # Dùng useMemo useCallback
     const handleClick = useCallback(() => {
         console.log(counter);
         setCounter(counter + 1);
     }, []);
 
-    // ## ReactJS / # Dùng useRef
-    // Nó ref được tới cấu hình DOM thg dùng để thay thế PP dùng JS thuần dù dùng cách nào cũng được. Khi dùng JS thuần phải check or đảm bảo
-    // thẻ refer tới tồn tại 
+    // useRef / Nó ref được tới cấu hình DOM thg dùng để thay thế PP dùng JS thuần dù dùng cách nào cũng được. Khi dùng JS thuần phải check or đảm bảo thẻ refer tới tồn tại 
     const ref = useRef(null);
 
     return(
