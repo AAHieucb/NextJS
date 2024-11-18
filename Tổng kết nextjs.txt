@@ -22,6 +22,8 @@ ReturnType tạo ra 1 type mới là type trả về của function. VD: type T1
 VD: type T2 = ReturnType<<T>() => T>; => T2 có type T
 VD: declare function f1(): { a: number; b: string }; type T4 = ReturnType<typeof f1>; => thì type T4 = { a: number; b: string; }
 
+-> Dùng tốt với vercel kv db 
+
 
 
 # Feature flags
@@ -91,6 +93,10 @@ URL ảnh có thể từ bên ngoài nhưng tối ưu nhất là dùng ảnh sta
 -> Setting next.config.js
 NextJS có sẵn image optimization api, có thể chuyển sang dùng cloud provider khác. VD: images: { loader: 'custom', loaderFile: './my/image/loader.js' }
 VD bỏ optimize: "images: { unoptimized: true }"
+
+-> Nextjs tag image có sẵn thuộc tính blurDataURl và placeholder="blur" không cần check thủ công. NextJS thì có thể dùng kèm thư viện plaiceholder giúp tạo ảnh placeholder mờ cho nextjs
+
+-> Ưu tiên load image với nextjs dùng thuộc tính priority, trong html thuần có thuộc tính preload của tag img tương tự
 
 
 
@@ -282,6 +288,10 @@ export async function updateUser(userId, formData) { }
 Trong component: const updateUserWithId = updateUser.bind(null, userId); 
 <form action={updateUserWithId}></form>
 
+=> Khi nào dùng? - Nếu gọi 1 hàm kp fetch API, nó vẫn gửi request tới server, server xử lý và update html trước khi gửi lại người dùng giúp SEO cho data đó
+- Kể cả không cần fetch API nhưng cần xử lý tác vụ nặng, dùng server actions sẽ khiến chúng được thao tác ở server đỡ cho người dùng. 
+- Nếu cần process thông tin nhạy cảm, để vào server actions là người dùng k thấy. Vd ta query API moralis cần API key mà frontend k được lộ cho người dùng thì có thể dùng nextjs lưu key đó là biến môi trường phía server và gọi an toàn với server actions thay vì mất cộng 1 server api trung gian.
+
 -> Tương tự có thể dùng redis, cookies, db như 1 server nodejs bth. Dùng như 1 điểm lưu data mà an toàn hơn localStorage.
 
 -> Có thể update database trong server actions. Có 1 loại database tiện dụng ngay trong nextjs là kv database
@@ -333,4 +343,11 @@ Mặc định next nó luôn tuân thủ 3 bước đó. Nhưng thực tế, tro
 - Lib next-lazy-hydrate giúp cả phần download, parsed và executed JS chỉ thực hiện khi component visible
 => Người dùng muốn tương tác sẽ lâu hơn 1 tí ở trang landing page nhưng tốc độ load trang và performance rất nhanh.
 
-
+-> Tồng kết tối ưu SEO và performance NextJS => ref tới "Projects / MoveWorld"
+Thiết kế placeholder sao cho k có layout shift ở mọi màn hình cả text và ảnh.
+Thuộc tính priority của Image có tác dụng xđ hình ảnh ưu tiên cần tải trước các hình khác trên trang. Nên dùng <Image/> với local image hơn là url để next tối ưu và tự động có lazy loading. Dùng onError và blurData tạo hiệu ứng. 
+Tối ưu hóa ảnh và font trong docs nextjs, tải hẳn về chứ k dùng API.
+Setup SEO với DefaultSeoTag và đầy đủ mọi thẻ Head ở từng trang. Tối ưu hóa page insight. Dùng đủ các thẻ canonical và open-graph, chuẩn bị các ảnh cho thẻ preload thumbnail khi nhúng vào web khác. 
+Tối ưu dùng JS và css thuần, xóa bỏ các file không dùng. Dùng tree-shaking cho mọi thư viện, nên dùng ít thư viện nhất có thể và nên tự implement (check bằng webpack-bundle-analyzer), hoặc đổi sang thư viện nhẹ hơn.
+Dùng dynamic import cho các phần tử k chắc chắn dùng luôn khi vào page (React thì là React.lazy). Nên dùng thẻ Link của nextjs để tận dụng prefetch hoặc router.prefetch(url) thủ công.
+Dùng getStaticProps nhiều nhất có thể, dùng getServerSideProps với request nhẹ lấy data chỉ cần cho SEO thôi, k cần quá realtime thì nên dùng revalidate + getStaticProps. 
