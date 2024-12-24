@@ -4,7 +4,7 @@ Deploy code
 
 -> Debug
 
--> Routing
+-> Routing: Page Router, App Router
 
 -> Custom page 404, layout document
 

@@ -1,3 +1,4 @@
+//!!!!!!!!
 # Caching trong App Router
 NextJS luôn tự cache nhiều nhất có thể để tối ưu mà k ảnh hưởng tới luồng hoạt động bình thường. Ta custom tắt đi hay không thôi.
 VD client request tới server có Router Cache ở ngay client để k gọi 1 request nhiều lần, gọi tới server nextjs lại có Full Route Cache có sẵn html từ request trước đó không, nếu không thì server side sẽ call api để lấy data vào html thì lại có Request Memoization lưu kết quả của hàm gọi api và Data Cache lưu quả JSON data của API.

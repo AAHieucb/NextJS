@@ -1,36 +1,37 @@
+Dùng như mặc định này, muốn thêm gì thì thêm:
 {
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"], // Specifies the library files to be included in the compilation.
-    "module": "esnext", // Specifies the module code generation: 'esnext' for modern JavaScript modules.
-    "moduleResolution": "node", // Determines how modules are resolved: 'node' mimics Node.js module resolution.
-    "resolveJsonModule": true, // Allows importing JSON files as modules.
-    "removeComments": true, // Removes comments from the output.
+    "target": "ES2017", // *Specifies the target JavaScript version. VD 'es5' for ECMAScript 5.
+    "lib": ["dom", "dom.iterable", "esnext"], // *Specifies the library files to be included in the compilation.
+    "allowJs": true, // *Allows JavaScript files to be compiled.
+    "skipLibCheck": true, // *Skips type checking of declaration files.
+    "strict": true, // *Enables all strict type-checking options.
+    "noEmit": true, // *Disables emitting files from the compilation.
+    "esModuleInterop": true, // *Enables interoperability between CommonJS and ES Modules, sẽ giúp việc import các mô-đun trở nên mượt mà hơn.
+    "module": "esnext", // *Specifies the module code generation: 'esnext' for modern JavaScript modules.
+    "moduleResolution": "bundler", // *Determines how modules are resolved. VD 'node' mimics Node.js module resolution. 
+    "resolveJsonModule": true, // *Allows importing JSON files as modules.
+    "isolatedModules": true, // *Ensures each file can be safely transpiled without relying on other imports.
+    "jsx": "preserve", // *Preserves JSX as part of the output.
+    "incremental": true, // *Enables incremental compilation for faster builds.
+    "removeComments": true, // *Removes comments from the output.
     "preserveConstEnums": true, // Typescript có enum sang JS chuyển thành số. Config giữ `const enum` declarations in the output.
-    "strict": true, // Enables all strict type-checking options.
-    "alwaysStrict": true, // Ensures 'use strict' is always emitted.
-    "strictNullChecks": true, // Ensures `null` and `undefined` are only assignable to themselves and `any`.
+    "alwaysStrict": true, // *Ensures 'use strict' is always emitted.
+    "strictNullChecks": true, // *Ensures `null` and `undefined` are only assignable to themselves and `any`.
     "noUncheckedIndexedAccess": true, // Adds `undefined` to the type of an indexed access when the index signature is not present.
-    "noImplicitAny": true, // Raises an error on expressions and declarations with an implied `any` type.
-    "noImplicitReturns": true, // Raises an error on functions that do not return a value in all code paths.
-    "noImplicitThis": true, // Raises an error on `this` expressions with an implied `any` type.
-    "noUnusedLocals": true, // Raises an error on unused local variables.
-    "noUnusedParameters": true, // Raises an error on unused parameters.
-    "allowUnreachableCode": false, // Disallows unreachable code.
-    "noFallthroughCasesInSwitch": true, // Disallows fallthrough cases in switch statements.
-    "target": "es5", // Specifies the target JavaScript version: 'es5' for ECMAScript 5.
-    "outDir": "out", // Redirects output structure to the directory.
-    "declaration": true, // Generates corresponding `.d.ts` files.
-    "sourceMap": true, // Generates source map files.
-    "esModuleInterop": true, // Enables interoperability between CommonJS and ES Modules.
-    "allowSyntheticDefaultImports": true, // Allows default imports from modules with no default export.
-    "allowJs": false, // Disallows JavaScript files to be compiled.
-    "skipLibCheck": true, // Skips type checking of declaration files.
+    "noImplicitAny": true, // *Raises an error on expressions and declarations with an implied `any` type.
+    "noImplicitReturns": true, // *Raises an error on functions that do not return a value in all code paths.
+    "noImplicitThis": true, // *Raises an error on `this` expressions with an implied `any` type.
+    "noUnusedLocals": true, // *Raises an error on unused local variables.
+    "noUnusedParameters": true, // *Raises an error on unused parameters.
+    "allowUnreachableCode": false, // *Disallows unreachable code.
+    "noFallthroughCasesInSwitch": true, // *Disallows fallthrough cases in switch statements.
+    "outDir": "out", // *Redirects output structure to the directory.
+    "declaration": true, // *Generates corresponding `.d.ts` files.
+    "sourceMap": true, // *Generates source map files.
+    "allowSyntheticDefaultImports": true, // *Allows default imports from modules with no default export.
     "forceConsistentCasingInFileNames": true, // Disallows inconsistently-cased references to the same file.
-    "jsx": "preserve", // Preserves JSX as part of the output.
-    "noEmit": true, // Disables emitting files from the compilation.
-    "isolatedModules": true, // Ensures each file can be safely transpiled without relying on other imports.
-    "incremental": true, // Enables incremental compilation for faster builds.
-    "baseUrl": ".", // Specifies the base directory to resolve non-relative module names.
+    "baseUrl": ".", // *Specifies the base directory to resolve non-relative module names.
     "paths": {
       "@/*": ["./src/*"], // Maps `@/*` to `./src/*` for module resolution.
       "@/public/*": ["./public/*"] // Maps `@/public/*` to `./public/*` for module resolution.
@@ -39,3 +40,9 @@
   "exclude": ["./out/**/*", "./node_modules/**/*", "**/*.cy.ts"], // Excludes specified files and directories from the compilation.
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"] // Includes specified files and directories in the compilation.
 }
+
+Dùng next.config.js: 
+poweredByHeader: false, // *NextJS sẽ k thêm header "X-Powered-By: Next.js" vào các response HTTP, ẩn thông tin bảo mật
+logging: { fetches: { fullUrl: true } } => *Log thông tin full URL khi fetch API bằng "fetch" của nextjs ở dev mode.
+basePath => *Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
+trailingSlash: true => có / ở cuối kqtr

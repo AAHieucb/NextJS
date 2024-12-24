@@ -3,9 +3,34 @@ CSR: browser gửi request lấy htm -> render tạm loading -> download JS -> f
 SSR: browser gửi request lấy html -> page hiện luôn nhưng không tương tác được -> download JS event file -> thực hiện được actions
 SSG thì fetch data lưu vào cache rồi build ra html tĩnh, cache stale thì nó tự fetch tiếp và build lại html tĩnh.
 NextJS mặc định là Universal SSR tốt nhất vì CSR data realtime, SSR data cần SEO.
+=> ***SSR có nhiều điểm lợi hơn CSR. Vd API dùng cookies httponly cản k truy cập từ FE thì server của SSR lại call đc. Vd biến môi trường secret ở client cần che giấu thì phải dùng SSR mới ẩn được
+=> Các trang web có thể hosting CSR cũng như các file tĩnh. Còn hosting SSR hay SSG đều cần hosting 1 server nodejs lên serve file.
 
-SSR có nhiều điểm lợi. Vd API dùng cookies httponly cản k truy cập thì server của SSR lại call đc. Vd biến môi trường secret ở client cần che giấu thì phải dùng SSR mới ẩn được
 
--> Firebase cho phép host file html js css lên. Tức là nó có thể host CSR static site.
-Vercel platform hỗ trợ host đủ loại SSR, SSG, CSR, Universal SSR cho nextjs luôn. Còn bth hosting SSR, phải hosting 1 server nodejs lên.
+
+# Typescript trong NextJS
+Tích hợp được typescript vào nextjs có sẵn bằng cách thêm tsconfig.json và sửa các file js.
+ReturnType tạo ra 1 type mới là type trả về của function. VD: type T1 = ReturnType<(s: string) => void>; => T1 có type là void.
+VD: type T2 = ReturnType<<T>() => T>; => T2 có type T
+VD: declare function f1(): { a: number; b: string }; type T4 = ReturnType<typeof f1>; => thì type T4 = { a: number; b: string; }
+
+
+
+# Feature flag
+Không chỉ là FE, feature flag khi tắt hay bật thì toàn bộ tính năng liên quan, query db, api sẽ k còn khả dụng. Thường dùng khi: 
+- Kill switch bật tắt 1 tính năng, chuyển đổi version của 1 tính năng nếu ngừoi dùng muốn.
+- Beta testing, set cho 1 vài ngừoi dùng trong whitelist được phép truy cập beta version của sản phẩm. Hoặc cho 10% users hiện tại truy cập vào beta.
+Tuỳ tình huống mà feature flag khác nhau như true/false, userroles nào, bao nhiêu phần trăm, whitelist những user nào.
+VD: ta code 1 câu query mới thay cho câu query cũ nhưng không biết chắc chắn đúng hay không, ta vẫn chạy query cũ và feature flag chỉ enable ở môi trường test để chạy cả query mới rồi check kết quả 2 loại query giống thì bỏ qua, khác nhau thì log thông báo để dev vào check lỗi. Khi ok hết r thì xoá code, thay thành query mới là xong.
+Cũng có thể code 1 feature và lưu flag trong db là false, trong code check flag và nếu flag k set thì tự lấy là true. Khi feature hoàn thiện thì set luôn là true hoặc xoá setting đó luôn.
+
+Cơ chế cũng chỉ là cho vào 1 function check trả true hay false để enable feature hay không.
+VD để check random 25% user được phép sử dụng feature mới, ta dùng: return randomhash(`${featurename}-{userid}`) / MAX_VALUE_HASH < 0.25 == true;
+
+-> Feature flag có thể lưu ở trong settings của code nhưng mỗi khi đổi sẽ cần deploy lại. 
+Cách tốt hơn là lưu ở file settings trong blob storage hoặc trong db, hoặc lưu lên bên thứ 3 để biết feature có enable hay k mà k cần deploy lại.
+
+Để đổi feature flag, có thể vào code đổi file settings, hoặc đổi trong db. Với ứng dụng mà customer admin có thể đổi thì phải xây giao diện và cho customer đổi feature flag qua API.
+Trong FE chỉ cần tạo component wrap lại và check env var thôi, trong BE dự án lớn sẽ rất phức tạp khi nhiều feature call api phụ thuộc lẫn nhau sẽ phải cô lập các feature ra riêng và chỉ call vào feature khác khi flag enable.
+
 
