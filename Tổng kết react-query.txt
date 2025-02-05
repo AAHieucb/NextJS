@@ -1,0 +1,61 @@
+# react-query v5
+-> isLoading (cache k có data)
+isFetching (đang fetch API để cập nhập)
+isLoadingError (khi query fail to fetch lần đầu tiên)
+isPending, data, refetch, enabled, data
+error (bỏ onError), isError
+
+-> useQueries({ queries: [{ queryKey1, queryFn1, options1 }, { queryKey2, queryFn2, options2 }] }) => Khi cần query nhiều API gộp chung 1 biến
+useQuery
+
+-> Các options có thể set trong QueryClient ban đầu luôn để tự dùng với mọi query:
+cacheTime => thời gian cache tồn tại, quá mốc này thì data bị xoá khỏi cache
+staleTime => thời gian cache tính là mới. VD mặc định là 0 sẽ luôn call api khi được gọi tới bằng bất cứ cách nào (background interval, click màn hình) vì coi là stale
+initialData
+refetchOnMount
+refetchOnWindowFocus => window unfocus khi focus lại sẽ fetch
+refetchIntervalInBackground => control cái interval background
+refetchInterval
+
+--> Có thể cho chỉ fetch 1 lần trong react-query bằng cách cho cacheTime và staleTime là Infinity, nó vẫn đảm bảo vào lần đầu tiên là fetch
+Khi đó refetchOnWindowFocus cũng k còn tác dụng nữa vì data coi kbh stale vì cái này thì mỗi khi window focus sẽ check data stale chưa để gọi lại mà
+
+--> Set trong QueryClientProvider QueryClient áp dụng cho mọi query
+const [queryClient] = useState(() => new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, 
+      refetchOnMount: false
+    },
+  }
+}));
+<QueryClientProvider client={queryClient}>
+
+-> VD viết hàm update data trên server, sau đó 10 cái API liên quan của react-query cần fetch lại thì dùng: useMutation giúp đổi data trong cache của react-query trực tiếp
+const { 
+  isPending, // hàm mutationFn reject hay resolve thì là false, đang chạy thì true
+  variables, // tham số truyền vào hàm mutate (dùng cho optimistic update) 
+  mutate // gọi mutate(newTodo) để gọi hàm mutationFn
+} = useMutation({
+  mutationKey: "ok"
+  mutationFn: async (newTodo) => { },
+  onSuccess: () => {
+    queryClient.invalidateQueries('yourQueryKey1');
+    queryClient.invalidateQueries('yourQueryKey2');
+    ...
+    queryClient.invalidateQueries('yourQueryKey10');
+  },
+});
+
+--> useMutationState giúp lấy data từ mọi mutation kèm select và filters:
+VD lấy biến variables từ mọi mutation có mutationKey là "ok" và đang được mutate (pending):
+const data = useMutationState<Todo>({
+  filters: { mutationKey: "ok", status: "pending" },
+  select: (mutation) => mutation.state.variables as Todo,
+});
+=> Điều đặc biệt là mutation dùng 1 cache global nên useMutationState có thể dùng ở bất cứ components nào để lấy mutation ở bất cứ components nào khác.
+URL: https://www.youtube.com/watch?v=ICu-6ZYaMms
+
+-> Trong react-query cũng có prefetch gọi thủ công. VD: await queryClient.prefetchQuery('todos', fetchTodos);
+
+

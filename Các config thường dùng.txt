@@ -1,4 +1,4 @@
-Dùng như mặc định này, muốn thêm gì thì thêm:
+-> tsconfig.json:
 {
   "compilerOptions": {
     "target": "ES2017", // *Specifies the target JavaScript version. VD 'es5' for ECMAScript 5.
@@ -30,7 +30,7 @@ Dùng như mặc định này, muốn thêm gì thì thêm:
     "declaration": true, // *Generates corresponding `.d.ts` files.
     "sourceMap": true, // *Generates source map files.
     "allowSyntheticDefaultImports": true, // *Allows default imports from modules with no default export.
-    "forceConsistentCasingInFileNames": true, // Disallows inconsistently-cased references to the same file.
+    "forceConsistentCasingInFileNames": true, // *Disallows inconsistently-cased references to the same file.
     "baseUrl": ".", // *Specifies the base directory to resolve non-relative module names.
     "paths": {
       "@/*": ["./src/*"], // Maps `@/*` to `./src/*` for module resolution.
@@ -41,8 +41,395 @@ Dùng như mặc định này, muốn thêm gì thì thêm:
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"] // Includes specified files and directories in the compilation.
 }
 
-Dùng next.config.js: 
+
+
+-> next.config.mjs:
 poweredByHeader: false, // *NextJS sẽ k thêm header "X-Powered-By: Next.js" vào các response HTTP, ẩn thông tin bảo mật
 logging: { fetches: { fullUrl: true } } => *Log thông tin full URL khi fetch API bằng "fetch" của nextjs ở dev mode.
-basePath => *Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
+basePath: '' => *default load static files từ folder public. Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
 trailingSlash: true => có / ở cuối kqtr
+reactStrictMode: true,
+swcMinify: true, => *dùng speed web compiler thay vì Terser để nén file js nhỏ hơn
+images: { => *
+  unoptimized: true,
+  remotePatterns: [
+    {
+      protocol: "https",
+      hostname: "**",
+    },
+  ],
+  domains: [
+    "aptos-api-testnet.bluemove.net",
+    "aptos.dev",
+  ],
+},
+useFileSystemPublicRoutes: false, => k chia router theo cấu trúc thư mục nữa, phải tự custom server để serve.
+eslint: {
+  dirs: ['.'], => *eslint kiểm tra toàn bộ thư mục hiện tại
+}, 
+appDir: true, => dùng app router
+serverActions: true,
+serverActionsBodySizeLimit: '2mb',
+staleTimes: { => Phải có mới enable client-side router cache cho pages
+  dynamic: 30, 
+  static: 180,
+},
+bundlePagesRouterDependencies: true, => *bundle các page router dependencies trong quá trình build giúp tối ưu hiệu suất và kích thước, luôn dùng
+serverExternalPackages: ['lodash', 'axios'], => Các packages mà server k bundle mà sẽ lấy từ node_modules trực tiếp, qtr build nhanh hơn nhưng size lớn hơn.
+esmExternals: false => default true cho phép nextjs sử dụng cách gọi EcmaScript Module (export import) bên ngoài mà k cần chuyển đổi sang CommonJS (module.export require). Nếu là false thì nó phải chuyển hết các gói ESM về commonjs nên build sẽ lâu hơn
+experimental: { }
+devIndicators: { => liên quan đến việc hiển thị các chỉ số trong quá trình chạy app. 
+  buildActivity: false, => k hiện các chỉ số khi build như khi tái biên dịch, trông clear hơn nhưng khó khăn hơn khi debug
+},
+
+
+
+-> tailwind.config.js:
+module.exports = {
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  theme: {
+    screens: {
+      sm: "480px",
+      md: "768px",
+      lg: "976px",
+      xl: "1100px",
+      xxl: "1300px",
+    },
+    fontSize: {
+      xs: '0.75rem',
+      sm: '0.875rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      '2xl': '1.5rem',
+      '6xl': '4rem',
+    },
+    extend: {
+      colors: {
+        gray: {
+          100: '#f7fafc',
+          200: '#edf2f7',
+          300: '#e2e8f0',
+          900: '#1a202c',
+        },
+        pink: "#ff49db",
+        "gray-dark": "#273444",
+      },
+    },
+  },
+  plugins: [],
+};
+
+
+
+-> posstcss.config.js
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+    ...(process.env.NODE_ENV === "production" ? { cssnano: {} } : {}),
+  },
+};
+
+
+-> .prettierrc:
+{
+  "singleQuote": false, => *
+  "printWidth": 100, => *1 dòng max 100 ký tự
+  "importOrder": ["^@core/(.*)$", "^@server/(.*)$", "^@ui/(.*)$", "^[./]"], => thứ tự sx nhóm các câu lệnh import
+  "importOrderSeparation": true, => thêm 1 dòng trống giữa các nhóm import khác nhau được define từ importOrder
+  "importOrderSortSpecifiers": true, => tự sx tên biến và hàm trong 1 câu lệnh import theo thứ tự alphabet
+  "tabWidth": 2, => *
+  "semi": true, => *buộc có dấu ; cuối mỗi câu lệnh
+  "trailingComma": "es5", => thêm dấu phẩy cuối cùng ở các cấu trúc hỗ trợ ES5 (như array, object, v.v.).
+}
+
+
+
+-> .eslintrc.json:
+{
+  // Áp dụng mọi file
+  "extends": [ // Kế thừa các quy tắc mặc định từ các cấu hình ESLint có sẵn 
+    "next/core-web-vitals", // *Sử dụng bộ quy tắc chính thức từ Next.js, tránh các warning lỗi vớ vẩn
+    "plugin:prettier/recommended",
+  ],
+  "rules": { => Ghi đè hoặc thêm các quy tắc tùy chỉnh.
+    "prefer-const": "error", // Buộc dùng const thay vì let nếu biến k được gán lại
+    "quotes": ["error", "double"] // *Buộc dùng " thay vì ' 
+    "prettier/prettier": [ // tích hợp prettier với eslint rule, phải cài package eslint-plugin-prettier 
+      "error",
+      {
+        "singleQuote": true,
+        "endOfLine": "auto", // auto tự động điều chỉnh ký tự xuống dòng phù hợp với OS, window là \r\n, linux là \n
+      }
+    ]
+  },
+  // Quy định cấu hình riêng cho các loại file khác nhau
+  "overrides": [ 
+    {
+      "files": ["**/*.ts", "**/*.tsx"],
+      "plugins": ["@typescript-eslint"], // *Kích hoạt plugin @typescript-eslint, cung cấp các quy tắc hỗ trợ kiểm tra mã TypeScript.
+      "extends": [
+        "plugin:@typescript-eslint/recommended", // *Kế thừa các quy tắc kiểm tra TypeScript tốt (do nhóm TypeScript ESLint cung cấp).
+        "prettier" // *Tắt các quy tắc ESLint có thể gây xung đột với Prettier để cả 2 hoạt động ok, phải có package eslint-config-prettier
+      ],
+      "parserOptions": {
+        "project": "./tsconfig.json" // *
+      },
+      "rules": { // rules riêng cho kiểu file này
+        "react-hooks/exhaustive-deps": "off", // *Vô hiệu hóa cảnh báo về thiếu dependency trong useEffect
+        "@typescript-eslint/ban-ts-comment": ["warn", "off"], // *Vô hiệu hóa cảnh báo khi sử dụng chú thích @ts-ignore
+        "react-hooks/rules-of-hooks": "off", // *Vô hiệu hóa kiểm tra các rules-of-hooks
+      }
+    }
+  ]
+}
+
+
+
+-> package.json:
+{
+  "name": "codeagain",
+  "version": "0.1.0",
+  "private": true, // dự án sẽ k được publish như 1 package lên npm registry
+  "scripts": {
+    "lint": "next lint", // check rules eslint và show cảnh báo 
+    "format": "prettier --check --ignore-path .gitignore .", // check rules prettier và show cảnh báo
+    "format:fix": "prettier --write --ignore-path .gitignore .", // check và fix rules prettier
+    "prepare": "husky install"
+  },
+  "lint-staged": { // Kết hợp husky, khi commit sẽ tự fix format các file đã được staged
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "git add ."
+    ],
+    "*.{ts,js,jsx,ts,tsx,json,yml,md}": [
+      "prettier --write",
+      "git add ."
+    ]
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}
+
+
+
+-> .commitlint.config.js:
+{
+  extends: ['@commitlint/config-conventional']
+}
+
+
+
+-> .eslintignore:
+node_modules
+out
+.next
+
+
+
+-> .prettierignore:
+**/node_modules/**/*
+out
+yarn.lock
+package-lock.json
+public
+**/*.svg
+package.json
+.eslintignore
+*.png
+*.toml
+.gitignore
+.prettierignore
+LICENSE
+.eslintcache
+*.lock
+yarn-error.log
+node_modules
+**/.next/**
+**/_next/**
+**/dist/**
+**/__tmp__/**
+lerna.json
+.github
+
+
+
+-> .gitignore:
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# cypress
+cypress/screenshots
+cypress/videos
+
+# cache
+.swc/
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local folder
+local
+
+# env files
+.env*.local
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+
+
+-> jsconfig.json:
+{
+  "compilerOptions": {
+    "baseUrl": ".", // *
+    "paths": { 
+      "@/*": ["./src/*"] // *
+    },
+    "outDir": "dist"
+  }
+  "extends": "../../tsconfig.base.json", // kế thừa cấu hình tránh lặp cấu hình.
+  "include": ["src"], // chỉ biên dịch thư mục src
+  "files": ["./index.ts"] // đảm bảo file index.ts được biên dịch dù k có trong include
+}
+
+
+
+-> extendTheme chakra-ui config:
+extendTheme({
+  semanticTokens: {
+    colors: {
+      _header: {
+        _dark: "#272832",
+        default: "#272832",
+      },
+      background: {
+        default: "#fff",
+        _dark: "#111827",
+      },
+      header: {
+        default: "#ffff",
+        _dark: "#111827f2",
+      },
+      primary: {
+        _dark: "#10a3a3",
+        _light: "#3cc9c9",
+      },
+      hoverCover: {
+        _dark: "rgba(255,255,255,0.2)",
+        _light: "rgba(0,0,0,0.2)",
+      },
+      pagination: {
+        default: "#edf2f7",
+        _dark: "#303744",
+      },
+      divider: {
+        _dark: "#303744",
+        default: "#b9bec7",
+      },
+      backgroundTop: {
+        _dark: "#141b2a",
+        default: "#f6f7f9",
+      },
+      text: {
+        _light: "#000",
+        _dark: "#ffffffa8",
+      },
+      cover: {
+        _dark: "#161d2c",
+        default: "#f6f7f9",
+      },
+      coveritem: {
+        _dark: "#212834",
+        default: "#f6f7f9",
+      },
+      backgroundBigText: {
+        _dark: "#303744",
+        default: "#bee3f8",
+      },
+      bright: {
+        _dark: "#6b7280",
+        default: "#bee3f8",
+      },
+      backgroundTab: {
+        _dark: "#2d3748",
+        default: "#f6f7f9",
+      },
+      dividerdash: {
+        _dark: "#c6f6d533",
+        default: "#80808021",
+      },
+      bioText: {
+        _dark: "#ffffffa8",
+        _light: "#808080",
+      },
+      hoverDark: {
+        _dark: "#212e48",
+        default: "#b9bec7",
+      },
+      topCollectionCard: {
+        _dark: "#24243557",
+        default: "#e8eaed",
+      },
+      hoverTable: {
+        _dark: "#0D213F",
+        _light: "rgba(0,0,0,0.15)",
+      },
+      tableHeader: {
+        _dark: "#285E61",
+        _light: "#808080",
+      },
+    },
+  },
+  colors: {
+    white: "#fff",
+    black: "#000",
+  },
+  breakpoints: {
+    sm: "30em",
+    md: "52em",
+    lg: "64em",
+    xl: "80em",
+  },
+  config: {
+    initialColorMode: "light",
+    useSystemColorMode: false,
+  },
+  components: {
+    Divider: {
+      baseStyle: {
+        borderColor: "#747474",
+      },
+    },
+  },
+});
+
+

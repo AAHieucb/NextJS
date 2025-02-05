@@ -1,5 +1,6 @@
 /* eslint-disable import/no-extraneous-dependencies */
 const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  // Dùng bundle analyzer để phân tích bundle size chỉ cần thêm như này khi chạy sẽ có báo cáo sinh ra 
   enabled: process.env.ANALYZE === 'true',
 });
 

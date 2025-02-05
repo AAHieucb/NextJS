@@ -34,3 +34,37 @@ Cách tốt hơn là lưu ở file settings trong blob storage hoặc trong db, 
 Trong FE chỉ cần tạo component wrap lại và check env var thôi, trong BE dự án lớn sẽ rất phức tạp khi nhiều feature call api phụ thuộc lẫn nhau sẽ phải cô lập các feature ra riêng và chỉ call vào feature khác khi flag enable.
 
 
+
+# Hiểu OAuth và OAuth2 cho web
+-> Luồng hoạt động của OAuth 1.0 cho ứng dụng web
+- Web (Consumer) đk với nhà cung cấp dịch vụ (VD: Twitter) để nhận Consumer Key và Consumer Secret.
+- Web gửi yêu cầu lấy Request Token đến nhà cung cấp dịch vụ. Nó chứa CallbackURL là nơi nhận phản hồi sau khi uỷ quyền, yêu cầu cũng được ký số bằng Consumer Secret.
+Web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ và để login và đồng ý cấp quyền truy cập cho web.
+Nhà cung cấp dịch vụ sẽ trả về callback url oauth_token (Request Token), oauth_token_secret (bí mật liên quan đến token) tới callbackurl.
+- Web gửi Request Token đã được ủy quyền đến nhà cung cấp dịch vụ để đổi lấy Access Token. Yêu cầu này cũng phải được ký số.
+- Web dùng Access Token để truy cập tài nguyên từ nhà cung cấp dịch vụ. Mỗi request đều phải được ký số bằng Consumer Secret và oauth_token_secret
+=> Bất tiện vì luôn phải ký số mọi request. K cần https luôn vì ký số luôn an toàn. K còn dùng nữa, bh mặc định chỉ dùng OAuth2.
+
+-> Luồng hoạt động của OAuth 2.0 cho ứng dụng web: có nhiều luồng nhưng web chỉ dùng Authorization Code Flow
+- Web đăng ký với nhà cung cấp dịch vụ (VD: Google) để nhận Client ID(định danh ứng dụng) và Client Secret.
+- Khi login, web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ. 
+Yêu cầu đó chứa Client ID và RedirectURL, Scope (Phạm vi quyền mà web yêu cầu), Response Type luôn là code (để nhận Authorization Code).
+User login và đồng ý cấp quyền truy cập cho ứng dụng. Nhà cung cấp dịch vụ chuyển hướng về RedirectURL kèm Authorization Code trong url.
+- Web gửi Authorization Code đến nhà cung cấp dịch vụ để đổi lấy Access Token. 
+Yêu cầu gồm Client ID và Client Secret để xác thực ứng dụng, Authorization Code nhận được từ bước trước, Redirect URI phải khớp với URI đã đăng ký.
+Nhà cung cấp dịch vụ trả về Access Token (và có thể cả Refresh Token) cho web.
+Khi Access Token hết hạn, ứng dụng web có thể sử dụng Refresh Token để yêu cầu Access Token mới mà không cần người dùng đăng nhập lại.
+=> Để làm thủ công, chỉ cần tạo các api url cho server xử lý tương tác với google là được, thì next-auth tạo sẵn các url đó cho ta r cung các callbacks để ta custom các qtr đó.
+
+
+
+# (xoá ngay) Bug cũ nextjs 
+-> Call api tới external source ở server pages sẽ bị gọi 2 lần, nếu udpate db sau đó cũng sẽ update 2 lần. 
+Để fix, hoặc là dùng prefetch={true} thì khi xuất hiện ở view port sẽ tự prefetch chỉ 1 lần k sợ lặp. Hoặc là dùng router.push() thay cho thẻ Link
+
+-> 1 bug nữa next14 là client side router cache vẫn tự cache với page.tsx dù trong docs nói là ta phải tự enable. Điều này khiến cho client tự cache k chịu gọi lại API fetch ở server. Mà éo có option opt out nó, buộc phải set staleTime trong next.config ép = 0 để opt out.
+
+-> VD để đạt được getServerSideProps như page router, ta phải disable data cache và full route cache và client side cache trong app router rất dở. 
+Tức thêm cache:"no-store" để opt out data cache và full router cache, và thêm staleTime dynamic 0 vào config để opt out client side router cache. Lại còn k được dùng thẻ Link để tránh lỗi nữa.
+
+

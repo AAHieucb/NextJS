@@ -11,7 +11,7 @@ export const useForm =
   (handler: (content: TContent) => void) =>
   async (event: ChangeEvent<HTMLFormElement>) => {
     event.preventDefault()
-    event.persist() // cản vc gán null tự động sau khi gọi xong
+    event.persist() // giải quyết vấn đề event gán null khi tự động xoá sau khi thực hiện xong nhưng vẫn muốn truy cập lại, nó sẽ cản việc gán null.
 
     const form = event.target as HTMLFormElement
     const elements = Array.from(form.elements) as HTMLInputElement[]
@@ -25,7 +25,7 @@ export const useForm =
         defaultValues
       )
     await handler(data)
-    form.reset() // reset form từ đầu
+    form.reset() // reset form từ đầu, set lại mọi giá trị các trường về default value có khi mới tải
   }
 
 // Hook useInterval sẽ thực hiện hàm call back sau mỗi khoảng delay. Nhưng nó khác setInterval là nếu callback or delay thay đổi, nó

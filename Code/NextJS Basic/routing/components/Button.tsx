@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from "react";
 
-const Button = () => {\
+const Button = () => {
     const [counter, setCounter] = useState(0);
     console.log("Client vào trang thì server cũng chạy");
     console.log(counter);

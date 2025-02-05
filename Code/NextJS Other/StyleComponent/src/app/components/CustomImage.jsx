@@ -15,7 +15,7 @@ function CustomImage({...props}) {
       alt={""}
       onError={() => setSrc('https://static.thenounproject.com/png/741653-200.png')}
       placeholder="blur"
-      blurDataURL="/a.png"
+      blurDataURL="/a.png" // Nên là base64 image nhỏ
     />
   );
 }
