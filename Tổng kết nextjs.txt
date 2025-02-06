@@ -588,7 +588,65 @@ VD chuẩn: Google Console set url origin là http://localhost:3000 và url redi
 Có thể login với google, GitHub, custom với jwt, lưu login data vào db chạy như 1 server bth. Dùng token từ Google để Query data từ Google ok. 2 factor authentication.
 Tự dùng refreshtoken làm mới acccesstoken nếu exprires 
 
--> Truy cập được session login data ở BE API Route với getServerSession
+-> useSession({ onUnauthenticated(){} }); => xử lý thêm gì khác khi chưa login 
+
+useSession({ required: true }) => trang nào dùng sẽ popup buộc login trước mới cho xem, status sẽ thành chỉ có 2 giá trị là loading và authenticated
+Có thể tạo common thì component nào muốn chỉ cần gán auth=true:
+export default function AdminDashboard() {
+  const { data: session } = useSession()
+  return "Some super secret dashboard"
+}
+AdminDashboard.auth = true
+export default function App({
+  Component,
+  pageProps: { session, ...pageProps },
+}) {
+  return (
+    <SessionProvider session={session}>
+      {Component.auth ? (
+        <Auth>
+          <Component {...pageProps} />
+        </Auth>
+      ) : (
+        <Component {...pageProps} />
+      )}
+    </SessionProvider>
+  )
+}
+function Auth({ children }) {
+  const { status } = useSession({ required: true })
+  if (status === "loading") {
+    return <div>Loading...</div>
+  }
+  return children;
+}
+
+update({trường đổi}) từ useSession giúp update session gọi từ client sang server. update() thì sẽ reload lại server luôn, VD khi đổi db cần update session or refetch định kỳ
+Check trong hàm callbacks jwt và session if(trigger === "update") để server biết khi nào hàm được gọi vì chủ động call update
+
+Có thể lấy session client cách k dùng hook với getSession, ở server là getServerSession
+
+getCsrfToken lấy csrf token bất cứ lúc nào. next-auth tự sinh 1 csrf token có thể lấy luôn ở cả 2 phía mà k cần cài package generate csrf token ở server nx
+
+getProviders() lấy provider và các trường truyền vào
+
+Params thứ 3 của hàm sign in là param truyền thêm vào endpoint /authorize or truyền vào provider trường authorizationParams
+
+signOut({ 
+  callbackUrl: 'http://localhost:3000/foo'
+  redirect: false 
+}); => vẫn redirect sang page khác nhưng k có page reload, data useSession vẫn chuẩn
+
+<SessionProvider
+  // Default base path if your app lives at the root "/" => về sau nối vào NEXTAUTH_URL để ra
+  basePath="/"
+  // Re-fetch session every 5 minutes
+  refetchInterval={5 * 60}
+  // Re-fetches session when window is focused
+  refetchOnWindowFocus={true}
+>
+
+-> Có email sign-in flow trong next-auth
 
 
 

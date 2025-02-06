@@ -434,7 +434,6 @@ extendTheme({
 });
 
 
-
 -> Project structure có sẵn:
 public
 src
@@ -464,7 +463,7 @@ src
       _settings
         page.js => private toàn folder k routing gì hết 
       (.)settings
-        page.js => intercept route
++       page.js => intercept current route
       (..)settings
         page.js
       (..)(..)folder

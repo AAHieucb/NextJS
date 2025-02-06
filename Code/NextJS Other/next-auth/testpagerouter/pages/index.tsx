@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Geist, Geist_Mono } from "next/font/google";
-import { signIn, signOut, useSession } from "next-auth/react";
+import { getCsrfToken, signIn, signOut, useSession } from "next-auth/react";
+import { getServerSession } from "next-auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,7 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export default function Home() {
-  const { data: session, status } = useSession();
+  const { data: session, status } = useSession({
+    required: true // tự chuyển sang trang login nếu chưa login
+  });
+
+  if (status === "loading") {
+    return "Loading or not authenticated..."
+  }
   return (
     <div
       className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
@@ -26,4 +33,14 @@ export default function Home() {
       <button onClick={() => signIn("google", { callbackUrl: "http://localhost:3000/"})}>Sign in with callback</button> 
     </div>
   );
+}
+
+export async function getServerSideProps() {
+  var x = await getCsrfToken();
+  console.log("x::", x);
+  return {
+    props: {
+      csrfToken: x
+    },
+  };
 }
