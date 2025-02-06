@@ -126,8 +126,8 @@ module.exports = {
 module.exports = {
   plugins: {
     tailwindcss: {},
-    autoprefixer: {},
-    ...(process.env.NODE_ENV === "production" ? { cssnano: {} } : {}),
+    autoprefixer: {}, // => nextjs có r, nhưng tự tạo file postcss.config sẽ ghi đè bị mất phải tự thêm lại
+    ...(process.env.NODE_ENV === "production" ? { cssnano: {} } : {}), // cssnano: {} và cssnano: {preset: "default"} là giống nhau
   },
 };
 
@@ -433,3 +433,66 @@ extendTheme({
 });
 
 
+-> Project structure có sẵn:
+public
+src
+  pages
+  app
+    api
+      hello
+        route.js => /api/hello
+    dashboard
+      layout.js
+      loading.js
+      not-foundjs
+      error.js
+      template.js
+      default.js => fallback nếu k có slot khi cần thế vào layout
+      @testslot
+        page.js => slots chỉ là 1 phần thế vào layout
+      (settings)
+        test
+          page.js => /dashboard/test
+      [slug] 
+        page.js => /dashboard/a
+      [...slug]
+        page.js => /dashboard/a/b/c
+      [[...settings]]
+        page.js => /dashboard/a/b/c và /dashboard
+      _settings
+        page.js => private toàn folder k routing gì hết 
+      (.)settings
+        page.js => intercept route
+      (..)settings
+        page.js
+      (..)(..)folder
+        page.js
+      (...)folder
+        page.js
+      page.js
+      opengraph-image.png
+      twitter-image.png
+    global-error.js
+    favicon.ico
+    icon.ico
+    apple-icon.png
+    sitemap.xml
+    robots.txt
+package.json
+next.config.js
+middleware.ts
+.env
+jsconfig.json
+.eslintrc.json
+Cấu trúc code:
+<Layout>
+  <Template>
+    <ErrorBoundary fallback={<Error />}>
+      <Suspense fallback={<Loading />}>
+        <ErrorBoundary fallback={<NotFound />}>
+          <Page />
+        </ErrorBoundary>
+      </Suspense>
+    </ErrorBoundary>
+  </Template>
+</Layout>
