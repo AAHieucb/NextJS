@@ -245,8 +245,8 @@ export default withAuth(
 
 
 
-# Có thể tạo custom adapters connect db
-Khi 1 người dùng tk github và google (cùng mail) logins vào hệ thống sẽ hiểu là 1 người khác nhau với 2 ids. Buộc phải can thiệp thủ công quá trình check mail để check merge thành 1 người không.
+# Có thể tạo custom adapters connect db, connect supabase cloud, mongodb.
+Khi 1 người dùng tk github và google (cùng mail) logins vào hệ thống sẽ hiểu là 1 người khác nhau với 2 ids. Buộc phải can thiệp thủ công quá trình check mail để check merge thành 1 người.
 
 
 
