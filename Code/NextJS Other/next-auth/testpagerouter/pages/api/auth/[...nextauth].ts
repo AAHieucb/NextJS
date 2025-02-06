@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import User from "@/models/User";
 
 // # Dùng next-auth
+// Force lưu vào db dù dùng jwt
 
 const connectDB = async () => {
   if (mongoose.connections[0].readyState) return;
@@ -93,7 +94,7 @@ export const authOptions = {
       return session;
     },
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET, 
 }
 
 export default NextAuth(authOptions)

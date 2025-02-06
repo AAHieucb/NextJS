@@ -1,0 +1,286 @@
+# Dùng next-auth 
+=> Nếu tự sign in username password, nên tự implement bằng nextjs thuần
+
+-> const {
+  update 
+} = useSession({
+  required: true,
+  onUnauthenticated(){}, => xử lý thêm gì khác khi chưa login 
+});
+
+--> required: true => trang nào dùng sẽ popup buộc login trước mới cho xem, status sẽ thành chỉ có 2 giá trị là loading và authenticated
+VD tạo common thì component nào muốn chỉ cần gán auth=true:
+export default function AdminDashboard() {
+  const { data: session } = useSession()
+  return "Some super secret dashboard"
+}
+AdminDashboard.auth = true;
+export default function App({ Component, pageProps: { session, ...pageProps } }) {
+  return (
+    <SessionProvider session={session}>
+      {Component.auth ? (
+        <Auth>
+          <Component {...pageProps} />
+        </Auth>
+      ) : (
+        <Component {...pageProps} />
+      )}
+    </SessionProvider>
+  )
+}
+function Auth({ children }) {
+  const { status } = useSession({ required: true })
+  if (status === "loading") {
+    return <div>Loading...</div>
+  }
+  return children;
+}
+
+--> update({trường đổi}) từ useSession giúp update session gọi từ client sang server trực tiếp. Còn update() thì sẽ reload lại session ở server luôn, VD khi đổi db cần update session or refetch định kỳ.
+Có thể check trong hàm callbacks jwt và session if(trigger === "update") để server biết khi nào hàm được gọi vì chủ động call hàm update()
+
+-> getSession lấy ở client, ở server dùng getServerSession. 
+Để xác thực authen ở các api route khác phải dùng getServerSession để check user đã login => getServerSession đã tự verify token mà k cần làm thủ công, nó gọi encode và decode của jwt, nếu token từ ngoài mới cần thủ công verify. URL: https://next-auth.js.org/configuration/nextjs
+Cách khác là dùng middlware 
+
+getCsrfToken lấy csrf token bất cứ lúc nào. next-auth tự sinh 1 csrf token có thể lấy luôn ở cả 2 phía mà k cần cài package generate csrf token ở server nx.
+getProviders() lấy provider và các trường truyền vào
+
+-> signOut({ 
+  callbackUrl: 'http://localhost:3000/foo' // vẫn redirect sang page này sau khi signOut
+  redirect: false // Nhưng k reload page
+}); 
+
+-> <SessionProvider
+  basePath="/" // Phải định nghĩa basePath nếu custom basePath, mặc định là "/", thực tế nó sẽ nối vào canonical url NEXTAUTH_URL trong env var
+  refetchInterval={5 * 60} // Re-fetch session every 5 minutes
+  refetchOnWindowFocus={true} // Re-fetches session when window is focused
+>
+
+-> signIn("email", { email }) => dùng email sign-in flow là flow yêu cầu người dùng xác thực link gửi về input mail để login
+
+-> const authOptions = {
+  providers: [
+    GoogleProvider({
+      clientId: process.env.CLIENT_ID ?? "",
+      clientSecret: process.env.CLIENT_SECRET ?? "",
+      authorization: {
+        params: {
+          prompt: "consent", // Forces the consent screen, buộc phải login và cấp quyền lại dù đã login trước đó rồi, có nó sẽ k có tính năng auto login
+          access_type: "offline", // Phải có mới request trả về refresh token
+          response_type: "code", // Buộc là code trong OAuth2.0, gg trả về code r dùng đổi lấy token
+        },
+      },
+    }),
+    GithubProvider({ => github k hỗ trợ refresh token như gg
+      clientId: "test1",
+      clientSecret: "test2",
+    }),
+  ],
+  callbacks: {
+    redirect({ url, baseUrl } => { => Gọi khi nào user redirect to callback url, Vd signIn, signOut
+      return baseUrl;
+    }),
+    async jwt({ token, user, account, profile, isNewUser }) { => Gọi khi tương tác với JWT VD tạo, cập nhật, login, làm mới, truy cập bởi client
+      // Có thể check access_token exprires thì lấy lại bằng refresh_token ở đây
+      if (account) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+      }
+      return token; => giá trị returned được encrypted
+    },
+    async signIn({ user, account, profile, email, credentials }) { => Gọi khi login, có thể thay đổi thông tin login trước khi tạo phiên đăng nhập
+      // Có thể thêm or update vào db
+      return true;
+    },
+    async session({ session, user, token }:) { => Gọi khi truy cập or đổi thông tin session, VD login success và tạo 1 phiên, gọi getSession() or useSession()
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET, => Buộc có trong production để encrypted JWT or hash mail tự động bởi next-auth, sinh với: openssl rand -base64 32
+  session: {
+    strategy: "jwt", 
+    maxAge: 30 * 24 * 60 * 60, // 30 days nữa thì session expires
+    updateAge: 24 * 60 * 60,
+    generateSessionToken: () => { => session thường là random UUID
+      return randomUUID?.() ?? randomBytes(32).toString("hex")
+    }
+  },
+  jwt: { // Chỉ có tác dụng khi strategy "jwt"
+    maxAge: 60 * 60 * 24 * 30, // maxAge của jwt token
+    async encode({ token, secret, maxAge }) { // mặc định tự encrypt và decrypt nhưng có thể tự custom nếu thích
+      return "" => trả custom encoded JWT string
+    },
+    async decode({ token, secret }) {
+      return {} // trả jwt object, null nếu failed to decode
+    },
+  },
+  events: { => thường dùng cho log, trường trong message: https://next-auth.js.org/configuration/events
+    async signIn(message) { /* on successful sign in */ },
+    async signOut(message) { /* on signout */ },
+    async createUser(message) { /* user created */ },
+    async updateUser(message) { /* user updated - e.g. their email was verified */ },
+    async linkAccount(message) { /* account (e.g. Twitter) linked to a user */ },
+    async session(message) { /* session is active */ },
+  },
+  logger: { => intercept log có sẵn của next-auth, default nó log trên console
+    error(code, metadata) { },
+    warn(code) { },
+    debug(code, metadata) { }
+  },
+  theme: { => custom page theme
+    colorScheme: "auto", // "auto" | "dark" | "light"
+    brandColor: "", // Hex color code
+    logo: "", // Absolute URL to image
+    buttonText: "" // Hex color code
+  },
+  cookies: { => các loại token đều tự có và tự dùng trong next-auth khi cần thiết, ta có thể kiểm soát cách nó lưu trong cookie. 
+    sessionToken: { => kiểm soát cách sessionToken lưu trong cookie
+      name: `__Secure-next-auth.session-token`,
+      ...
+    },
+    callbackUrl: { => cookie lưu url mà người dùng chuyển hướng tới sau khi signIn
+      name: `__Secure-next-auth.callback-url`,
+      ...
+    },
+    csrfToken: { => kiểm soát cách csrfToken lưu trong cookie
+      name: `__Host-next-auth.csrf-token`,
+      ...
+    },
+    pkceCodeVerifier: { => cookie lưu PKCE - 1 cơ chế tăng cường bảo mật cho OAuth2.0
+      name: `${cookiePrefix}next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+        maxAge: 900
+      }
+    },
+    state: { => lưu trong cookie là 1 token bảo mật, gửi cho provider rồi provider gửi lại để đảm bảo request k bị giả mạo
+      name: `${cookiePrefix}next-auth.state`,
+      ...
+    },
+    nonce: { => có sẵn trong next-auth và được lưu trong cookie để cản replay attack
+      name: `${cookiePrefix}next-auth.nonce`,
+      ...
+    },
+  },
+  pages: { => custom page cho các chức năng. URL: https://next-auth.js.org/configuration/pages
+    signIn: '/auth/signin',
+    signOut: '/auth/signout',
+    error: '/auth/error', => khi có error code pass vào query string
+    verifyRequest: '/auth/verify-request', => verify mail
+    newUser: '/auth/new-user', => new user first sign-in
+  }
+}
+export default async function auth(req, res) { // Thực hiện cho mọi request trước khi pass vào NextAuth
+  if(req.query.nextauth.includes("callback") && req.method === "POST") {
+    console.log("Handling callback request from my Identity Provider", req.body);
+  }
+  const someCookie = req.cookies["some-custom-cookie"];
+  return await NextAuth(req, res, {
+    ...
+    callbacks: {
+      session({ session, token }) {
+        session.someCookie = someCookie
+        return session
+      }
+    }
+  })
+}
+
+--> session.strategy default là "jwt" lưu encrypted jwt trong session cookies. Nếu dùng adapter tự default là "database" và session cookies sẽ chứa sessionToken là giá trị để query session data từ db.
+--> session.updateAge: sau bao lâu nữa sẽ update session hiện tại vào db khi session data đổi. Set 0 thì cứ có thay đổi là update luôn sẽ tốn.
+Nếu dùng jwt sẽ ignore trường này, vì jwt chỉ cần lưu data trong session cookies, k cần dùng database luôn dù ta có thể force dùng db.
+
+-> Nó cung hàm để lấy token ở bất cứ đâu phía server, dùng ở mọi api route:
+import { getToken } from "next-auth/jwt";
+export default async function handler(req, res) {
+  const token = await getToken({ => hàm này cũng tự lấy token pass vào header Authorization: 'Bearer token'
+    req, 
+    secret: process.env.NEXTAUTH_SECRET, => Nếu dùng NEXTAUTH_SECRET env thì chỉ cần gọi await getToken({req})
+    secureCookie: true,
+    cookieName: true, 
+    raw: true, => k decode mà trả dạng encrypted raw luôn
+  });
+  res.end()
+} 
+
+--> secureCookie => thêm secure prefix vào tên trường chứa token lưu trong cookie, mặc định tự động false cho dev, true cho production, trừ khi NEXTAUTH_URL chứa tiền tố https thì tự động true hết.
+--> cookieName => chỉ định tên của trường chứa token lưu trong cookie, sẽ ignore secureCookie
+
+-> middleware.js của nextjs:
+import { withAuth } from "next-auth/middleware"
+export { default } from "next-auth/middleware" => mọi route đều yêu cầu login
+export const config = { matcher: ["/dashboard"] } => thêm matcher đảm bảo mọi route đều k cần, chỉ các route trong matcher mới cần
+export default withAuth({ 
+  pages: {
+    signIn: "/login", => setting middlware nếu người dùng vào 1 trang được bảo vệ (set như bên trên) mà chưa login sẽ redirect qua
+    error: "/error", => setting nếu lỗi login thì đi vào. setting phải trùng với options NextAuth
+  },
+  secret: "", => phải trùng với NextAuth config
+  callbacks: {
+    authorized({ req , token }) { => Để check người dùng được authorized không, hàm này chạy khi middleware bắt được request
+     if(token) return true; => default
+    }
+  },
+  jwt: { decode: authOptions.jwt?.decode }, => phải giống với trong authOptions thì import rồi add luôn như này cũng được
+})
+
+export default withAuth(
+  function middleware(req) {
+    console.log(req.nextauth.token);
+    console.log(req.nextauth.token?.role);
+    console.log(req.nextauth.token?.emailVerified);
+    if (userRole !== "admin") {
+      return NextResponse.redirect(new URL("/unauthorized", url));
+    }
+  },
+  {
+    <options như trên>
+  },
+)
+=> Khi có 2 tham số thì hàm middleware đầu là hàm bth của next js có thể xử lý thêm
+
+
+
+# Có thể tạo custom adapters connect db
+Khi 1 người dùng tk github và google (cùng mail) logins vào hệ thống sẽ hiểu là 1 người khác nhau với 2 ids. Buộc phải can thiệp thủ công quá trình check mail để check merge thành 1 người không.
+
+
+
+# 3 loại providers
+-> OAuth. Vd Tạo google login
+Lấy OAuth token có client id và client secret trên Google Console.
+Origin và redirect url phải chuẩn. VD Google Console set url origin là http://localhost:3000 và url redirect http://localhost:3000/api/auth/callback/google
+
+-> Email: custom việc gửi về mail đẻ xác thực tk
+-> Credentials: login bằng username, password, 2-factor authen ok
+
+
+
+# Module Augmentation typescript là pp mở rộng type cho các type có sẵn ở module nào đó.
+Vd tạo file types/next-auth.d.ts:
+import NextAuth, { DefaultSession } from "next-auth";
+declare module "next-auth" {
+  interface Session { => Trả ra bởi useSession
+    user: {
+      address: string
+    } & DefaultSession["user"] => extended default type
+  }
+}
+
+
+
+# GET /api/auth/signin => display page signin
+GET /api/auth/providers => display page list các OAuth services
+GET /api/auth/signout => display page signout
+GET /api/auth/csrf => lấy csrf token để cho vào form
+POST /api/auth/signout => signout, phải có csrftoken từ /api/auth/csrf. Hàm signOut tự động hết
+GET /api/auth/session => lấy client session object
+POST /api/auth/signin/:provider => khởi động sign-in flow tùy providers, phải có csrf token. Hàm signIn tự động hết, trừ khi muốn custom
+GET/POST /api/auth/callback/:provider => route này xử lý redirect từ provider khi sign in theo docs RFC
+
+
+

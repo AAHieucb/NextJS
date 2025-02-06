@@ -463,7 +463,7 @@ src
       _settings
         page.js => private toàn folder k routing gì hết 
       (.)settings
-+       page.js => intercept current route
+        page.js => intercept current route
       (..)settings
         page.js
       (..)(..)folder

@@ -202,6 +202,8 @@ Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa s�
 Lỗi thì error.tsx
 => Ref tới "Projects / Portfolio"
 
+-> intercept route: ghi đè hiển thị khi navigate từ 1 route sang 1 route khác, nó sẽ hiển thị khác đi trong case đó, VD hiển thị dạng modal preview, khi close sẽ vẫn ở trang gốc.
+
 
 
 # Pages router và hiểu SSR trong nextjs
@@ -579,74 +581,6 @@ VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên 
 
 -> Với pages routes: K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
 => Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
-
-
-
-# Dùng next-auth
--> Điều kiện để tạo Google login: có client id và client secret từ OAuth App trên Google Console; origin và redirect url trên console phải trùng với web. 
-VD chuẩn: Google Console set url origin là http://localhost:3000 và url redirect http://localhost:3000/api/auth/callback/google
-Có thể login với google, GitHub, custom với jwt, lưu login data vào db chạy như 1 server bth. Dùng token từ Google để Query data từ Google ok. 2 factor authentication.
-Tự dùng refreshtoken làm mới acccesstoken nếu exprires 
-
--> useSession({ onUnauthenticated(){} }); => xử lý thêm gì khác khi chưa login 
-
-useSession({ required: true }) => trang nào dùng sẽ popup buộc login trước mới cho xem, status sẽ thành chỉ có 2 giá trị là loading và authenticated
-Có thể tạo common thì component nào muốn chỉ cần gán auth=true:
-export default function AdminDashboard() {
-  const { data: session } = useSession()
-  return "Some super secret dashboard"
-}
-AdminDashboard.auth = true
-export default function App({
-  Component,
-  pageProps: { session, ...pageProps },
-}) {
-  return (
-    <SessionProvider session={session}>
-      {Component.auth ? (
-        <Auth>
-          <Component {...pageProps} />
-        </Auth>
-      ) : (
-        <Component {...pageProps} />
-      )}
-    </SessionProvider>
-  )
-}
-function Auth({ children }) {
-  const { status } = useSession({ required: true })
-  if (status === "loading") {
-    return <div>Loading...</div>
-  }
-  return children;
-}
-
-update({trường đổi}) từ useSession giúp update session gọi từ client sang server. update() thì sẽ reload lại server luôn, VD khi đổi db cần update session or refetch định kỳ
-Check trong hàm callbacks jwt và session if(trigger === "update") để server biết khi nào hàm được gọi vì chủ động call update
-
-Có thể lấy session client cách k dùng hook với getSession, ở server là getServerSession
-
-getCsrfToken lấy csrf token bất cứ lúc nào. next-auth tự sinh 1 csrf token có thể lấy luôn ở cả 2 phía mà k cần cài package generate csrf token ở server nx
-
-getProviders() lấy provider và các trường truyền vào
-
-Params thứ 3 của hàm sign in là param truyền thêm vào endpoint /authorize or truyền vào provider trường authorizationParams
-
-signOut({ 
-  callbackUrl: 'http://localhost:3000/foo'
-  redirect: false 
-}); => vẫn redirect sang page khác nhưng k có page reload, data useSession vẫn chuẩn
-
-<SessionProvider
-  // Default base path if your app lives at the root "/" => về sau nối vào NEXTAUTH_URL để ra
-  basePath="/"
-  // Re-fetch session every 5 minutes
-  refetchInterval={5 * 60}
-  // Re-fetches session when window is focused
-  refetchOnWindowFocus={true}
->
-
--> Có email sign-in flow trong next-auth
 
 
 
