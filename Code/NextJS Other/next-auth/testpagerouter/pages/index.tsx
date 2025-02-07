@@ -15,9 +15,7 @@ const geistMono = Geist_Mono({
 
 export default function Home() {
   // Trang này buộc phải login mới hiện
-  const { data: session, status } = useSession({
-    required: true
-  });
+  const { data: session, status } = useSession();
   if (status === "loading") {
     return "Loading or not authenticated..."
   }
@@ -35,13 +33,13 @@ export default function Home() {
   );
 }
 
-// Láy csrf token ở server
-export async function getServerSideProps() {
-  var x = await getCsrfToken();
-  console.log("x::", x);
-  return {
-    props: {
-      csrfToken: x
-    },
-  };
-}
+// // Láy csrf token ở server
+// export async function getServerSideProps() {
+//   var x = await getCsrfToken();
+//   console.log("x::", x);
+//   return {
+//     props: {
+//       csrfToken: x
+//     },
+//   };
+// }

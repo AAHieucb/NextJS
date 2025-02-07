@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import GithubProvider from "next-auth/providers/github"
+import CredentialsProvider from "next-auth/providers/credentials";
 import mongoose from "mongoose";
 import User from "@/models/User";
 
@@ -29,6 +30,37 @@ export const authOptions = {
       // github k hỗ trợ refresh token như gg
       clientId: "test1",
       clientSecret: "test2",
+    }),
+    CredentialsProvider({
+      id: "domain-login",
+      name: "Domain Account",
+      credentials: { 
+        username: { label: "Username", type: "text", placeholder: "jsmith", value: "TEST" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials, req) {
+        // Logic lấy user từ credentials. Khi login sẽ gọi để lấy user từ hàm này
+        const user = { id: "1", name: "J Smith", email: "jsmith@example.com" }
+        if (user) {
+          return user // giá trị trả về lưu vào trường user mà về sau lấy ra trong hàm jwt
+        } else {
+          // Trả null sẽ hiện lỗi bảo user check lại details.
+          // Có thể gọi reject để chuyển sang trang error pages
+          return null
+        }
+      },
+    }),
+    CredentialsProvider({
+      // Có thể định nghĩa nhiều credential provider
+      id: "intranet-credentials",
+      name: "Two Factor Auth",
+      async authorize(credentials: any, req: any) {
+        return null;
+      },
+      credentials: {
+        username: { label: "Username", type: "text ", placeholder: "jsmith" },
+        "2fa-key": { label: "2FA Key" },
+      },
     }),
   ],
   callbacks: {
