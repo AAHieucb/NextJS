@@ -1,5 +1,6 @@
 # Dùng next-auth 
 => Nếu tự sign in username password, nên tự implement bằng nextjs thuần
+=> Đơn giản hơn nên dùng clerk nếu user k nhiều
 
 -> const {
   update 
@@ -98,6 +99,7 @@ getProviders() lấy provider và các trường truyền vào
     },
   },
   secret: process.env.NEXTAUTH_SECRET, => Buộc có trong production để encrypted JWT or hash mail tự động bởi next-auth, sinh với: openssl rand -base64 32
+  trustHost: true, => Cần khi dùng proxy, true thì sẽ tin X-Forwarded-Host và X-Forwarded-Proto headers passed to the app by the proxy to auto-detect the host URL (AUTH_URL)
   session: {
     strategy: "jwt", 
     maxAge: 30 * 24 * 60 * 60, // 30 days nữa thì session expires
@@ -283,4 +285,53 @@ POST /api/auth/signin/:provider => khởi động sign-in flow tùy providers, p
 GET/POST /api/auth/callback/:provider => route này xử lý redirect từ provider khi sign in theo docs RFC
 
 
+
+# next-auth v5
+-> Hỗ trợ preview deployment 
+
+-> Tự dùng đúng env khi định nghĩa:
+AUTH_[PROVIDER]_ID= => ví dụ AUTH_GOOGLE_ID
+AUTH_[PROVIDER]_SECRET= => ví dụ AUTH_GOOGLE_SECRET
+AUTH_URL/NEXTAUTH_URL => k có cũng được mà nó sẽ tự detect
+AUTH_SECRET => buộc phải có
+
+-> GitHub({
+  account(account) { // Thêm hàm callback account vào provider
+    // Hàm truy cập được mọi token của provider, dùng để tạo account gắn với user
+    return {
+      access_token: account.access_token,
+      expires_at: account.expires_at,
+      refresh_token: account.refresh_token,
+      refresh_token_expires_at: account.refresh_token_expires_in
+    }
+  }
+})
+
+-> Dùng auth() thế hết getServerSession, getSession, withAuth, getToken, and useSession và authen ở phía server:
+https://authjs.dev/getting-started/migrating-to-v5#authenticating-server-side
+
+-> ./auth.config.ts:
+import GitHub from "next-auth/providers/github"
+import type { NextAuthConfig } from "next-auth"
+export default { providers: [GitHub] } satisfies NextAuthConfig
+./auth.ts:
+import authConfig from "./auth.config"
+import NextAuth from "next-auth"
+export const { auth, handlers, signIn, signOut } = NextAuth({
+  session: { strategy: "jwt" },
+  ...authConfig,
+})
+File [...nextauth].ts chỉ còn:
+import { handlers } from "@/auth"
+export const { GET, POST } = handlers;
+
+-> Dùng middleware tự loại bỏ database adapter mà k hỗ trợ edge runtime, khi code ta k cần lo về điều đó. Có 2 cách:
+- Dùng trực tiếp chỉ middleware của next-auth:
+import authConfig from "./auth.config";
+export const { auth: middleware } = NextAuth(authConfig);
+- Wrap hàm middleware:
+const { auth } = NextAuth(authConfig)
+export default auth(async function middleware(req: NextRequest) { })
+
+-> cookie đổi prefix nex-auth thành authjs
 
