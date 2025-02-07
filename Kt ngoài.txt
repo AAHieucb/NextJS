@@ -1,3 +1,13 @@
+# Edge runtime
+Middleware chỉ hỗ trợ edge runtime. Các hàm server như getServerSideProps và API route hỗ trợ cả edge runtime và noderuntime.
+Cố sử dụng hàm của edge runtime trong node runtime sẽ hoạt động k tối ưu và đôi khi gây lỗi. Cố sử dụng node runtime trong edge runtime sẽ lỗi luôn.
+Edge runtime thường sử dụng với các hàm nhẹ, bộ nhớ giới hạn và tốc độ của nó cũng nhanh. Node runtime xử lý được hàm nặng nhưng tốc độ chậm hơn (cold start) vì phải chạy 1 server truyền thống để xử lý function
+Khi deploy nextjs lên vercel, nó tự phân tán trên toàn thế giới nhưng k cần chạy server, nó tự chuyển mọi hàm trong edge runtime thành edge function, node runtime thành serverless function.
+
+VD khi dùng next-auth với database strategy nhưng database adapter k hỗ trợ edge runtime, mà dùng nó trong middleware sẽ lỗi, next-auth tự xử lý để adapter k hỗ trợ edge runtime tự k cho vào middleware.
+
+
+
 # CSR SSG SSR static web và hosting
 CSR: browser gửi request lấy htm -> render tạm loading -> download JS -> fetch data API -> render với data đủ
 SSR: browser gửi request lấy html -> page hiện luôn nhưng không tương tác được -> download JS event file -> thực hiện được actions

@@ -431,7 +431,9 @@ Lấy ip và location của client ở phía server. Nó chỉ hoạt động kh
 
 
 # Dùng middleware
--> VD Tạo middleware.ts ở ngoài cùng cấp next.config.js:
+Mặc định middleware luôn chạy trên edge runtime. K thể dùng các nodejs module như fs, crypto, path, nhưng có thể dùng web api như fetch, NextResponse. Muốn dùng nodejs module hoặc là chuyển qua web api, hoặc phải tìm cách khác.
+
+-> VD Tạo middleware.ts ở ngoài cùng cấp next.config.js (dùng cả page router và app router):
 export function middleware(req, res) { return NextResponse.next(); }
 export const config = { matcher: '/' };
 => Middleware chạy khi client request vào trang / (nếu k sẽ rất nhiều), chạy sau các setting trong next.config.js nếu ảnh hưởng, chạy trước khi trang được render
@@ -475,6 +477,7 @@ VD: export function middleware(req: NextRequest, event: NextFetchEvent) {
 export const config = {
   matcher: ['/api/auth/:path*', '/dashboard/:path*'],
 };
+=> event.waitUntil giúp thực hiện thêm task call api nếu cần.
 
 -> redirect:
 - import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side.
@@ -497,6 +500,22 @@ module.exports = {
     ];
   },
 };
+
+-> Chain middleware:
+- Có thê combine các middleware bằng cách viết logic từng cái liên tiếp trong 1 hàm middleware.js
+- Middleware chỉ là 1 hàm nhận (request, event), rồi hoặc là trả ra response lấy từ NextResponse.next() cho client hoặc là redirect hay rewrites. Có thể tự tạo custom chain middleware gọi từng hàm một trả ra response, chia làm 2 loại, middlewares chạy trước và sau NextResponse.next()
+URL code mẫu: https://www.youtube.com/watch?v=bFr2t68AABQ
+
+
+
+# NextJS support giúp tạo i18n 
+Có hàng loạt thư viện hỗ trợ hoặc dùng sẵn của nextJS: https://nextjs.org/docs/app/building-your-application/routing/internationalization
+Luôn phải tự định nghĩa từng text cho từng ngôn ngữ support. 
+
+-> 2 cách:
+- Tạo 1 settings lưu vào localstorage. 
+- Mỗi ngôn ngữ có 1 route riêng, trong app lấy lang từ params và dùng text tương ứng. Phải thêm lang vào html header. 
+Check nếu url thiếu lang thì redirect sang lang mặc định. Package "negotiator" giúp lấy locale từ url. Có thể tạo middleware xử lý điều này.
 
 
 
