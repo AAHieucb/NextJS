@@ -504,7 +504,7 @@ module.exports = {
 -> Client component được server chạy qua 1 lần, nhưng k chạy code useEffect. Nếu dùng window object trong client component trực tiếp sẽ lỗi, dùng conditional check cũng lỗi hydration vì html render ở server và client phải giống nhau. Dùng trong useEffect thì ok, FE sẽ bị jump giá trị khi useEffect chạy.
 Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data. Hoặc dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh, nhưng k nên làm v.
 
--> Kp file nào cũng cần "use client", 1 client component import 1 component khác thì component được import phải là client component, khi đó k cần "use client" ở file con. Chú ý client component có tình import server comp gây lỗi.
+-> Kp file nào cũng cần "use client", 1 client component import 1 component khác thì component được import phải là client component, khi đó k cần "use client" ở file con. Chú ý client component cố tình import server comp gây lỗi.
 Nhưng 1 client component có thể truyền { children } là 1 server component. Do đó thêm "use client" vào provider k biến cả app thành client component
 => Hình như dùng dynamic thì cũng import được server comp ở client comp??
 

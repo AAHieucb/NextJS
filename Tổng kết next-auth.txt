@@ -40,8 +40,9 @@ function Auth({ children }) {
 Có thể check trong hàm callbacks jwt và session if(trigger === "update") để server biết khi nào hàm được gọi vì chủ động call hàm update()
 
 -> getSession lấy ở client, ở server dùng getServerSession. 
-Để xác thực authen ở các api route khác phải dùng getServerSession để check user đã login => getServerSession đã tự verify token mà k cần làm thủ công, nó gọi encode và decode của jwt, nếu token từ ngoài mới cần thủ công verify. URL: https://next-auth.js.org/configuration/nextjs
-Cách khác là dùng middlware 
+Để xác thực authen ở các api route khác phải dùng getServerSession để check user đã login => getServerSession sẽ lấy session từ cookie về giải mã và xác thực còn hạn, truy cập db để lấy session nếu cần thiết, tự gọi decode của jwt, nếu token từ ngoài mới cần thủ công verify. URL: https://next-auth.js.org/configuration/nextjs
+Cách khác là dùng middlware check ngay từ trước
+Dùng getServerSession từng page chưa ổn vì fetch data ở phạm vi từng component, nếu tái sử dụng component ở pages khác sẽ phải thêm getServerSession vào pages đó. Recommend là nên tạo 1 data access layer "server-only" check token và call api trong 1 hàm đó thôi, r đem tái sử dụng ở mọi nơi ok. Nên bao lại với cache chống deduplicate nữa
 
 getCsrfToken lấy csrf token bất cứ lúc nào. next-auth tự sinh 1 csrf token có thể lấy luôn ở cả 2 phía mà k cần cài package generate csrf token ở server nx.
 getProviders() lấy provider và các trường truyền vào
@@ -76,31 +77,46 @@ getProviders() lấy provider và các trường truyền vào
       clientId: "test1",
       clientSecret: "test2",
     }),
+    CredentialsProvider({ // Custom login k dùng bên thứ 3
+      id: "domain-login",
+      name: "Domain Account", // Sign in with ...
+      credentials: { // Các trường input
+        username: { label: "Username", type: "text", placeholder: "jsmith", value: "TEST" },
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials, req) { // Hàm được gọi khi login để lấy user
+        return user; // giá trị trả về lưu vào trường user mà về sau lấy ra trong hàm jwt. return null sẽ báo lỗi user check lại detail, Reject sẽ sang trang error
+      },
+    }),
   ],
   callbacks: {
     redirect({ url, baseUrl } => { => Gọi khi nào user redirect to callback url, Vd signIn, signOut
       return baseUrl;
     }),
-    async jwt({ token, user, account, profile, isNewUser }) { => Gọi khi tương tác với JWT VD tạo, cập nhật, login, làm mới, truy cập bởi client
-      // Có thể check access_token exprires thì lấy lại bằng refresh_token ở đây
+    async jwt({ token, user, account, profile, isNewUser }) { => Gọi khi tương tác với JWT VD tạo, cập nhật, login, làm mới, khi client truy cập session cũng gọi
+      // user, account, profile, isNewUser chỉ có khi login lần đầu tiên tạo session mới. Các request sau đó cũng gọi nhưng chỉ truy cập được token thôi
+      // Thường dùng để lưu lại access token vào next-auth session data sau khi login. Nó tuỳ vào provider. VD login gg thì account sẽ chứa token, login CredentialProviders thì có thể nhét token vào user trong hàm authorize sẽ truyền tiếp xuống user đây
       if (account) {
         token.accessToken = account.access_token;
         token.refreshToken = account.refresh_token;
       }
+      // Có thể xử lý token expires thì làm mới bằng refresh token
       return token; => giá trị returned được encrypted
     },
-    async signIn({ user, account, profile, email, credentials }) { => Gọi khi login, có thể thay đổi thông tin login trước khi tạo phiên đăng nhập
-      // Có thể thêm or update vào db
-      return true;
+    async signIn({ user, account, profile, email, credentials }) { => Gọi khi login, dùng EmailProvider thì lúc verify link trong mail cũng gọi
+      // Dùng EmailProvider thì email.verificationRequest = true ở lần đầu click login, khi verify trong mail thì trường này k còn nữa
+      // Dùng CredentialProvider thì user passed từ hàm authorize, profile là raw body của http post
+      return true; // Có thể thêm or update vào db, thay đổi login info trước khi tạo session mới
     },
-    async session({ session, user, token }:) { => Gọi khi truy cập or đổi thông tin session, VD login success và tạo 1 phiên, gọi getSession() or useSession()
+    async session({ session, user, token }:) { => Gọi khi tương tác session, VD login, gọi getSession(), useSession(), call vào /api/auth/session.
+      // Dùng db thì user được pass. Dùng jwt thì token được pass từ hàm jwt trên, gọi sau jwt() để lấy token mà
       return session;
     },
   },
   secret: process.env.NEXTAUTH_SECRET, => Buộc có trong production để encrypted JWT or hash mail tự động bởi next-auth, sinh với: openssl rand -base64 32
   session: {
     strategy: "jwt", 
-    maxAge: 30 * 24 * 60 * 60, // 30 days nữa thì session expires
+    maxAge: 30 * 24 * 60 * 60, // 30 days nữa thì session expires.
     updateAge: 24 * 60 * 60,
     generateSessionToken: () => { => session thường là random UUID
       return randomUUID?.() ?? randomBytes(32).toString("hex")
@@ -213,7 +229,7 @@ export default async function handler(req, res) {
 -> middleware.js của nextjs:
 import { withAuth } from "next-auth/middleware"
 export { default } from "next-auth/middleware" => mọi route đều yêu cầu login
-export const config = { matcher: ["/dashboard"] } => thêm matcher đảm bảo mọi route đều k cần, chỉ các route trong matcher mới cần
+export const config = { matcher: ["/dashboard/:path*"] } => thêm matcher đảm bảo mọi route đều k cần, chỉ các route trong matcher mới cần
 export default withAuth({ 
   pages: {
     signIn: "/login", => setting middlware nếu người dùng vào 1 trang được bảo vệ (set như bên trên) mà chưa login sẽ redirect qua
@@ -242,6 +258,44 @@ export default withAuth(
   },
 )
 => Khi có 2 tham số thì hàm middleware đầu là hàm bth của next js có thể xử lý thêm
+
+
+
+# Luồng hoạt động jwt
+Khi dùng OAuth Provider, k cần lo về việc login. Khi dùng CredentialsProvider phải tự custom các api để sign up, login.
+
+-> Bản chất các cách login:
+- Dùng session data: là 1 cách để client call api tới server mà k cần tạo access token.
+Client login sẽ chia sẻ với server cùng 1 session data. Server check session data từ client trùng nhau là valid.
+Có nhiều giải pháp để server lưu data như: lưu trong db, lưu trong bộ nhớ, lưu trong cache, sử dụng 1 secret để mã hoá và chỉ cần lưu ở client. 
+Ở phía client thì session cookie lưu trong browser, mục cookies có expires time là "Session" là session cookie, nếu expires time cụ thể thì là normal cookie.
+
+Sử dụng 1 secret để mã hoá và chỉ cần lưu ở client là 1 cách rất hay cho server stateless: Client gửi session data tới server, server mã hoá bằng secret và gửi lại client 1 token, client lưu lại token trong cookie, khi có request sẽ gửi lại server decrypt được là được.
+
+- Dùng jwt: là cách thông thường khi mà server sinh access token và refresh token. Server k cần lưu gì cả mà client chỉ lưu vào normal cookie hoặc localStorage.
+
+=> Vấn đề là next-auth gây hiểu nhầm: sử dụng session cookie nhưng thực ra là lưu session ở FE vào normal cookie chứ kp session cookie, đóng browser k bị xoá. next-auth cũng sử dụng strategy jwt nhưng thực tế kp là jwt của OAuth mà chỉ là cách encrypt session data giống cách encrypt jwt token nên đặt tên v thôi.
+=> Bản chất next-auth mã hoá session data thành 1 jwt token và lưu lại (chỉ để lưu chứ kp là jwt oath). Token này có hạn là session.maxAge, được lưu vào cookie với tên mặc định là next-auth.session-token với hạn là cookies.sessionToken.options.maxAge. Nên set bằng nhau
+
+1) strategy: "jwt" => session trong useSession ở FE được mã hoá bằng secret và lưu vào normal cookie, server k lưu gì cả. Client gửi session được mã hoá tới server để server decrypt xác thực
+2) strategy: "database" => session trong useSession ở FE được lưu vào db và có 1 key, client lưu mỗi key đó trong normal cookie và gửi tới server để lấy từ db mà check.
+
+--> Tức là: Mặc định client có thể call tới server dựa vào việc check session data. Phía server dùng getServerSession là check thoải mái.
+Mặc định next-auth k dùng jwt OAuth và k có accesstoken refreshtoken gì cả, nếu muốn thì phải tự thêm. Thực tế chỉ cần dùng nếu call external api, chứ cùng dự án nextjs thì dùng session data là đủ.
+Măc định next-auth tự có auto login rồi vì lưu vào normal cookie, ta có thể custom cookies.sessionToken thời gian sống lâu lên là được.
+
+-> 2 flows login ổn nhất
+1) Dùng session data như cách next-auth hiện tại: chỉ gọi api cùng dự án; k cần accesstoken, chỉ cần session data check là được; đặt time sống của cookie lâu là có auto login và hết hạn phải login lại.
+Config cookies.sessionToken, dùng getServerSession lấy session ra check ở api route
+2) Dùng OAuth access token như bth:
+- Nếu dùng Provider bên thứ 3 thì có token luôn, tuỳ loại k có refresh token thì tuỳ biến bỏ logic đó đi.
+- Dùng CredentialsProvider, lấy user và 2 loại token luôn trong hàm authorize() -> jwt() -> session()
+Sửa type interface Session chứa cả 2 loại token
+custom jwt() xử lý accesstoken hết hạn thì lấy lại, nếu refreshtoken sắp hết hạn cũng lấy lại. 
+Lúc gọi API thì lấy session.token truyền vào header Authorization (chuẩn OAuth) và server lấy ra check. Cách khác là server lấy bằng getServerSession.
+
+--> Vấn đề thời gian hết hạn của session, cookies, access token, refresh token. Expirse times của cookies và session đều tự mở rộng mỗi khi lấy session nên k sợ nó hết hạn trước refresh token nhé, cứ set 1 ktg đủ xa là được.
+Logic acccess token hết hạn và làm mới chỉ cần viết trong hàm jwt() là đủ vì getServerAction hay bất cứ khi nào truy cập session đều gọi vào. Trừ khi cần gọi API bên thứ 3 k dùng server của ta thì có thể phải thêm ở client side. 
 
 
 
