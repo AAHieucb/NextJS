@@ -3,6 +3,8 @@ NextJS luôn tự cache nhiều nhất có thể để tối ưu mà k ảnh hư
 VD client request tới server có Router Cache ở ngay client để k gọi 1 request nhiều lần, gọi tới server nextjs lại có Full Route Cache có sẵn html từ request trước đó không, nếu không thì server side sẽ call api để lấy data vào html thì lại có Request Memoization lưu kết quả của hàm gọi api và Data Cache lưu JSON data của API.
 Hàng loạt example: https://nextjs.org/docs/app/building-your-application/data-fetching/fetching
 
+Cache trong nextjs lưu trong filesystem của server. Có thể config cache location sang storage bền vững or chia sẻ giữa các container và nhiều instance trên máy.
+
 
 
 # Browser có sẵn cache
@@ -15,6 +17,11 @@ Việc dùng cache browser sẽ override lên setting của App Router nhé, VD 
 
 =>*** Cái này nên dùng mặc định k đụng vào, mặc định cache các file assets static thôi.
 
+-> Nextjs tự thêm Cache-Control cho truly immutable assets là "public, max-age=31536000, immutable", bao gồm static image và điều này k thể đổi.
+Riêng với image, có thể config minimumCacheTTL, deviceSizes, imageSizes, formats. 
+Khi có cả 2 minimumCacheTTL và Cache-Control sẽ chọn cái có time lớn hơn, nên k thể ép thời gian cache image nhỏ hơn setting fix của Cache-Control được
+Các page dynamic cũng tự set Cache-Control cho browser là "private, no-cache, no-store, max-age=0, must-revalidate" để cản mọi cache
+
 
 
 # Request Memoization
@@ -24,7 +31,7 @@ Vd set {next:{revalidate:1}} và Promise.all([fetchData(), fetchData()]) call t�
 => Lưu ý tính năng này luôn cần có, k ảnh hưởng gì tới flow chính của ứng dụng vì chỉ trong 1 single render pass.
 => Cơ chế nó lưu lại request vào cache trong 1 single render pass, hết render pass đó thì xoá cache đi
 
-Chỉ cần dùng fetch có sẵn của nextjs là tự có request memoization r. Thực tế đây là tính năng của React có sẵn cache dùng cho server component. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch, có thể tự implement lại với cache của React để có Request Memoization và cache. Còn cache của react sang nextjs thành { unstable_cache }
+Chỉ cần dùng fetch có sẵn của nextjs là tự có request memoization r. Thực tế đây là tính năng của React có sẵn cache dùng cho server component. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch, có thể tự implement lại với cache của React để có Request Memoization và cache. Còn cache của react sang nextjs thành { unstable_cache } vẫn có sẵn request memoization.
 VD: import { cache } from 'react'; const fetchWithCache = cache( async (url) => { const res = await fetch(url); return res.json(); });
 
 Dùng các thư viện như swr, react-query cũng giúp tạo Request Memoization tự cache request, xử lý deduplicate trong ktg ngắn.

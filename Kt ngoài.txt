@@ -1,10 +1,7 @@
-# Edge runtime
-Middleware chỉ hỗ trợ edge runtime. Các hàm server như getServerSideProps và API route hỗ trợ cả edge runtime và noderuntime.
-Cố sử dụng hàm của edge runtime trong node runtime sẽ hoạt động k tối ưu và đôi khi gây lỗi. Cố sử dụng node runtime trong edge runtime sẽ lỗi luôn.
-Edge runtime thường sử dụng với các hàm nhẹ, bộ nhớ giới hạn và tốc độ của nó cũng nhanh. Node runtime xử lý được hàm nặng nhưng tốc độ chậm hơn (cold start) vì phải chạy 1 server truyền thống để xử lý function
-Khi deploy nextjs lên vercel, nó tự phân tán trên toàn thế giới nhưng k cần chạy server, nó tự chuyển mọi hàm trong edge runtime thành edge function, node runtime thành serverless function.
-
-VD khi dùng next-auth với database strategy nhưng database adapter k hỗ trợ edge runtime, mà dùng nó trong middleware sẽ lỗi, next-auth tự xử lý để adapter k hỗ trợ edge runtime tự k cho vào middleware.
+# File mdx
+Kết hợp của markdown và jsx, có thể viết component jsx trong markdown. 
+Vào github sẽ k thấy mà phải dùng compiler riêng.
+Nextjs hỗ trợ mdx, có thể viết toàn page bằng mdx rồi hiển thị như component JSX. Page đơn giản có thể dùng mdx ok vì bị giới hạn tính năng, pages phức tạp thì dùng jsx bth.
 
 
 
@@ -68,6 +65,60 @@ Khi Access Token hết hạn, ứng dụng web có thể sử dụng Refresh Tok
 
 
 
+# Request waterfalls
+Là khi để load 1 files, phải load 1 file khác dùng bên trong trước. VD:
+|-> Markup
+  |-> CSS
+  |-> JS
+    |-> CSS
+      |-> Image
+  |-> Image
+VD client side:
+|-> Markup (without content)
+  |-> JS
+    |-> Query
+VD server side: 
+|-> Markup (with content AND initial data)
+  |-> JS
+
+-> dehydrate là quá trình server loại bỏ data k cần thiết để giảm kích thước và gửi html cho client
+hydrate là qtr client nhận được html rồi thì ghép sự kiện vào DOM và thực thi JS để tương tác được thôi
+
+
+
+# Rich result
+Web chứa rich result sẽ được google crawl thêm các thông tin như: phụ lục, thông tin sản phẩm, sao review, FAQ
+Chỉ cần thêm data vào tag <script type="application/ld+json">
+Web để test: https://search.google.com/test/rich-results
+VD chỉ cần thêm thẻ này vào header:
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "Điện thoại XYZ",
+  "image": "https://example.com/xyz.jpg",
+  "description": "Điện thoại XYZ có màn hình 6.5 inch, pin 5000mAh, camera 64MP.",
+  "brand": {
+    "@type": "Brand",
+    "name": "XYZ"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.7",
+    "reviewCount": "152"
+  },
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "VND",
+    "price": "15990000",
+    "availability": "https://schema.org/InStock",
+    "url": "https://example.com/dien-thoai-xyz"
+  }
+}
+</script>
+
+
+
 # (xoá ngay) Bug cũ nextjs 
 -> Call api tới external source ở server pages sẽ bị gọi 2 lần, nếu udpate db sau đó cũng sẽ update 2 lần. 
 Để fix, hoặc là dùng prefetch={true} thì khi xuất hiện ở view port sẽ tự prefetch chỉ 1 lần k sợ lặp. Hoặc là dùng router.push() thay cho thẻ Link
@@ -76,5 +127,17 @@ Khi Access Token hết hạn, ứng dụng web có thể sử dụng Refresh Tok
 
 -> VD để đạt được getServerSideProps như page router, ta phải disable data cache và full route cache và client side cache trong app router rất dở. 
 Tức thêm cache:"no-store" để opt out data cache và full router cache, và thêm staleTime dynamic 0 vào config để opt out client side router cache. Lại còn k được dùng thẻ Link để tránh lỗi nữa.
+
+
+
+# Other
+-> Hook useFormState => deprecated thay bằng useActionState
+const [formState, formAction] = useFormState(addToCart, { itemID: "" });
+async function addToCart(prevState, queryData) { const itemID = queryData.get('itemID'); return { itemID }; }
+<form action={formAction}>
+Khi form thực hiện submit sẽ chạy hàm addToCard, hàm này trả ra giá trị lấy với formState. Lúc chưa thực hiện mang giá trị mặc định là {itemID:""}
+Ở lần gọi sau thì prevState mang giá trị formState trả ra ở lần gọi trước đó
+Có thể custom xử lý lỗi trả ra formState.pending, formState.error, formState.itemID.
+=> useFormStatus lấy form status ở từng component, còn useFormState lấy status thực hiện action ở component ngoài cùng (server component fetch loading thì dùng Suspense)
 
 

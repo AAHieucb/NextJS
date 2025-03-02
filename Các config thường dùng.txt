@@ -1,17 +1,17 @@
 -> tsconfig.json:
 {
   "compilerOptions": {
-    "target": "ES2017", // *Specifies the target JavaScript version. VD 'es5' for ECMAScript 5.
-    "lib": ["dom", "dom.iterable", "esnext"], // *Specifies the library files to be included in the compilation.
+    "target": "ES2017", // *Specifies the target JavaScript version. VD 'es5' for ECMAScript 5; "es6" for ecmascript 6
+    "lib": ["dom", "dom.iterable", "esnext"], // *Specifies the library files to be included in the compilation. "es2015" fix lỗi promise, "dom" fix lỗi console
     "allowJs": true, // *Allows JavaScript files to be compiled.
     "skipLibCheck": true, // *Skips type checking of declaration files.
     "strict": true, // *Enables all strict type-checking options.
     "noEmit": true, // *Disables emitting files from the compilation.
     "esModuleInterop": true, // *Enables interoperability between CommonJS and ES Modules, sẽ giúp việc import các mô-đun trở nên mượt mà hơn.
-    "module": "esnext", // *Specifies the module code generation: 'esnext' for modern JavaScript modules.
+    "module": "esnext", // *Specifies the module code generation: 'esnext' for modern JavaScript modules. "commonjs" là tiêu chuẩn cho nodejs.
     "moduleResolution": "bundler", // *Determines how modules are resolved. VD 'node' mimics Node.js module resolution. 
     "resolveJsonModule": true, // *Allows importing JSON files as modules.
-    "isolatedModules": true, // *Ensures each file can be safely transpiled without relying on other imports.
+    "isolatedModules": true, // *Đảm bảo mỗi file được xử lý như 1 module, compile độc lập k dựa vào file khác. Tức phải có ít nhất 1 export, k có sẽ báo lỗi.
     "jsx": "preserve", // *Preserves JSX as part of the output.
     "incremental": true, // *Enables incremental compilation for faster builds.
     "removeComments": true, // *Removes comments from the output.
@@ -29,10 +29,11 @@
     "outDir": "out", // *Redirects output structure to the directory.
     "declaration": true, // *Generates corresponding `.d.ts` files.
     "sourceMap": true, // *Generates source map files.
-    "allowSyntheticDefaultImports": true, // *Allows default imports from modules with no default export.
+    "allowSyntheticDefaultImports": true, // *Cho import từ module k có default export. VD import React from "react"; Nếu k có buộc phải dùng: import * as React from "react";
     "forceConsistentCasingInFileNames": true, // *Disallows inconsistently-cased references to the same file.
+    "watch": true, // thay đổi file ts tự compile lại
     "baseUrl": ".", // *Specifies the base directory to resolve non-relative module names.
-    "paths": {
+    "paths": { => baseUrl kèm paths để thêm tiền tố
       "@/*": ["./src/*"], // Maps `@/*` to `./src/*` for module resolution.
       "@/public/*": ["./public/*"] // Maps `@/public/*` to `./public/*` for module resolution.
     }
@@ -48,31 +49,41 @@ poweredByHeader: false, // *NextJS sẽ k thêm header "X-Powered-By: Next.js" v
 logging: { fetches: { fullUrl: true } } => *Log thông tin full URL khi fetch API bằng "fetch" của nextjs ở dev mode.
 basePath: '' => *default load static files từ folder public. Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
 trailingSlash: true => có / ở cuối kqtr
-reactStrictMode: true,
-swcMinify: true, => *dùng speed web compiler thay vì Terser để nén file js nhỏ hơn
+reactStrictMode: true, => bỏ, dùng app router tự có true luôn
 images: { => *
+  loader: "custom", // Dùng custom loader
+  loaderFile: "./loader-img.ts", // File export ra function nhận { src, width, quality } trả ra 1 url ảnh đã được optimize. VD dùng cloudinary sẽ rõ
   unoptimized: true,
   remotePatterns: [
     {
       protocol: "https",
-      hostname: "**",
+      hostname: "images.unplash.com", // or ** là tất cả
+      port: "",
+      pathname: "/**",
+      search: "", // để trống thì url ảnh k được có search params nào cả mới optimize
     },
   ],
-  domains: [
+  domains: [ // y hẹt remotePatterns nhưng k dùng wildcard mà fix cứng
     "aptos-api-testnet.bluemove.net",
     "aptos.dev",
   ],
+  minimumCacheTTL: 60, // Image luôn tự được cache, có thể set TTL như này, nó sẽ ss với Cache-Control header và lấy cái lớn hơn.
+  deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840], // Default
+  imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // Default.
 },
 useFileSystemPublicRoutes: false, => k chia router theo cấu trúc thư mục nữa, phải tự custom server để serve.
 eslint: {
-  dirs: ['.'], => *eslint kiểm tra toàn bộ thư mục hiện tại
+  dirs: ['.'], => *eslint kiểm tra toàn bộ thư mục hiện tại, mặc định check trong src thôi là chuẩn rồi, chứ set như này check cả .next nữa là sai
 }, 
-appDir: true, => dùng app router
-serverActions: true,
-serverActionsBodySizeLimit: '2mb',
+appDir: true, => dùng app router => bỏ, tự dùng là được chứ k cần nx
+serverActions: true, => bỏ, v13 mới cần thôi
+serverActionsBodySizeLimit: '2mb', => v13
+serverActions: {
+  bodySizeLimit: '2mb', => v14 trở đi phải dùng như này, default 1mb
+}
 staleTimes: { => Phải có mới enable client-side router cache cho pages
-  dynamic: 30, 
-  static: 180,
+  dynamic: 30, // default 0s tức nó k cache page dynamic
+  static: 180, // default 5p là nó luôn cache page static, hoặc khi prefetch 1 page vào cache khi dùng <Link prefetch={true}/> hoặc gọi router.prefetch
 },
 bundlePagesRouterDependencies: true, => *bundle các page router dependencies trong quá trình build giúp tối ưu hiệu suất và kích thước, luôn dùng
 serverExternalPackages: ['lodash', 'axios'], => Các packages mà server k bundle mà sẽ lấy từ node_modules trực tiếp, qtr build nhanh hơn nhưng size lớn hơn.
@@ -81,12 +92,80 @@ experimental: { }
 devIndicators: { => liên quan đến việc hiển thị các chỉ số trong quá trình chạy app. 
   buildActivity: false, => k hiện các chỉ số khi build như khi tái biên dịch, trông clear hơn nhưng khó khăn hơn khi debug
 },
+output: "export" => sẽ "export" ra chỉ file static để host CSR thôi, "standalone" sẽ trích tất cả các file cần thiết từ mọi nơi ra tối ưu và chạy minimal server đó là được
+async headers() { => set custom header
+  return [
+    {
+      source: '/:path*',
+      headers: [
+        {
+          key: 'x-hello',
+          value: 'there',
+        },
+      ],
+    },
+    {
+      source: '/blog/:slug',
+      headers: [
+        {
+          key: 'x-slug',
+          value: ':slug', // Matched parameters can be used in the value
+        },
+        {
+          key: 'x-slug-:slug', // Matched parameters can be used in the key
+          value: 'my other custom header value',
+        },
+      ],
+    }
+  ]
+},
+async rewrites() {
+  return [
+    {
+      source: '/old-url',
+      destination: '/new-url', // URL thực tế sẽ được xử lý
+    },
+    {
+      source: '/api/:path*',
+      destination: 'https://api.example.com/:path*', // Proxy đến một API khác
+    },
+  ];
+},
+async redirects() {
+  return [
+    {
+      source: '/blog/:slug',
+      destination: '/news/:slug',
+      permanent: true,
+    },
+  ]
+},
+assetPrefix: "https://cdn.mydomain.com",
+cacheHandler: require.resolve('./cache-handler.js'),
+cacheMaxMemorySize: 0, => disable default in-memory cache để dùng theo cacheHandler
+generateBuildId: async () => { return "xxx"; },
+compress: true,
+crossOrigin: 'anonymous', => sẽ thêm vào script tag crossOrigin="anonymous" hoặc crossOrigin="use-credentials"
 
+--> compress: Mặc định true và nextjs nén với gzip. Khi host trên vercel, nó dùng brotli trước r mới gzip. Check loại thuật toán trong Accept-Encoding và Content-Encoding header
+Muốn đổi thuật toán phải tự cài và disable compress mặc định của nextjs. VD set nginx compress với brotli và disable compress của nextjs để chỉ dùng của nginx.
 
+--> generateBuildId: mặc định mỗi lần build sẽ gắn với 1 build id mới được sinh ra. 2 lần build cùng build id sẽ tận dụng build cache của lần build trước và chạy cực nhanh, nếu khác build id sẽ xoá cache build lại từ đầu. 
+Nếu ta cần rebuild mà k sửa code, VD sửa env var và build lại thì nên dùng cùng build id cho nhanh. Lý tưởng nhất là gắn buildid là githash để đảm bảo code đổi mới thực sự xoá build cache. Thường sử dụng để build dự án cho nhiều môi trường khác nhau nhanh chóng.
+
+--> cacheHandler: mặc định cache được lưu in-memory max 50MB, nhưng nếu host lên container platform như K8s thì mỗi pod sẽ có 1 cache rời rạc k đồng nhất. cacheHandler giúp tạo 1 cache consistent duy nhất, có thể dùng S3 or redis tuỳ. Dùng nó sẽ opt out in-mem cache bth và dùng cache trong file này.
+URL: https://nextjs.org/docs/app/building-your-application/deploying#configuring-caching
+Dùng cái này vẫn đạt hiệu quả y như in-mem cache (chậm hơn tí), nó xử lý cache và ISR luôn.
+
+--> assetPrefix là url của cdn host static file nếu ta muốn host server riêng, static file ra CDN riêng thì phải thêm vào. Thì mọi request tới /_next/static/chunks/ sẽ thành https://cdn.mydomain.com/_next/static/chunks
+Sau khi build, host phần .next/static lên CDN. Nó bao gồm các file js css chunk static, k tính file trong thư mục public, nếu folder public cũng CDN thì phải thêm settings khác.
+
+--> images.deviceSizes: Nếu biết trước các loại máy sử dụng thì để vào để tránh image optimizer phải optimize quá nhiều.
+images.imageSizes: Set image width, nối với deviceSizes tạo full array. imageSizes chỉ dùng cho image có prop sizes, chỉ rằng image nhỏ hơn full-width của screen.
 
 -> tailwind.config.js:
 module.exports = {
-  content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     screens: {
       sm: "480px",
@@ -181,6 +260,9 @@ module.exports = {
         "react-hooks/exhaustive-deps": "off", // *Vô hiệu hóa cảnh báo về thiếu dependency trong useEffect
         "@typescript-eslint/ban-ts-comment": ["warn", "off"], // *Vô hiệu hóa cảnh báo khi sử dụng chú thích @ts-ignore
         "react-hooks/rules-of-hooks": "off", // *Vô hiệu hóa kiểm tra các rules-of-hooks
+        "quotes": ["error", "double"],
+        "semi": ["error", "always"],
+        "@typescript-eslint/no-unused-vars": "off"
       }
     }
   ]
@@ -258,56 +340,6 @@ lerna.json
 
 
 
--> .gitignore:
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# cypress
-cypress/screenshots
-cypress/videos
-
-# cache
-.swc/
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-Thumbs.db
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# local folder
-local
-
-# env files
-.env*.local
-.env*
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-
-
 -> jsconfig.json:
 {
   "compilerOptions": {
@@ -344,70 +376,6 @@ extendTheme({
         _dark: "#10a3a3",
         _light: "#3cc9c9",
       },
-      hoverCover: {
-        _dark: "rgba(255,255,255,0.2)",
-        _light: "rgba(0,0,0,0.2)",
-      },
-      pagination: {
-        default: "#edf2f7",
-        _dark: "#303744",
-      },
-      divider: {
-        _dark: "#303744",
-        default: "#b9bec7",
-      },
-      backgroundTop: {
-        _dark: "#141b2a",
-        default: "#f6f7f9",
-      },
-      text: {
-        _light: "#000",
-        _dark: "#ffffffa8",
-      },
-      cover: {
-        _dark: "#161d2c",
-        default: "#f6f7f9",
-      },
-      coveritem: {
-        _dark: "#212834",
-        default: "#f6f7f9",
-      },
-      backgroundBigText: {
-        _dark: "#303744",
-        default: "#bee3f8",
-      },
-      bright: {
-        _dark: "#6b7280",
-        default: "#bee3f8",
-      },
-      backgroundTab: {
-        _dark: "#2d3748",
-        default: "#f6f7f9",
-      },
-      dividerdash: {
-        _dark: "#c6f6d533",
-        default: "#80808021",
-      },
-      bioText: {
-        _dark: "#ffffffa8",
-        _light: "#808080",
-      },
-      hoverDark: {
-        _dark: "#212e48",
-        default: "#b9bec7",
-      },
-      topCollectionCard: {
-        _dark: "#24243557",
-        default: "#e8eaed",
-      },
-      hoverTable: {
-        _dark: "#0D213F",
-        _light: "rgba(0,0,0,0.15)",
-      },
-      tableHeader: {
-        _dark: "#285E61",
-        _light: "#808080",
-      },
     },
   },
   colors: {
@@ -432,6 +400,7 @@ extendTheme({
     },
   },
 });
+
 
 
 -> Project structure có sẵn:
@@ -479,10 +448,11 @@ src
     apple-icon.png
     sitemap.xml
     robots.txt
+  middleware.ts
+  instrumentation.ts
 package.json
 next.config.js
-middleware.ts
-.env
+.env.$(NODE_ENV).local > .env.local > .env.$(NODE_ENV) > .env
 jsconfig.json
 .eslintrc.json
 
@@ -498,3 +468,201 @@ Cấu trúc code:
     </ErrorBoundary>
   </Template>
 </Layout>
+
+--> sitemap là file chứa các thông tin bổ sung về url kèm lastModified, changeFrequency, priority giúp crawler hiểu hơn về content.
+sitemap thường dùng cho các trang có nội dung thường đổi, web lớn phức tạp, đa ngôn ngữ vì sitemap có thể cung thông tin về ngôn ngữ cho mỗi trang giúp crawler hiểu.
+sitemap.xml phải tuân thủ:
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://acme.com/about</loc>
+    <lastmod>2023-04-06T15:02:24.021Z</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>
+sitemap.ts khi cần generate bằng code chỉ cần export ra 1 hàm return ra object { 
+  url: 'https://acme.com/blog',
+  lastModified: new Date(),
+  changeFrequency: 'weekly',
+  priority: 0.5,
+}
+VD: https://github.com/nodejs/nodejs.org/blob/main/apps/site/app/sitemap.ts => codebase chuẩn cho static site generation
+
+
+
+-> Route Segment Config
+Hàng loạt các options có thể dùng trong page, layout, route handler: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
+=> Mịa nó, nó còn dùng export const dynamic = 'error'; ở file sitemap.js để bảo route ở file này dùng static rendering. Ta éo qt mà chỉ dùng cho layout, page, route thôi
+
+- layout.tsx | page.tsx | route.ts:
+export const experimental_ppr = true
+export const dynamic = 'auto' / 'force-dynamic' / 'error' / 'force-static' => force-dynamic tương đương fetch { cache: 'no-store', next: { revalidate: 0 } }; error sẽ ép page và layout cache và static, nếu dùng dynamic apis sẽ lỗi luôn, tự đổi default của dynamicParams thành false; force-static tương tự nhưng k báo lỗi mà return empty, khi có thì route sẽ cache nhiều nhất có thể 
+export const dynamicParams = true => vào 1 route mà k được generate với generateStaticParams VD app/posts/[id]/page.js thì false sẽ lỗi 404, true (defautl) sẽ vẫn fetch runtime
+export const revalidate = false / number
+export const fetchCache = 'auto' / 'default-cache' / 'only-cache' / 'force-cache' / 'force-no-store' / 'default-no-store' / 'only-no-store' => 
+export const runtime = 'nodejs' / 'edge' => thường dùng edge cho middleware, còn lại render thì dùng nodejs runtime.
+export const preferredRegion = 'auto' / 'global' / 'home' / ['iad1', 'sfo1'] 
+export const maxDuration = 5 => mặc định nextjs k limit gì cả, set sẽ limit thời gian thực hiện server logics. VD server actions sẽ lỗi timeout nếu quá maxDuration => ít dùng
+
+--> experimental_ppr = true kết hợp ppr: 'incremental' trong next config để enable Partial Prerendering (PPR).
+Bth chỉ có static site generation build hoàn toàn ở build time. SSR là server build hoàn toàn ở runtime. Static site increment giống static site generation nhưng có revalidate tự build lại sau 1 ktg. 
+Parial Prerendering là việc server vẫn build trước 1 phần tĩnh vào CDN, có request sẽ kết hợp phần động vào hoàn chỉnh.
+Dùng trong next: Phải enable option thì mọi component sẽ prerender hết trong lúc build. Các component dynamic cần fetch API cần wrap lại trong Suspense và fallback của Suspense phải là static component để nó prerender luôn.
+
+--> revalidate = false => set giá trị default cho revalidation time của pages, layout, dùng cho router handler thì là thời gian sống của cache lưu data.
+Nó là thời gian phải làm mới lại pages, nếu dùng với static site sẽ biến thành static site increment. K dùng được khi dùng runtime = 'edge
+Nó k override revalidate của hàm fetch mà chỉ sửa đổi giá trị default thôi. Khi kích hoạt nó fetch lại cả pages và cả api fetch luôn.
+Set là false (default) tương đương Infinity. Set là 0 thì luôn dynamic render lại dù pages k dùng dynamic apis, điều đb là case này sẽ ghi đè nếu fetch dùng force-cache or revalidate (vì nextjs luôn ưu tiên settings k cache). Set là 1 số sẽ đảm bảo endpoint invalidated và re-executed mỗi X phút.
+---> Dynamic APIs là sử dụng các hàm cookies, headers, connection, draftMode, searchParams prop
+
+--> fetchCache ít dùng vì nó override default options của hàm fetch trong toàn pages.
+Mặc định nextjs cache mọi hàm fetch() gọi trước khi dùng dynamic apis, k cache các hàm fetch() gọi sau dynamic apis.
+
+
+
+-> Tổng kết các hàm và file:
+route.ts:
+import { type NextRequest } from "next/server";
+export async function GET(  
+  request: Request,
+  segmentData: { params: Promise<{ slug: string }> }
+) {
+  return Response.json({
+    data,
+  }, {
+    status: 200,
+    headers: { 
+      'Set-Cookie': "name=value" // set cookie 
+    }
+  });
+}
+
+layout.tsx | page.tsx:
+export const metadata: Metadata = { };
+export async function generateMetadata(
+  { params, searchParams }: { params: Promise<{ id: string }>, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }, 
+  parent: ResolvingMetadata // A promise of the resolved metadata from parent route segments
+): Promise<Metadata> { }
+export default function Page({ params, searchParams }) {}
+export async function generateStaticParams() { // Kết hợp dynamic route để có static route generate ở build time, page k có sẽ generate runtime
+  return  [
+    { category: 'a', product: '1' },
+    { category: 'b', product: '2' },
+    { category: 'c', product: '3' },
+  ]; // page lấy với const { category, product } = await params
+}
+
+icon.tsx | open graph metdata
+export function generateImageMetadata({ params }: { params: { slug: string } }) { }
+
+middleware.ts:
+import { NextResponse } from "next/server";
+export function middleware(req: NextRequest, event: NextFetchEvent) { return NextResponse.next({
+  headers: new Headers(req.headers);
+}); }
+export const config = { matcher: '/' };
+
+Page router:
+Page.getInitialProps = async (ctx: NextPageContext) => { => bỏ
+  return {};
+}
+export async function getServerSideProps({ req, res }) {
+  return {};
+}
+export const getStaticProps = (async (context) => {
+  return { 
+    props: { repo: "" },
+    revalidate: 60, // ISR 60s
+  }
+}) satisfies GetStaticProps<{
+  repo: Repo
+}>
+export const getStaticPaths = (async () => {
+  return {};
+}) satisfies GetStaticPaths
+
+
+
+-> import { cookies, headers, draftMode } from "next/headers"; => server comp
+import { unstable_noStores, revalidatePath, revalidateTag } from "next/cache";
+import { loadEnvConfig } from "@next/env";
+import { redirect, usePathname, useSelectedLayoutSegment, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import dynamic from "next/dynamic";
+import Form from "next/form";
+import { connection, after } from "next/server";
+import { Inter } from "next/font/google";
+import localFont from "next/font/local";
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
+
+--> const router = useRouter();
+router.push(`/demo?count={count + 1}`, { 
+  scroll: false, // Prevent scrolling to top
+  shallow: true, // Đổi url mà k navigate, có thể dùng window.history.pushState được
+  state: { // truyền custom state lấy qua window.history.state
+    someData: 'custom data'
+  }
+})
+router.push({ => cách khác truyền 1 object duy nhất
+  pathname: '/destination',
+  query: {
+    id: '123',
+    category: 'example'
+  }
+})
+router.replace('/new-route', {
+  query: {
+    q: 'nextjs',
+    page: '2'
+  },
+  scroll: false, // Prevent scrolling
+  state: { // truyền custom state lấy qua window.history.state
+    replacement: true, // Custom state
+  }
+})
+
+--> <Form
+  action="/search" => string sẽ navigate client side, prefetch, hàm thì là server actions
+  replace={false} => true sẽ replace route k thể back về
+  scroll={true} => default true sẽ luôn scroll lên top của new route
+  prefetch={true} => default true sẽ prefetch khi visible trên viewport.
+  onSubmit={(e) => {e.preventDefault();}} => xử lý thêm cho form submit action, nhưng nếu action là string và onSubmit e.preventDefault thì override k navigate chả làm j
+>
+  <input type="submit"
+    formAction="/test" // override action của <Form> y hệt nhưng k prefetch
+  ></input>
+</Form>
+
+--> <Image
+  src="/profile.png"
+  style={{objectFit: "contain"}}
+  width={500}
+  height={500}
+  fill={true} => fill thẻ cha, thì k cần truyền width height cũng được
+  alt="Picture of the author"
+  priority={true} => ưu tiên tải ngay lập tức 
+  loading="lazy" => trì hoãn tải cho đến khi xuất hiện trong viewport
+  blurDataURL="data:image/jpeg..." => nếu ảnh là local image, sẽ tự có blur url do nextjs optimize mà k cần điền
+  placeholder="empty" => empty default kcj, "blur" sẽ dùng ảnh của blurDataURL, hoặc truyền ảnh blur trực tiếp base64 "data:image/..." 
+  onError={(e) => console.error(e.target.id)}
+  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" => dùng như srcset
+/>
+
+--> <Link 
+  href="/dashboard"
+  replace={true} => replace k thể back lại
+  prefetch={true} => null (default) thì chỉ refetch static route và partial route gần nhất của dynamic route, true thì prefetch hết
+  scroll={true} => default true sẽ giữ vị trí scroll khi mà Page hiện tại bằng cách nào đó ấn Link mà vẫn hiện trên màn hình
+/>
+
+
+
+-> fetch(url, {
+  cache: "no-store", // "force-cache"
+  next: {
+    revalidate: 3600, // > 3600s sau khi vào sẽ thấy page vẫn cũ nhưng trigger revalidate, reload lần nữa sẽ thấy data mới
+    tags: ["a", "b"],
+  },
+}) 
+

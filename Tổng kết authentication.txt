@@ -1,0 +1,12 @@
+
+# Các pp login
+-> Dùng session data: là 1 cách để client call api tới server mà k cần tạo access token.
+Client signup/login sẽ chia sẻ với server cùng 1 session data. Server check session data từ client trùng với server thì là valid.
+
+Có nhiều giải pháp để server lưu session data và session id như: lưu trong db, bộ nhớ, cache.
+Có 1 cách khác là sử dụng 1 secret để mã hoá và chỉ cần lưu ở client: Client gửi session data tới server, server mã hoá bằng secret và gửi lại client 1 token, client lưu lại token trong cookie, khi có request sẽ gửi lại cho server decrypt.
+Ở phía client thì session cookie lưu trong browser, mục cookies có expires time là "Session" là session cookie, nếu expires time cụ thể thì là normal cookie.
+
+-> Dùng jwt: user vẫn gửi password tới server hash và check trong db. Server k cần check session từ db mà sinh token cho client lưu vào normal cookie hoặc localStorage luôn.
+
+

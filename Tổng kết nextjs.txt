@@ -8,9 +8,7 @@ npm run build + npm run export => build từng page và xuất đống đó thà
 
 "next dev --turbo" dùng turbopack nhanh hơn bth => luôn dùng
 
--> Thêm font: 
-Có thể thêm font bằng CDN thẻ link từng pages
-Dùng global thì thêm vào _document.tsx 
+-> Thêm font: Có thể thêm font bằng CDN thẻ link từng pages
 Dùng next/font => ưu tiên
 Dùng next/font/local => định nghĩa local font bằng js
 
@@ -18,11 +16,20 @@ Dùng next/font/local => định nghĩa local font bằng js
 
 -> npx create-next-app -e with-tailwindcss test-nextjs => có nhiều loại example template kết hợp đủ loại thư viện
 
+-> Có thể check kiểu chạy trong file config:
+import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
+export default (phase) => {
+  const isDev = phase === PHASE_DEVELOPMENT_SERVER
+  const nextConfig = {};
+  return nextConfig
+} => npm run dev thì isDev mới = true, k check được trong component
+
 
 
 # Template layout trong app router
 template.js giống layout.js có thể wrap ngoài layout hoặc pages. Đb là template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. 
 => Layout thì state được giữ nguyên khi navigate sang page khác dùng cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
+layout.tsx thay thế _app.tsx và _document.tsx
 
 
 
@@ -41,7 +48,7 @@ URL: https://nextjs.org/examples chứa đủ loại example kết hợp redux v
 daisy: thư viện component mạnh của tailwind. URL: https://daisyui.com/docs/install/
 
 -> SWR (stale-while-revalidate) cung react hook cho data fetching, cache, lưu async state. Ít tính năng hơn react-query nhưng đơn giản hơn.
-Redux toolkit cũng có tool query để thay thế react-query
+Redux toolkit cũng có tool query để thay thế react-query là rtk query
 
 -> *Các tool formatter như reactjs: Chỉ cần eslint + prettier + eslint-config-prettier để tránh xung đột là đủ. 
 K cần eslint-plugin-prettier, cái prettier/recommended thực chất là eslint-plugin-prettier k dùng
@@ -50,7 +57,13 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 *postcss là một công cụ xử lý CSS bằng code JS, nó là nơi các plugin css được cài vào để dùng.
 *cssnano là 1 plugin của PostCSS. Nó giảm size của các tệp CSS bằng cách minify (loại bỏ các khoảng trắng, bình luận, viết gọn mã, và hợp nhất các quy tắc) giúp tăng tốc.
 
--> react query dùng phía client có thể dùng trong nextjs app router.
+-> *react query dùng phía client có thể dùng trong nextjs app router.
+
+-> *hero icons
+
+-> *Payload: là 1 headless CMS chỉ cung cấp API k có FE. Điểm đb là có thể nhúng thẳng vào NextJS codebase mà k cần hosted. Cài 1 phát tự có sẵn hàng loạt tính năng phức tạp.
+
+-> *react-next-parallax
 
 
 
@@ -65,8 +78,36 @@ Luôn để file .env*.local luôn để trong gitignore
 VD truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env có thể chạy trực tiếp trên command nếu cài -g) => Khi dùng NODE_ENV, next tự động dùng đúng file .env developement hoặc production mà ta k cần set gì thêm 
 VD có thể dùng file .env lưu giá trị mặc định cho biến môi trường, .env.development lưu giá trị mặc định cho biến môi trường development để k set gì vẫn chạy được, các giá trị này k cần bảo mật, còn .env.development.local lưu giá trị secret ta set cho biến môi trường development nhưng cần che giấu và k cho lên git
 
--> loadEnvConfig trong next/env giúp load env file vào process.env. Dùng khi cần chạy script or command ngoài nextjs vì nextjs chỉ tự load env var khi chạy next dev/build/start thôi.
-VD chạy script viết bằng JS.
+-> loadEnvConfig trong next/env giúp load env file vào process.env. Dùng khi cần chạy script or command ngoài nextjs vì nextjs chỉ tự load env var khi chạy next dev/build/start thôi. VD chạy script viết bằng JS => kbh dùng
+
+-> Cách tạo ứng dụng multi-env với docker: example with-docker-multi-env
+Cơ ché là tạo mỗi môi trường 1 file .env rồi tạo Dockerfile cho từng môi trường, mỗi môi trường chỉ cần copy code và file .env tương ứng vào container r build và start.
+Chú ý chạy bước copy trước rồi mới build vì bản chất khi buid sẽ nhét tất cả giá trị của biến môi trường có NEXT_PUBLIC_ fix cứng vào JS thì k đổi được nữa.
+
+--> 1 cách khác hơi tù nhưng giải quyết được là để build trước ra code duy nhất rồi ốp môi trường vào sau là dùng await connection() trong server component. Hàm này sẽ chờ k chạy tiếp cho đến khi user request lấy component này thực tế, cản hết cả prerendering hay render at build time.
+VD: export default async function Page() {
+  await connection()
+  const rand = Math.random()
+  return <span>{rand}</span>
+} => server component này k call api thì được render static vào build time nhưng như vậy giá trị random sẽ fix cứng, dùng await connection() sẽ ép nó dynamic render runtime mà k cần dùng dynamic api.
+=> Tương tự dùng nó rồi lấy env var bên dưới đảm bảo build sẽ k lấy fix cứng nữa
+
+--> Cũng có cách lấy runtime config nhưng k ai dùng nữa: https://nextjs.org/docs/pages/api-reference/config/next-config-js/runtime-configuration
+
+
+
+# instrumentation.ts
+Export ra 1 hàm register, hàm này sẽ tự động chạy 1 lần ngay khi 1 instance nextjs server được khởi tạo. Kiểu constructor của server.
+VD tích hợp thêm các tool monitoring, logging vào server 
+
+-> after(callback) giúp thực hiện callback sau khi response hoàn thàn, kiểu 1 side effect k muốn block rendering. VD log or analytics.
+Có thể dùng trong Server Components (bao hàm generateMetadata), Server Actions, Route Handlers, and Middleware.
+
+after tự hỗ trợ khi self host, nhưng nếu tắt app nên tắt chuẩn bằng cách gửi SIGINT or SIGTERM. Nó đảm bảo chờ promise trong after done mới tắt.
+Vercel hỗ trợ hàm tương tự là waitUtil().
+
+--> NextJS tự detect các page k dùng dynamic API thì là static page, khi có await connection() sẽ thành dynamic page. 
+Chú ý khi dùng after, nó không phải dynamic api và k khiến static page trở thành dynamic. Nếu dùng static build nó sẽ chạy 1 lần lúc build time, hoặc chạy lại nếu có revalidate
 
 
 
@@ -104,6 +145,7 @@ VD: truy cập vào http://localhost:3000/robots.txt được sau khi tạo xong
 
 -> Còn có import { cookies, headers } from 'next/headers' lấy cookies từ header
 NextJS v15 luôn dùng await khi dùng async: const cookieStore = await cookies(); const headersList = await headers()
+Dùng được ở hàm server component, route handler, server actions để read/write cookies. Thường thì client k cần truy cập, dùng document.cookies để acccess nếu cần, nếu muốn đổi, nên gọi tới server để đổi.
 
 
 
@@ -112,7 +154,7 @@ Export trong file layout.js or pages.js => thay thế các tag metadata thông t
 export metadata => fix metadata
 export generateMetadata({params}) => dynamic metadata
 
--> NextJS có ImageResponse giúp tạo component hiển thị Image động là code html css. Ta tạo 1 api route trả về ImageResponse và dùng nó trong src của <Image>, nhận tham số và trả ra data tương ứng với tham số (tức là data động theo url đó).
+-> NextJS có ImageResponse giúp tạo component hiển thị Image động là code html css. Ta tạo 1 api route trả về ImageResponse và dùng nó trong src của <Image>, nhận tham số và trả ra data tương ứng với tham số (tức là data động theo url đó). Hoặc tạo icon.tsx export default hàm trả ra ImageResponse tương tự.
 export generateImageMetadata k có tác dụng gì cho SEO, chỉ cung thêm thông tin cho image động.
 generateImageMetadata trả ra 1 mảng là nhiều version khác nhau của image mà người dùng nhận về khi nhét url vào src. Các phần tử trong mảng có trường id và params của component image cũng nhận object có trường id để lấy đúng metadata tương ứng, metadata quyết định kích thước hay extension các thứ, từ đó nextjs sinh ra các ảnh khác nhau để dùng.
 
@@ -141,6 +183,9 @@ Hoặc ảnh k rõ kích thước và ta k muốn dùng optimizer thì dùng tag
 
 -> Khi nào k dùng <Image>? Khi k trust domain mà web ta load ảnh.
 
+-> Có thể quản lý cache của optimized image nhưng chắc chẳng bh dùng: https://nextjs.org/docs/app/api-reference/components/image#caching-behavior\
+Mặc định image được cache trong memory của server sau khi optimize bất kể image từ ngoài hay local, đến khi expires mới xoá.
+
 
 
 # Routing
@@ -148,16 +193,16 @@ Routing chia theo cấu trúc file thư mục, cả be và fe.
 
 -> Dynamic route
 Page router dùng getServerSideProps, getStaticProps như bth. App router dùng fetch và các options đi kèm.
-getStaticPaths thay thế bằng generateStaticParams giúp xđ tham số cho dynamic routes ở server side mà async, VD fetch API ra list params rồi cho vào page.tsx hoặc layout.tsx lấy Page({params}). 
+getStaticPaths thay thế bằng generateStaticParams giúp xđ tham số cho dynamic routes ở server side mà async, VD fetch API ra list params rồi cho vào page.tsx hoặc layout.tsx lấy Page({params}). Sau đó sẽ dùng để generate ra STATIC SITE. VD hàm sinh ra 10 tham số để build ra 10 pages.
 
-NextJS v15 dùng await khi gọi trong hàm async. VD: 
+NextJS v15 dùng await khi gọi trong hàm async. VD page.ts:
 export async function generateMetadata(
   { params, searchParams }: { params: Promise<{ slug: string }, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }
 ) {
   const { slug } = await params
   const searchParams = await searchParams
 }
-Nếu sync usage:
+Nếu sync usage: 
 const params = use(params)
 const searchParams = use(searchParams)
 
@@ -271,7 +316,7 @@ Cái getStaticProps k truy cập được vào biến request và response ở t
 -> 1 app có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG (static HTML + JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) => khi build hiện ra ký hiệu rõ route dùng kiểu nào
 => 1 dự án thông thường cứ chơi SSR hay CSR tùy hứng thôi, page lớn có thể CSR hết. Nếu SSR mà thấy fetch lớn quá thì dùng revalidate với ISR cũng được.
 
--> Dùng next/router
+-> Dùng next/router (page router chứ app router khác hoàn toàn)
 VD replace url mà k chuyển trang:
 router.replace(
   {
@@ -365,7 +410,8 @@ Trong component: const updateUserWithId = updateUser.bind(null, userId);
 => Khi nào dùng? - Nếu gọi 1 hàm kp fetch API, nó vẫn gửi request tới server, server xử lý và update html trước khi gửi lại người dùng giúp SEO cho data đó
 - Kể cả không cần fetch API nhưng cần xử lý tác vụ nặng, dùng server actions sẽ khiến chúng được thao tác ở server đỡ cho người dùng. 
 - Nếu cần process thông tin nhạy cảm, để vào server actions là người dùng k thấy. Vd ta query API moralis cần API key mà frontend k được lộ cho người dùng thì có thể dùng nextjs lưu key đó là biến môi trường phía server và gọi an toàn với server actions thay vì mất thêm 1 server api trung gian.
-- Server actions call được từ client nên cho vào react query call thoải mái.
+- Server actions call được từ client nên cho vào react query call thoải mái
+- So với route handler, server action gọn hơn và k cần xử lý cors, nên ưu tiên dùng.
 => API route cho kết quả tương tự, server actions hơn ở chỗ nó trả về html đã được xử lý luôn và k cần phải viết 1 api route mới nên tối ưu hơn thôi.
 
 -> Tương tự có thể dùng redis, cookies, db như 1 server nodejs bth. Dùng như 1 điểm lưu data mà an toàn hơn localStorage.
@@ -383,7 +429,6 @@ export async function GET(request: Request, segmentData: { params: Promise<{ slu
 -> URL đầy đủ: https://www.youtube.com/watch?v=BWJJwk2j-7A
 Để revalidate 1 api thì gắn tag cho nó + revalidateTag, để revalidate mọi api trong 1 route url thì dùng revalidatePath
 @vercel/postgres có sql query trực tiếp vào db có thể chống sql injection khi dùng template string tự lấy giá trị nội suy sql`lệnh{<variables}`
-Kết hợp với useFormStatus và useFormState để lấy trạng thái call api thành công hay pending (Còn server component fetch loading thì có Suspense)
 Điều đặc biệt là "use server" dùng trong 1 function sẽ giới hạn function đó được thực hiện ở server chứ kp nó là 1 server components. Họ vẫn muốn dùng file như 1 client component nên tách phần code server đó ra file riêng.
 
 -> import { cache } from "react"; kết hợp cache của react chỉ dùng ở server side giúp các request api được memoized chỉ call 1 lần khi gọi nhiều lần đồng thời. Lưu ý nó cache trong 1 session nên phải tự refresh cached. 
@@ -397,12 +442,14 @@ await fetchData(1); // Fetch lần đầu, lưu vào cache
 refreshCache(); // Reset cache
 await fetchData(1); // Fetch lại từ API
 
--> -> Khai báo server actions ở file bất kỳ trong app/api hoặc trong bất cứ folder component nào miễn là có "use server" ở đầu
+-> Khai báo server actions ở file bất kỳ trong app/api hoặc trong bất cứ folder component nào miễn là có "use server" ở đầu
 import "server-only" và còn có "client-only" bảo rằng mọi thứ export ở file hiện tại chỉ có thể được import ở server component hoặc client component. 
 Thường dùng cho server fetching actions khi tách ra 1 file riêng giúp việc call data đó được tái sử dụng ở nhiều nơi ok.
 import server-only đảm bảo hàm chỉ được import ở server side, use server đảm bảo hàm được import ở bất cứ đâu nhưng chỉ thực thi trên server
+default là "use client"
 
--> revalidatePath và revalidateTag không giúp refresh lại khi 1 route có nhiều server component nhưng chỉ muốn refresh 1 component trong đó và k dùng fetch. Khi đó có thể dùng refreshKey truyền vào server component, muốn refresh cho component nào thì tăng key +1 lên để nó render lại sẽ call lại api??
+-> revalidatePath và revalidateTag không giúp refresh lại khi 1 route có nhiều server component nhưng chỉ muốn refresh 1 component trong đó và k dùng fetch. 
+Giải pháp là dùng dùng refreshKey truyền vào server component, muốn refresh cho component nào thì tăng key +1 lên để nó render lại sẽ call lại api => pp này chỉ dùng khi render ít component thôi. Còn client side thì render lại ta dùng useEffect hoặc react-query có refetch lại thì render lại mà
 
 
 
@@ -434,7 +481,7 @@ Lấy ip và location của client ở phía server. Nó chỉ hoạt động kh
 Mặc định middleware luôn chạy trên edge runtime. K thể dùng các nodejs module như fs, crypto, path, nhưng có thể dùng web api như fetch, NextResponse. Muốn dùng nodejs module hoặc là chuyển qua web api, hoặc phải tìm cách khác.
 
 -> VD Tạo middleware.ts ở ngoài cùng cấp next.config.js (dùng cả page router và app router):
-export function middleware(req, res) { return NextResponse.next(); }
+export function middleware(req, event) { return NextResponse.next(); }
 export const config = { matcher: '/' };
 => Middleware chạy khi client request vào trang / (nếu k sẽ rất nhiều), chạy sau các setting trong next.config.js nếu ảnh hưởng, chạy trước khi trang được render
 
@@ -506,6 +553,23 @@ module.exports = {
 - Middleware chỉ là 1 hàm nhận (request, event), rồi hoặc là trả ra response lấy từ NextResponse.next() cho client hoặc là redirect hay rewrites. Có thể tự tạo custom chain middleware gọi từng hàm một trả ra response, chia làm 2 loại, middlewares chạy trước và sau NextResponse.next()
 URL code mẫu: https://www.youtube.com/watch?v=bFr2t68AABQ
 
+->*** Chốt hiểu bản chất runtime và middleware:
+NodeJS dùng 2 môi trường là node runtime và edge runtime. Node runtime truy cập được mọi api của nodejs. 
+Edge runtime truy cập được 1 phần api thôi. Các api nó k truy cập được như native api của nodejs như path hay fs để đọc file, connect db. Nó k dùng được require mà chỉ dùng ES module, do đó thư viện ngoài dùng được miễn là thư viện đó k sử dụng native api của nodejs bên trong và dùng es module import thay vì require. 
+Bản chất edge runtime thường dùng các hàm nhẹ, bộ nhớ giới hạn, tốc độ nhanh hơn. Node runtime xử lý hàm nặng nhưng tốc độ chậm hơn (cold start) vì phải chạy 1 server truyền thống để xử lý. 
+
+Page router như getServerSideProps hỗ trợ cả edge runtime và node runtime dùng thoải mái nên k tính.
+App router khuyên dùng edge runtime cho middleware. Còn node runtime thường dùng khi render application như trong route.js, layout.ts, page.ts
+Trong thực tế, middleware bắt buộc dùng edge runtime, việc export runtime "nodejs" trong middleware k có tác dụng. Còn route.js, layout.ts, page.ts mặc định dùng node runtime, nếu export runtime "edge" trong các file này sẽ ép các file đó chỉ dùng api của edge runtime, cố dùng node runtime api sẽ lỗi.
+VD khi dùng next-auth với database strategy nhưng database adapter k hỗ trợ edge runtime, mà dùng nó trong middleware sẽ lỗi, next-auth tự xử lý để adapter k hỗ trợ edge runtime tự k cho vào middleware.
+
+Dùng runtime nào phụ thuộc 3 yếu tố: api dùng là gì, export runtime là gì, deploy lên đâu => vô cùng ez
+export runtime như nào thì dùng đúng api trong phạm vi đó. Nhưng hầu hết các hàm của edge runtime đều có trong node runtime vì edge runtime bị hạn chế hơn.
+Khi deploy vercel, nó tự phân tán trên toàn thế giới nhưng k cần chạy server mà tự chuyển mọi hàm trong edge runtime thành edge function, node runtime thành serverless function.
+Khi deploy self-host nodejs server, nó dựng server và chạy tất cả như node runtime. Nhưng các hàm edge runtime sử dụng trong dự án hầu hết đều chạy được trên node runtime, chỉ các trường hợp hy hữu mới k được thôi.
+=> Nếu tuân theo recommend của nextjs, middleware buộc dùng edge runtime, page.js và route.js dùng node runtime thì ta chả cần lo gì cả, deploy self host vẫn chạy được hết. Chỉ có 2 vấn đề: nếu middleware cần dùng nodejs api mà edge runtime k hỗ trợ, hoặc nếu case hy hữu xảy ra là dùng hàm edge runtime hiếm nào đó k chạy được ở node runtime. 
+Giải pháp là chuyển đổi logic đó sang page.js server component thay vì xử lý ở middleware, hoặc tìm các api mà thực sự hô trợ, dùng rewrites redirects trong next.config.js thay vì middleware
+
 
 
 # NextJS support giúp tạo i18n 
@@ -525,21 +589,79 @@ Check nếu url thiếu lang thì redirect sang lang mặc định. Package "neg
 
 -> Kp file nào cũng cần "use client", 1 client component import 1 component khác thì component được import phải là client component, khi đó k cần "use client" ở file con. Chú ý client component cố tình import server comp gây lỗi.
 Nhưng 1 client component có thể truyền { children } là 1 server component. Do đó thêm "use client" vào provider k biến cả app thành client component
-=> Hình như dùng dynamic thì cũng import được server comp ở client comp??
-
 VD: ta setup Provider của react-query là 1 client side component wrap 1 server component là layout.js, sau đó chỉ dùng các hàm react-query ở các client component bên trong ok.
+Comp ngoài cùng luôn 1 server component, VD app/layout.ts
+K có directive mặc định là 1 server component
+Server component chỉ chạy trên server, nhưng client component chạy trên cả server (first rendering pass) và client.
+
+--> Hack trick là dùng dynamic import có thể import server comp trong client comp. 
+VD: 'use client'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+const ServerComponentExample = dynamic(() => import('./server-component'), {
+  loading: () => <div>Đang tải...</div>,
+  ssr: true // Quan trọng: render trước ở server
+})
+export default function ClientComponent() {
+  return (
+    <Suspense fallback={<div>Đang tải...</div>}>
+      <ServerComponentExample />
+    </Suspense>
+  )
+}
 
 
 
 # next/forms
-Cung sẵn component <Form/> tự tối ưu prefetch, progressive enhancement cho form mà navigate sang page khác. 
-VD search input ấn để sang trang kết quả
+Cung component <Form/>, thường dùng cho server actions.
+
+-> Dùng <Form> của next/form khi action là string: GET api, nó tự tối ưu prefetch, progressive enhancement và client-side navigate sang pages khác (kp reload)
+replace={false} => true sẽ replace route k thể back về, false (default) sẽ push vào browser's history stack 
+scroll={true} => default là true sẽ luôn scroll lên top của new route thay vì giữ vị trí scroll hiện tại
+prefetch={true} => default là true sẽ prefetch khi visible trên viewport.
+
+Dùng formMethod, formEncType, và formTarget cho form giống như method, encType, target sẽ khiến form quay trở về hoạt động như form bth của html => khi đó thà dùng <form> thường
+Muốn post thì dùng server action, còn action là string sẽ navigate
+
+-> Phân biệt:
+1) HTML <form>: 
+onsubmit trigger hàm khi ấn vào type="submit" hoặc dùng JS form.submit(), có reload page nếu không dùng e.preventDefault
+action nhận 1 string sẽ gửi request đến url đó kết hợp với method, enctype, target. Trigger khi ấn type="submit"
+K hỗ trợ action nhận 1 hàm
+2) React form: giống html form nhưng là onSubmit. action có nhận 1 hàm thì vẫn trigger hàm và reload page nếu k dùng e.preventDefault. formAction 
+formAction có thể dùng trong button or input type submit để override action trong <form>
+3) Next form: giống react form bth. action nhận 1 hàm có thể là 1 hàm ở server để call server action, còn onSubmit không được gọi hàm ở server.
+Khi có formAction sẽ k support prefetching
+4) <Form> của next/form: giống next form nhưng ở riêng case action là string sẽ hỗ trợ thêm prefetch và vài attribute replace, scroll, prefetch
+
+-> Các form hooks thường dùng chỉ dùng ở client component:
+- useFormStatus cung status của last form submission: https://react.dev/reference/react-dom/hooks/useFormStatus
+Dùng trong 1 client component (nằm trong 1 form) sẽ tự detect component hiẹn tại ở trong form nào và cung status của form đó:
+const { pending, data, method, action } = useFormStatus();
+
+- useFormState => deprecated thay bằng useActionState
+
+- useActionState => dùng ở component chứa cái form để truyền vào form
+const [data, submitAction, isPending] = useActionState(
+  async (prevState, queryData) => {
+    const itemID = queryData.get('itemID'); return { itemID };
+  },
+  { itemID: "" }
+)
+<form action={submitAction}>
+  <input type="text" name="itemID" />
+  <button type="submit" disabled={isPending}>Update</button>
+</form>
+=> Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi
+=> Tham số 3 kbh dùng: https://www.youtube.com/watch?v=-aBKrvK5Vn8
 
 
 
-# Custom code server nextjs
+# Custom code server nextjs => tốt nhất là k nên dùng
 Dùng next start tự chạy server nodejs để serve dự án. Nếu chỉ tạo route api thì k cần vì nextjs có sẵn, nhưng muốn custom chi tiết thì vẫn được.
 router.beforePopState
+custom server làm mất đi nhiều tính năng tối ưu của nextjs và k thể deploy lên vercel, khi đó nên deploy lên VPS riêng => thay vì vậy, nếu cần server express riêng hãy tạo thêm 1 server rời.
+NextJS hỗ trợ deploy nodejs nhưng sẽ chuyển hết thành serverless function. K hỗ trợ websocket mà phải dùng Ably, Pusher thay thế với cơ chế client lắng nghe event phát từ server
 
 -> URL custom server: https://nextjs.org/docs/pages/building-your-application/configuring/custom-server
 Tạo server.js ở ngoài cùng, chỉ có vài điểm khác là server liên kết với nextjs app qua: const next = require('next'); const app = next({ }); Và app server được tạo trong app.prepapre().then(<>) như bth
@@ -564,12 +686,14 @@ export const config = {
 
 # Dùng tốt với vercel kv db 
 Chỉ dùng ở server side nên nếu client side muốn gọi phải tạo api cho client gọi. Có thể dùng cơ bản thay thế cho redis.
+=> Thay thế thành upstash kv trong marketplace
 
 
 
 # Feature flags
-NextJS hỗ trợ sẵn feature flags, giúp bật tắt feature mà không cần deploy lại code.
-Có thể host config ở 1 server riêng, hoặc dùng Vercel Toolbar cloud có sẵn hỗ trợ admin login và sửa feature flags trực tiếp dễ dàng.
+NextJS hỗ trợ sẵn feature flags, giúp bật tắt feature mà không cần deploy lại code => hoàn toàn free
+Flags phải lưu ở db or file nào đó chứ vercel k hỗ trợ. Vercel chỉ có thư viện flags để lấy cờ, thư viện toolbar giúp edit config ngay trên toolbar.
+Phải admin login mới tương tác được toolbar
 URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM
 
 
@@ -603,6 +727,16 @@ VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên 
 
 
 
+# Dùng view transition API
+URL: https://www.youtube.com/watch?v=hpt7SsZUCbs
+***Dùng lib next-view-transition để animate cả page hoặc từng phần tử được.
+Dùng react-lenis giúp áp dụng scroll mượt cho toàn trang
+Điều qtr là view transition phải dùng ở client-side component "use client" nếu k sẽ k chạy.
+Trong js có hàm tag.animate giúp animate bằng JS cho 1 tag dễ như @keyframe của css
+Animate bằng clip path khi 1 page xuất hiện đẹp hơn là cho nó di chuyển từ ngoài vào
+
+
+
 # Other
 -> Setup dùng các tool test cypress hay jest: https://nextjs.org/docs/pages/building-your-application/testing/jest
 
@@ -611,7 +745,7 @@ VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên 
 -> Chỉ số TTI và FID: TTI là Time To Interactive đo từ lúc trang bắt đầu tải cho đến khi có khả năng xử lý sự kiện của người dùng. FID là First Input Delay đo ktg chờ đợi từ khi user tương tác đầu tiên cho đến khi trang phản hồi tương tác đó
 URL: https://pagespeed.web.dev/ giúp đo tốc độ của trang web và các thông số giống tool light house
 
-Khi có 1 landing page dài viết bằng nextjs thì khi gõ url r ấn enter: 
+Khi có 1 landing page dài viết bằng nextjs thì khi gõ url r ấn enter, phía client side sẽ:
 1) HTML được load xuống browser sau khi server chạy SSR xong
 2) JS được tải xuống browser r thực thi
 3) JS chạy xong sẽ gắn đống event vào cây DOM
@@ -634,3 +768,6 @@ Dùng getStaticProps nhiều nhất có thể, dùng getServerSideProps với re
 Nên host trên CDN khi dùng static page. Nếu dùng vercel hosting thì có thể đảm bảo mọi thứ đều ổn.
 
 -> nextjs có config next.config.js để build ứng dụng như Preact, bundle size sẽ nhỏ hơn react nhưng code thì y như react, 1 số tính năng mới của react sẽ k chạy => k dùng vì sửa webpack phức tạp.
+
+-> Vercel có web analytics là package cho vào dự án để theo dõi lượt view ok. Tương tự có vercel speed insight.
+

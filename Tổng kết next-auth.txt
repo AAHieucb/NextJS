@@ -263,20 +263,21 @@ export default withAuth(
 
 
 
-# Luồng hoạt động jwt
+# Có thể tạo custom adapters connect db, connect supabase cloud, mongodb.
+Khi 1 người dùng tk github và google (cùng mail) logins vào hệ thống sẽ hiểu là 1 người khác nhau với 2 ids. Buộc phải can thiệp thủ công quá trình check mail để check merge thành 1 người.
+
+
+
+# 3 loại providers
+-> OAuth. Vd Tạo google login
+Lấy OAuth token có client id và client secret trên Google Console.
+Origin và redirect url phải chuẩn. VD Google Console set url origin là http://localhost:3000 và url redirect http://localhost:3000/api/auth/callback/google
+
+-> Email: custom việc gửi về mail đẻ xác thực tk
+-> Credentials: login bằng username, password, 2-factor authen ok
 Khi dùng OAuth Provider, k cần lo về việc login. Khi dùng CredentialsProvider phải tự custom các api để sign up, login.
 
--> Bản chất các cách login:
-- Dùng session data: là 1 cách để client call api tới server mà k cần tạo access token.
-Client login sẽ chia sẻ với server cùng 1 session data. Server check session data từ client trùng nhau là valid.
-Có nhiều giải pháp để server lưu data như: lưu trong db, lưu trong bộ nhớ, lưu trong cache, sử dụng 1 secret để mã hoá và chỉ cần lưu ở client. 
-Ở phía client thì session cookie lưu trong browser, mục cookies có expires time là "Session" là session cookie, nếu expires time cụ thể thì là normal cookie.
-
-Sử dụng 1 secret để mã hoá và chỉ cần lưu ở client là 1 cách rất hay cho server stateless: Client gửi session data tới server, server mã hoá bằng secret và gửi lại client 1 token, client lưu lại token trong cookie, khi có request sẽ gửi lại server decrypt được là được.
-
-- Dùng jwt: là cách thông thường khi mà server sinh access token và refresh token. Server k cần lưu gì cả mà client chỉ lưu vào normal cookie hoặc localStorage.
-
-=> Vấn đề là next-auth gây hiểu nhầm: sử dụng session cookie nhưng thực ra là lưu session ở FE vào normal cookie chứ kp session cookie, đóng browser k bị xoá. next-auth cũng sử dụng strategy jwt nhưng thực tế kp là jwt của OAuth mà chỉ là cách encrypt session data giống cách encrypt jwt token nên đặt tên v thôi.
+-> next-auth gây hiểu nhầm: sử dụng session cookie nhưng thực ra là lưu session ở FE vào normal cookie chứ kp session cookie, đóng browser k bị xoá. next-auth cũng sử dụng strategy jwt nhưng thực tế kp là jwt của OAuth mà chỉ là cách encrypt session data giống cách encrypt jwt token nên đặt tên v thôi.
 => Bản chất next-auth mã hoá session data thành 1 jwt token và lưu lại (chỉ để lưu chứ kp là jwt oath). Token này có hạn là session.maxAge, được lưu vào cookie với tên mặc định là next-auth.session-token với hạn là cookies.sessionToken.options.maxAge. Nên set bằng nhau
 
 1) strategy: "jwt" => session trong useSession ở FE được mã hoá bằng secret và lưu vào normal cookie, server k lưu gì cả. Client gửi session được mã hoá tới server để server decrypt xác thực
@@ -298,21 +299,6 @@ Lúc gọi API thì lấy session.token truyền vào header Authorization (chu�
 
 --> Vấn đề thời gian hết hạn của session, cookies, access token, refresh token. Expirse times của cookies và session đều tự mở rộng mỗi khi lấy session nên k sợ nó hết hạn trước refresh token nhé, cứ set 1 ktg đủ xa là được.
 Logic acccess token hết hạn và làm mới chỉ cần viết trong hàm jwt() là đủ vì getServerAction hay bất cứ khi nào truy cập session đều gọi vào. Trừ khi cần gọi API bên thứ 3 k dùng server của ta thì có thể phải thêm ở client side. 
-
-
-
-# Có thể tạo custom adapters connect db, connect supabase cloud, mongodb.
-Khi 1 người dùng tk github và google (cùng mail) logins vào hệ thống sẽ hiểu là 1 người khác nhau với 2 ids. Buộc phải can thiệp thủ công quá trình check mail để check merge thành 1 người.
-
-
-
-# 3 loại providers
--> OAuth. Vd Tạo google login
-Lấy OAuth token có client id và client secret trên Google Console.
-Origin và redirect url phải chuẩn. VD Google Console set url origin là http://localhost:3000 và url redirect http://localhost:3000/api/auth/callback/google
-
--> Email: custom việc gửi về mail đẻ xác thực tk
--> Credentials: login bằng username, password, 2-factor authen ok
 
 
 
