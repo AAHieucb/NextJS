@@ -5,27 +5,32 @@ Hàng loạt example: https://nextjs.org/docs/app/building-your-application/data
 
 Cache trong nextjs lưu trong filesystem của server. Có thể config cache location sang storage bền vững or chia sẻ giữa các container và nhiều instance trên máy.
 
+=> ***Chốt: Điều db là nếu dùng fetch bth hoặc query db sẽ luôn cache từ build time (pre-rendering) khiến lần sau k gọi lại. Nếu muốn luôn call lại thì dùng options cho fetch, hoặc export "force-dynamic"
+Nếu dùng dynamic api thì cũng luôn luôn call lại, tức dùng: cookies, headers, connection, draftMode, searchParams prop, unstable_noStore => chỉ cần lấy thôi cx call lại
+
 
 
 # Browser có sẵn cache
 Browser tự cache request theo trường Cache-Control trong response header.
 VD set là max-age=10 sẽ cache trong 10s. Điều này thường gặp trong static file css js img. 
-Ta có thể disable cache hoặc ép browser reload lại với k dùng cache, thì sẽ chỉnh sửa header và đè lên setting của server nextjs vì server nextjs cũng theo config đó. Thực tế k cần qt, vì request bth ta luôn để fetch lại chứ k dùng cache browser, chỉ sattic file mới cache thôi.
+Bản chất khi disable cache hoặc ép browser reload lại với k dùng cache thì sẽ chỉnh sửa header và đè lên setting của server nextjs vì server nextjs cũng theo config đó. => Thực tế k cần qt, vì request bth ta luôn để fetch lại chứ k dùng cache browser, chỉ static file mới cache thôi.
 
-Nhắc lại: App Router trong nextjs đã override hàm fetch bình thường. Default là k có cache tức cache:"no-store", phải tự thêm vào nếu cần cache:"force-cache", or thêm {next:{revalidate:30}} sẽ như SSG. Setting này ở server nextjs phụ thuộc vào Cache-Control trong header nên sẽ bị override bởi browser khi ta disable cache và reload trên browser.
-Việc dùng cache browser sẽ override lên setting của App Router nhé, VD disable cache thì App Router server nextjs sẽ luôn gọi lại API và bỏ qua cả Request Memoization.
+Nhắc lại: App Router trong nextjs đã override hàm fetch bình thường. Default là k có cache tức cache:"no-store", phải tự thêm vào nếu cần cache:"force-cache", or thêm {next:{revalidate:30}} sẽ như SSG. Setting này ở server nextjs phụ thuộc vào Cache-Control trong header nên sẽ bị override bởi browser khi ta disable cache và reload trên browser => nch là luôn dùng đủ options để tránh nó tưởng là pre-rendering từ buildtime.
+Việc sửa cache của browser sẽ override lên setting của App Router nhé, VD disable cache thì App Router server nextjs sẽ luôn gọi lại API và bỏ qua cả Request Memoization.
 
-=>*** Cái này nên dùng mặc định k đụng vào, mặc định cache các file assets static thôi.
-
--> Nextjs tự thêm Cache-Control cho truly immutable assets là "public, max-age=31536000, immutable", bao gồm static image và điều này k thể đổi.
+-> Nextjs tự thêm Cache-Control cho truly immutable assets là "public, max-age=31536000, immutable", bao gồm static image và điều này k thể đổi, cx k cần đổi.
 Riêng với image, có thể config minimumCacheTTL, deviceSizes, imageSizes, formats. 
 Khi có cả 2 minimumCacheTTL và Cache-Control sẽ chọn cái có time lớn hơn, nên k thể ép thời gian cache image nhỏ hơn setting fix của Cache-Control được
 Các page dynamic cũng tự set Cache-Control cho browser là "private, no-cache, no-store, max-age=0, must-revalidate" để cản mọi cache
 
+=>*** Chốt: cái này cứ specify rõ options của fetch ra, còn lại k cần đụng, mặc định cache các file assets static kệ nó thôi.
 
 
+
+//!!!!!!!
+Liệu fetch có tự deduplicate không? hay phải dùng force-cache mới có? Nếu dùng force-cache thì nó store cho mọi request chứ?
 # Request Memoization
-NextJS tự động lưu request call trong 1 single render pass ở server side. Mà server side của App Router chỉ có TH fetch bên trên, sẽ bị gom thành 1 request thôi.
+NextJS tự động lưu request call trong 1 single render pass ở server side.
 Vd set {next:{revalidate:1}} và Promise.all([fetchData(), fetchData()]) call tới server sẽ thấy chỉ gọi 1 lần.
 => Chú ý là chỉ ở server side nextjs, còn client side thì vẫn request lại hết, ta có thể custom việc xử lý với các thư viện.
 => Lưu ý tính năng này luôn cần có, k ảnh hưởng gì tới flow chính của ứng dụng vì chỉ trong 1 single render pass.
@@ -40,6 +45,7 @@ Ta có thể tự implement hook useFetch để fetch data kèm xử lý loading
 
 => K thể revalidate. Mặc định apply vào GET fetch 
 
+//@!@#!@#@#
 =>*** K cần dụng và cũng chả bh cần sửa gì 
 
 
