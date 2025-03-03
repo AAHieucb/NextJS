@@ -27,29 +27,24 @@ Các page dynamic cũng tự set Cache-Control cho browser là "private, no-cach
 
 
 
-//!!!!!!!
-Liệu fetch có tự deduplicate không? hay phải dùng force-cache mới có? Nếu dùng force-cache thì nó store cho mọi request chứ?
 # Request Memoization
-Fetch của NextJS tự động lưu request call trong 1 single render pass ở server side.
-Vd set {next:{revalidate:1}} và Promise.all([fetchData(), fetchData()]) call tới server sẽ thấy chỉ gọi 1 lần.
-=> Chú ý là chỉ ở server side nextjs, còn client side thì vẫn request lại hết, ta có thể custom việc xử lý với các thư viện.
-=> Lưu ý tính năng này luôn cần có, k ảnh hưởng gì tới flow chính của ứng dụng vì chỉ trong 1 single render pass.
-=> Cơ chế nó lưu lại request vào cache trong 1 single render pass, hết render pass đó thì xoá cache đi
+Fetch của NextJS tự động cache request call trong 1 single render pass ở server side.
+Vd call API bằng fetch của nextjs như Promise.all([fetchData(), fetchData()]) tới server sẽ thấy chỉ gọi 1 lần.
+=> Chú ý là chỉ ở server side nextjs, còn client side thì vẫn request lại nhiều lần, phải tự custom xử lý mới fix deduplicate phía client được.
+=> Cơ chế nó lưu lại request vào cache trong 1 single render pass, hết render pass đó thì xoá cache đi. Nên luôn dùng.
 
-Chỉ cần dùng fetch có sẵn của nextjs là tự có request memoization r. Thực tế đây là tính năng của React có sẵn cache dùng cho server component. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch, có thể tự implement lại với cache của React để có Request Memoization và cache. Còn cache của react sang nextjs thành { unstable_cache } vẫn có sẵn request memoization.
-VD: import { cache } from 'react'; const fetchWithCache = cache( async (url) => { const res = await fetch(url); return res.json(); });
+Chỉ cần dùng fetch có sẵn của nextjs là tự có request memoization r. Thực tế đây là tính năng của React có sẵn cache dùng cho server component. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch thì tự dùng cache của React để có Request Memoization. Cache của react chỉ request memoize chứ k cache data.
+VD: import { cache } from 'react'; const fetchWithCache = cache( async (url) => { const res = await fetch(url); return res.json(); }); => nextjs dùng v ok luôn
 
-Dùng các thư viện như swr, react-query cũng giúp tạo Request Memoization tự cache request, xử lý deduplicate trong ktg ngắn.
+Trong nextjs còn có { unstable_cache } hỗ trợ request memoization và mặc định nó cache mãi luôn, y hệt "force-cache" => éo bh dùng.
 Ta có thể tự implement hook useFetch để fetch data kèm xử lý loading, error, lưu lại request trong useRef hay useMemo coi như là cache nhưng kp là request memoization
-=> Việc dùng như v ko chỉ có request memoization trong 1 lần render mà còn kiểm soát mọi thứ của cache thủ công như revalidate khi cần thiết.
+Nếu dùng các thư viện như swr, react-query cũng giúp tạo Request Memoization tự cache request, xử lý deduplicate trong ktg ngắn.
 
-=> K thể revalidate. Mặc định apply vào GET fetch 
-
-//@!@#!@#@#
-=>*** K cần dụng và cũng chả bh cần sửa gì 
+=>*** Chốt: cứ dùng fetch GET tự có request memoization cho 1 single render pass r, với kiểu khác thì tự wrap bằng cache của react là xong.
 
 
 
+//!!!!!!!!
 # Data Cache
 Thứ tự: Client Side Cache HTML -> Full Router Cache HTML -> Data Cache API
 
