@@ -5,7 +5,7 @@ Hàng loạt example: https://nextjs.org/docs/app/building-your-application/data
 
 Cache trong nextjs lưu trong filesystem của server. Có thể config cache location sang storage bền vững or chia sẻ giữa các container và nhiều instance trên máy.
 
-=> ***Chốt: Điều db là nếu dùng fetch bth hoặc query db sẽ luôn cache từ build time (pre-rendering) khiến lần sau k gọi lại. Nếu muốn luôn call lại thì dùng options cho fetch, hoặc export "force-dynamic"
+=> ***Chốt: Nếu dùng fetch force-cache hoặc query db sẽ luôn cache từ build time (pre-rendering) khiến lần sau k gọi lại. Nếu muốn luôn call lại thì dùng options no-store (hoặc để mặc định cx v) cho fetch, hoặc export "force-dynamic"
 Nếu dùng dynamic api thì cũng luôn luôn call lại, tức dùng: cookies, headers, connection, draftMode, searchParams prop, unstable_noStore => chỉ cần lấy thôi cx call lại
 
 
@@ -23,14 +23,14 @@ Riêng với image, có thể config minimumCacheTTL, deviceSizes, imageSizes, f
 Khi có cả 2 minimumCacheTTL và Cache-Control sẽ chọn cái có time lớn hơn, nên k thể ép thời gian cache image nhỏ hơn setting fix của Cache-Control được
 Các page dynamic cũng tự set Cache-Control cho browser là "private, no-cache, no-store, max-age=0, must-revalidate" để cản mọi cache
 
-=>*** Chốt: cái này cứ specify rõ options của fetch ra, còn lại k cần đụng, mặc định cache các file assets static kệ nó thôi.
+=>*** Chốt: cái này cứ specify rõ options của fetch ra nếu cần cache, còn lại k cần đụng, mặc định cache các file assets static kệ nó thôi.
 
 
 
 //!!!!!!!
 Liệu fetch có tự deduplicate không? hay phải dùng force-cache mới có? Nếu dùng force-cache thì nó store cho mọi request chứ?
 # Request Memoization
-NextJS tự động lưu request call trong 1 single render pass ở server side.
+Fetch của NextJS tự động lưu request call trong 1 single render pass ở server side.
 Vd set {next:{revalidate:1}} và Promise.all([fetchData(), fetchData()]) call tới server sẽ thấy chỉ gọi 1 lần.
 => Chú ý là chỉ ở server side nextjs, còn client side thì vẫn request lại hết, ta có thể custom việc xử lý với các thư viện.
 => Lưu ý tính năng này luôn cần có, k ảnh hưởng gì tới flow chính của ứng dụng vì chỉ trong 1 single render pass.
