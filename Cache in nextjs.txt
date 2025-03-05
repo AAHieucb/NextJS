@@ -6,7 +6,7 @@ Hàng loạt example: https://nextjs.org/docs/app/building-your-application/data
 Cache trong nextjs lưu trong filesystem của server. Có thể config cache location sang storage bền vững or chia sẻ giữa các container và nhiều instance trên máy.
 
 => ***Chốt: Nếu dùng fetch force-cache hoặc query db sẽ luôn cache từ build time (pre-rendering) khiến lần sau k gọi lại. Nếu muốn luôn call lại thì dùng options no-store (hoặc để mặc định cx v) cho fetch, hoặc export "force-dynamic"
-Nếu dùng dynamic api thì cũng luôn luôn call lại, tức dùng: cookies, headers, connection, draftMode, searchParams prop, unstable_noStore => chỉ cần lấy thôi cx call lại
+Nếu dùng dynamic api thì cũng luôn luôn call lại, tức dùng: cookies, headers, connection, draftMode, searchParams prop, unstable_noStore => chỉ cần lấy thôi cx call dynamic lại. Chú ý ở mỗi page để tránh tự động pre-rendering ở build time.
 
 
 
@@ -15,15 +15,12 @@ Browser tự cache request theo trường Cache-Control trong response header.
 VD set là max-age=10 sẽ cache trong 10s. Điều này thường gặp trong static file css js img. 
 Bản chất khi disable cache hoặc ép browser reload lại với k dùng cache thì sẽ chỉnh sửa header và đè lên setting của server nextjs vì server nextjs cũng theo config đó. => Thực tế k cần qt, vì request bth ta luôn để fetch lại chứ k dùng cache browser, chỉ static file mới cache thôi.
 
-Nhắc lại: App Router trong nextjs đã override hàm fetch bình thường. Default là k có cache tức cache:"no-store", phải tự thêm vào nếu cần cache:"force-cache", or thêm {next:{revalidate:30}} sẽ như SSG. Setting này ở server nextjs phụ thuộc vào Cache-Control trong header nên sẽ bị override bởi browser khi ta disable cache và reload trên browser => nch là luôn dùng đủ options để tránh nó tưởng là pre-rendering từ buildtime.
-Việc sửa cache của browser sẽ override lên setting của App Router nhé, VD disable cache thì App Router server nextjs sẽ luôn gọi lại API và bỏ qua cả Request Memoization.
-
 -> Nextjs tự thêm Cache-Control cho truly immutable assets là "public, max-age=31536000, immutable", bao gồm static image và điều này k thể đổi, cx k cần đổi.
 Riêng với image, có thể config minimumCacheTTL, deviceSizes, imageSizes, formats. 
 Khi có cả 2 minimumCacheTTL và Cache-Control sẽ chọn cái có time lớn hơn, nên k thể ép thời gian cache image nhỏ hơn setting fix của Cache-Control được
 Các page dynamic cũng tự set Cache-Control cho browser là "private, no-cache, no-store, max-age=0, must-revalidate" để cản mọi cache
 
-=>*** Chốt: cái này cứ specify rõ options của fetch ra nếu cần cache, còn lại k cần đụng, mặc định cache các file assets static kệ nó thôi.
+=>*** Chốt: cái này k cần đụng, mặc định cache các file assets static kệ nó thôi.
 
 
 
@@ -33,7 +30,7 @@ Vd call API bằng fetch của nextjs như Promise.all([fetchData(), fetchData()
 => Chú ý là chỉ ở server side nextjs, còn client side thì vẫn request lại nhiều lần, phải tự custom xử lý mới fix deduplicate phía client được.
 => Cơ chế nó lưu lại request vào cache trong 1 single render pass, hết render pass đó thì xoá cache đi. Nên luôn dùng.
 
-Chỉ cần dùng fetch có sẵn của nextjs là tự có request memoization r. Thực tế đây là tính năng của React có sẵn cache dùng cho server component. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, Graph QL k dùng được fetch thì tự dùng cache của React để có Request Memoization. Cache của react chỉ request memoize chứ k cache data.
+Chỉ cần dùng fetch có sẵn của nextjs là tự có request memoization r. Thực tế đây là tính năng của React có sẵn cache dùng cho server component. NextJS chỉ override lại hàm fetch với nó. Nếu gọi db, CMS client, GraphQL k dùng được fetch thì tự dùng cache của React để có Request Memoization. Cache của react chỉ request memoize chứ k cache data, chú ý là cache này nằm phía server.
 VD: import { cache } from 'react'; const fetchWithCache = cache( async (url) => { const res = await fetch(url); return res.json(); }); => nextjs dùng v ok luôn
 
 Trong nextjs còn có { unstable_cache } hỗ trợ request memoization và mặc định nó cache mãi luôn, y hệt "force-cache" => éo bh dùng.
@@ -44,57 +41,55 @@ Nếu dùng các thư viện như swr, react-query cũng giúp tạo Request Mem
 
 
 
-//!!!!!!!!
 # Data Cache
 Thứ tự: Client Side Cache HTML -> Full Router Cache HTML -> Data Cache API
+Server nextjs check Request Memoization chưa từng gọi trong render pass này thì check tiếp trong Data Cache. Data cache cản call lại 1 API nếu đã từng call ở server => Request Memoization chỉ xét tới 1 lần render, còn Data Cache xét toàn bộ dự án ở phía server
+Hàm fetch của nextjs chỉ được gọi ở server và thêm các tính năng cache như này, còn client component mà fetch sẽ dùng hàm standard của browser.
 
-Data Cache cản call lại 1 API nếu đã từng call ở server.
-
-Server nextjs check Request Memoization chưa từng gọi trong render pass này thì check tiếp trong Data Cache. Chính là cache store bth.
-Có thể custom, Cache-Control của header kiểm soát cache của browser thì options fetch kiểm soát cache của server:
+Mặc định fetch k có cache tức cache:"no-store", phải tự thêm vào nếu cần cache:"force-cache", or thêm {next:{revalidate:30}} sẽ như SSG. 
+Còn Cache-Control header sẽ quản lý browser cache, cache này sẽ override cache của hàm fetch nextjs. VD disable cache và reload trên browser sẽ luôn call lại ở server.
+Mặc định Cache-Control dùng cho static file, còn lại luôn dynamic nên ta kqt, chỉ cần qt hàm options hàm fetch:
 fetch('https://...', { cache: "no-store }) => luôn fetch lại => default behavior
 fetch('https://...', { cache: "force-cache" }) => luôn cache
 fetch('https://...', { next: { revalidate: 3600 } }) => time-based revalidate
 fetch(`https://...`, { next: { tags: ['a', 'b', 'c'] } }) và revalidateTag('a') => revalidate cache chứa tag cụ thể
 revalidatePath('/') => trigger revalidate bất cứ lúc nào cho 1 path cụ thể
-=> Request Memoization chỉ xét tới 1 lần render, còn Data Cache xét toàn bộ dự án ở phía server
 
-export const fetchCache = 'default-cache' => khiến mọi fetch request đều được cached, nếu k muốn catch buộc phải thêm no-store
+export const fetchCache = 'default-cache' => khiến mọi fetch request ở page đó default đều được cached, nếu k muốn catch buộc phải thêm no-store
+export const dynamic='force-dynamic' => khiến mọi request đều call lại = default = { cache: 'no-store' } = { next: { revalidate: 0 } }
 
 -> Mặc định là opt out, có thể revalidate or opt in như trên
 Cách khác là dùng các options export ra. Các options export quản lý cache: https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
-Hoặc gọi hàm: import { unstable_noStores } from "next/cache"; y hệt option cache:"no-store", có option revalidate luôn
+Hoặc gọi hàm: import { unstable_noStores } from "next/cache"; y hệt option cache:"no-store", có option revalidate luôn => thay bằng connection r
 => Tức có 3 cách
 
-VD partial rendering: cả page static thì dùng cache, có vài component cần fetch data lại liên tục thì thêm noStore vào là xong
+VD partial rendering: nextjs tự chia ra các phần component static tự cache build time, component dynamc tự xây ở runtime, phần Suspense của component dynamic cũng là static được cache ở build time.
 
-=>*** Dùng các options cho chuẩn để đảm bảo SSR fetch lại liên tục, SSG fetch sau 1 ktg, revalidate theo tag hay cache static vĩnh viễn.
+=>*** Chốt: chỉ cần qt các options của fetch, no-store SSG fetch lại liên tục, revalidate SSG fetch sau 1 ktg.
 
 
 
 # Full Route Cache
-Cache này cản server làm bất cứ thứ gì, nếu page đã từng render sẽ hiện lại ra.
+Cache ở server, nếu page đã từng render html sẽ hiện luôn, cản server call api và render lại html. Data cache tương tự nhưng server vẫn render html lại.
+Static routes luôn cache tự động lúc build và có luôn ở lần truy cập đầu tiên (hoặc khi revalidate), dynamic routes mà dùng cache sẽ k cache lúc build mà lần truy cập đầu mới cache.
 
-Cũng chỉ là caches routes để k cần phải thực hiện lại việc call api và render html trên server với mỗi request. Data cache thì server vẫn render html lại.
-Static routes luôn cache tự động lúc build và có luôn ở lần truy cập đầu tiên, dynamic routes k cache lúc build mà lần truy cập đầu mới cache.
-
--> Quy trình: Thực tế, việc render được chia thành chunks là các phần routes khác nhau. Mỗi chunk qua 2 bước: render Server Components thành dạng "React Server Component Payload", rồi kết hợp với Client Component JavaScript để render ra html trên server. 
-Tức React Server Component Payload (RSC payload) chứa kết quả đã xử lý rendered xong Server Component. Đầu tiên HTML từ server hiện ra ngay và k thể tương tác -> React Server Components Payload từ server kết hợp update DOM các thứ -> JS sẽ hydrate client component ở client và html bắt đầu tương tác đươc.
-
-Mặc định nextjs server sẽ cache kết quả React Server Component Payload và html của routes trên server vào lúc build time và khi revalidate.
-Thực tế React Server Component Payload cũng lưu ở client-side Router Cache với từng routes. Router cache lưu routes từng visited và prefetch future routes. Các request sau sẽ check React Server Component Payload trong Router Cache k có sẽ request tới server lại cache Full Route Cache.
+-> Cơ chế: Thực tế, việc render được chia thành chunks là các phần routes khác nhau. Mỗi chunk qua 2 bước: render Server Components thành dạng "React Server Component Payload", rồi kết hợp pre-render Client Component để render ra html hoàn chỉnh trên server. 
+Lưu ý phần React Server Component Payload (RSC payload) chứa kết quả đã xử lý rendered xong Server Component. 
+HTML hoàn chỉnh từ server hiện ra ngay và k thể tương tác, vì server component chả có JS gì mà tương tác, còn client component thì chưa hydrate -> sau khi browser tải file js và hydrate client component xong thì tương tác được.
 
 -> Để invalidate, ta invalidate cái Data Cache, sẽ tự invalidate Router Cache và Full Router Cache. 
-Redeploy tuy k invalidate Data Cache, nhưng sẽ invalidate Full Route Cache.
+Đặc biệt là khi redeploy tuy k invalidate Data Cache, nhưng sẽ invalidate Full Route Cache html.
 
-Để opt out: dùng dynamic route; dùng option export dynamic='force-dynamic' hoặc revalidate=0 ở router config sẽ opt out Full Route Cache và cả Data Cache chỉ phía server; opt out Data Cache VD cache:"no-store" cũng sẽ opt out Full Route Cache.
-=> Nếu k opt out sẽ thấy data dùng bị cũ vì nó giữ cả html thì sẽ giữ cả data đã từng fetch. 
-=> Dùng data cache thì cũng dùng full route cache đi vì kết quả sẽ như nhau mà, k cần qt full route cache làm gì, chỉ cần biết có opt in/out data cache k thôi.
+Để opt out: opt out data cache cũng opt out full route cache.
 
-=>*** Nói chung là y như data cache. Nếu cần data cache thì nên có cái này, nếu k cần data cache thì thôi.
+=>*** Chốt: ta k cần qt vì nextjs tự tối ưu, nếu page có data cache thì data k đổi, thì RSC payload cũng k đổi thì Full Route Cache tự cache luôn r. Nch chỉ cần qt các options của fetch thôi.
+
+Dùng data cache thì cũng dùng full route cache đi vì kết quả sẽ như nhau mà, k cần qt full route cache làm gì, chỉ cần biết có opt in/out data cache k thôi.
+Thực tế React Server Component Payload cũng tự lưu ở Client-side Router Cache. Nó tự cache routes từng visited và prefetch future routes. Có request sẽ check từ Router Cache trước, k có mới tìm trong Full Route Cache ở server.
 
 
 
+//!!!!!!!!
 # Client-side Router Cache
 Cache này cản client làm thêm bất cứ thứ gì, sẽ k gọi vào server nữa luôn.
 App Router có cache này có thể khiến navigate giữa các page luôn tái sử dụng k fetch lại bh.
