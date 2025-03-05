@@ -163,6 +163,8 @@ Sau khi build, host phần .next/static lên CDN. Nó bao gồm các file js css
 --> images.deviceSizes: Nếu biết trước các loại máy sử dụng thì để vào để tránh image optimizer phải optimize quá nhiều.
 images.imageSizes: Set image width, nối với deviceSizes tạo full array. imageSizes chỉ dùng cho image có prop sizes, chỉ rằng image nhỏ hơn full-width của screen.
 
+
+
 -> tailwind.config.js:
 module.exports = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],

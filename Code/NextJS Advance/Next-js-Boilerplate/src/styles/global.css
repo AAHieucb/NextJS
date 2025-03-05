@@ -1,5 +1,7 @@
 @tailwind base;
 
+/* @apply giúp mở rộng class trong tailwind */
+
 a {
   @apply text-blue-700;
 }
