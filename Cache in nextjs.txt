@@ -89,30 +89,39 @@ Thực tế React Server Component Payload cũng tự lưu ở Client-side Route
 
 
 
-//!!!!!!!!
 # Client-side Router Cache
-Cache này cản client làm thêm bất cứ thứ gì, sẽ k gọi vào server nữa luôn.
+Cache này sẽ cản client làm thêm bất cứ thứ gì, sẽ k gọi vào server nữa luôn. Chỉ có trong app router
 App Router có cache này có thể khiến navigate giữa các page luôn tái sử dụng k fetch lại bh.
 URL: https://nextjs.org/docs/app/api-reference/next-config-js/staleTimes
 
-Mặc định nó cache server components layout.js và loading state trong loading.js giúp instant navigation, còn pages thì mặc định k cache. Bản chất là cache RSC payload ở client.
-Pages thì có thể setup cache với staleTimes trong config. Chú ý cache này khác với bfcache có sẵn của browser cho thao tác tiến lùi dù cơ chế như nhau, cache pages hđ riêng với nextjs server. Dù mặc định k cache nhưng vẫn đươc tái sử dụng khi browser backward, forward navigation.
-=> Page cache off by default, phải bật qua nextConfig { experimental: { staleTimes: { dynamic 30 } } }
+-> Mặc định tự cache server components layout.js và loading state trong loading.js giúp instant navigation. Bản chất là cache RSC payload ở client.
+Mặc định page.js không cache, có thể tự set cache page.js với staleTimes trong config là nextConfig { experimental: { staleTimes: { dynamic 30 } } }
+
+Chú ý cache này khác với bfcache có sẵn của browser. bfcache của browser khi navigate tiến lùi luôn tự cache page klq tới client side router cache. Ta kqt và cũng k lo  nó làm page cũ vì nó tự cache chuẩn.
+Chú ý là nó cache file.js, chứ call api ở client vẫn call lại như bth khi vào page thôi.
 
 -> Thời hạn cache: Client-side Router Cache tự mất khi refresh pages vì chỉ trong 1 session. 
-Với pages có thời gian set trong file config. Với layout và loading state chia 2 cases:
+page.js có thời gian cache theo nextConfig. Còn với layout và loading state chia 2 cases:
 VD default prefetch={null} or kxđ thì k cache dynamic pages, 5m cho static pages.
 VD prefetch={true} hoặc dùng router.prefetch thì 5m cho cả static và dynamic pages.
+=> Nói chung là prefetch true thì cache cả dynamic và static, k set thì 5m cho static thôi. 
+
+=> prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch.
 
 -> Để invalidate: dùng revalidatePath revalidateTag cho server action sẽ invalidate Router Cache ở client luôn
 router.refresh phía client cũng invalidate Router Cache 
 
-=> Chỉ có trong app router. Nói chung là nó cache k gọi API ngay từ browser client luôn cho page SSR. Lưu ý là nếu dùng default sẽ k cache cho dynamic pages, static page thì cache 5p, còn data client side fetching trong static pages k được cache mà vẫn phải fetch lại.
-=> prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data và lúc vào pages thì server k fetch lại nữa là sai. Nếu server chỉ fetch cho SEO, vào client sẽ fetch lại hết tất cả thì y hệt getServerSideProps page router mới dùng prefetch thả ga. Hoặc đảm bảo page hiện tại k thay đổi data của page đang prefetch.
-=>*** Cache này nên luôn dùng vì nó cache ở client và áp dụng cả cho static site. dynamic thì k cần nhưng static cần. layout và loading state để mặc định, pages thì để trong config là ok.
+=>*** Chốt: Cache này chỉ cần chú ý prefetch thì đảm bảo page data ở page prefetch k đổi nhiều thôi. Còn page.js dynamic mà vẫn muốn cache thì chỉ khi kqtr realtime, thì set trong nextConfig.
 
 
 
+# Trigger revalidate mọi thứ ngay lập tức
+revalidatePath/revalidateTag sẽ invalidate mọi loại cache ở 1 url cụ thể, nó chỉ gọi ở server nên có thể nhét vào server actions or route handlers.
+Muốn invalidate ở client thì call vào server action or route handler api, hoặc gọi router.refresh()
+
+
+
+//!!!!!!!!
 # Route Handlers
 Route Handlers của App Router giống API Route của Page Router. Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
 Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
@@ -128,8 +137,5 @@ Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js
 
 
 
-# Trigger revalidate ngay lập tức
-revalidatePath sẽ invalidate mọi loại cache ở 1 url cụ thể, nó chỉ gọi ở server nên có thể nhét vào server actions or route handlers.
-Tương tự có revalidateTag
 
 
