@@ -228,7 +228,9 @@ Dù nói là App Router dùng Server Component nhưng k có việc đổi props 
 next/navigation cung redirect dùng ở server component, cũng cung hàng loạt hook như useRouter, useSearchParams, usePathname, useSelectedLayoutSegment cho CSR.
 
 -> Prefetch: - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể. Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào => prefetch chỉ có tác dụng trên production (build r start), k test được ở dev. Chỉ prefetch static pages chứ SSR pages vẫn fetch lại delay như thường.
+null (default) => static sẽ prefetch, dynamic thì loading sẽ prefetch; true là luôn prefetch, false là k.
 - Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang. URL là trang muốn prefetch chơi cả router fix or dynamic routes như /product/[id]
+=> prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch và set stale time cho đúng.
 
 -> Custom 404: app router dùng notfound.js, page router dùng 404.js
 Tạo layout: cả app và page router đều có thể dùng layout.js. Nhưng cũng có thể dùng _document tạo layout thay vì dùng component layout riêng. 
@@ -479,6 +481,7 @@ Lấy ip và location của client ở phía server. Nó chỉ hoạt động kh
 
 # Dùng middleware
 Mặc định middleware luôn chạy trên edge runtime. K thể dùng các nodejs module như fs, crypto, path, nhưng có thể dùng web api như fetch, NextResponse. Muốn dùng nodejs module hoặc là chuyển qua web api, hoặc phải tìm cách khác.
+NextResponse giống Response của web thuần nhưng của nextjs để có thêm các hàm thao tác với redirect, rewrite, cookies, headers.
 
 -> VD Tạo middleware.ts ở ngoài cùng cấp next.config.js (dùng cả page router và app router):
 export function middleware(req, event) { return NextResponse.next(); }

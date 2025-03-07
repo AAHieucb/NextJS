@@ -275,8 +275,35 @@ module.exports = {
 -> package.json:
 {
   "name": "codeagain",
+  "homepage": "static", // url relative để load file static, k set nó bị lỗi trang trắng tinh khi mở index.html sau khi build đó
+  "description": "test",
+  "main": "index.html", // xđ file chính của dự án bắt đầu chạy. Nếu k có thì Node.js mặc định tìm index.js ở thư mục gốc. 
+  "keywords": ["a","b","c"],
   "version": "0.1.0",
+  "author": "John Doe <john.doe@whatever.com> (https://whatever.com)",
+  "author": { // or
+    "name": "John Doe",
+    "email": "john.doe@whatever.com",
+    "url": "https://whatever.com"
+  },
+  "author": "trava.finance", // khi là tên tổ chức chung
+  "contributors": [ // Có thể nhiều người đóng góp nhưng chỉ 1 tác giả, contributors và author đều chỉ dùng khi publish package lên npm thôi
+    {"name":"Johan","url":"https://github.com/johanjordaan"},
+    {"name":"Christopher John Ryan","email":"chrisjohnryan@live.com","url":"https://github.com/ChrisJohnRyan"}
+  ]
   "private": true, // dự án sẽ k được publish như 1 package lên npm registry
+  "bugs": "https://github.com/whatever/package/issues" // Đường dẫn đến trang issues của package.
+  "repository": "bitbucket:whatever/testing", // nơi lưu source code
+  "repository": { // or
+    "type": "git",
+    "url": "https://github.com/bnb/metaverse.git"
+  },
+  "engines": { // xđ phiên bản nodejs mà ứng dụng đang hoạt động nếu sợ publish lên npm rồi user dùng version node quá thấp để cài
+    "node": ">= 6.0.0",
+    "npm": ">= 3.0.0",
+    "yarn": "^0.13.0"
+  },
+  "browserslist": ["> 1%", "last 2 versions", "not ie <= 8"],
   "scripts": {
     "lint": "next lint", // check rules eslint và show cảnh báo 
     "format": "prettier --check --ignore-path .gitignore .", // check rules prettier và show cảnh báo
@@ -298,6 +325,22 @@ module.exports = {
   "devDependencies": {
   }
 }
+
+--> "browserslist": ["> 1%", "last 2 versions", "not ie <= 8"], => là hỗ trợ 2 phiên bản chính cuối cùng của tất cả các trình duyệt với ít nhất 1% mức sử dụng ngoại trừ IE8 trở xuống. 
+Nó xđ các phiên bản trình duyệt hỗ trợ, rồi nó sẽ được tham chiếu bởi babel, autoprefixer và các tool khác để thêm polyfills và các thứ cần thiết để chạy. Chỉ có tác dụng khi dự án chạy ở browser.
+
+--> version: x.x.x thì <phiên bản chính>.<phiên bản phụ>.<phiên bản vá lỗi>
+Trong 1 release chỉ sửa lỗi bản vá, nếu giới thiệu những thay đổi backward-compatible là một bản phát hành nhỏ, 1 bản phát hành lớn sẽ khiến API cũ k còn hoạt động.
+
+--> dependencies: 
+~ là cập nhật mọi bản vá lỗi luôn. VD: ~0.13.0 sẽ update các bản vá 0.13.1 nếu có nhưng k có 0.14.0
+^ sẽ cập nhật mọi bản vá lỗi và cập nhập phụ như 0.14.0, 0.13.2 ok hết => phổ biến nhất
+* cập nhật tất cả phiên bản
+> cập nhập phiên bản cao hơn ta chỉ định or >= là cao hơn or bằng. Tương tự < và <=
+x.x.x fix cứng duy nhất phiên bản này
+lastest luôn dùng phiên bản newest -> k nên vì cú pháp code cũ có thể break
+^1.0.0-beta.52 => có thể tính các phiên bản rc hay test alpha beta
+1.0.0 || > = 1.1.0 < 1.2.0 => kết hợp toán tử để sử dụng 1.0.0 hoặc 1 bản phát hành từ 1.1.0 trở lên nhưng nhỏ hơn 1.2.0
 
 
 
@@ -497,11 +540,11 @@ Hàng loạt các options có thể dùng trong page, layout, route handler: htt
 => Mịa nó, nó còn dùng export const dynamic = 'error'; ở file sitemap.js để bảo route ở file này dùng static rendering. Ta éo qt mà chỉ dùng cho layout, page, route thôi
 
 - layout.tsx | page.tsx | route.ts:
-export const experimental_ppr = true
-export const dynamic = 'auto' / 'force-dynamic' / 'error' / 'force-static' => force-dynamic tương đương fetch { cache: 'no-store', next: { revalidate: 0 } }; error sẽ ép page và layout cache và static, nếu dùng dynamic apis sẽ lỗi luôn, tự đổi default của dynamicParams thành false; force-static tương tự nhưng k báo lỗi mà return empty, khi có thì route sẽ cache nhiều nhất có thể 
+export const experimental_ppr = true =>*
+export const dynamic = 'auto' / 'force-dynamic' / 'error' / 'force-static' => force-dynamic tương đương fetch { cache: 'no-store', next: { revalidate: 0 } }; error sẽ ép page và layout cache và static, nếu dùng dynamic apis sẽ lỗi luôn, tự đổi default của dynamicParams thành false; force-static tương tự nhưng k báo lỗi mà return empty nếu dùng dynamic api, khi có thì route sẽ cache nhiều nhất có thể 
 export const dynamicParams = true => vào 1 route mà k được generate với generateStaticParams VD app/posts/[id]/page.js thì false sẽ lỗi 404, true (defautl) sẽ vẫn fetch runtime
-export const revalidate = false / number
-export const fetchCache = 'auto' / 'default-cache' / 'only-cache' / 'force-cache' / 'force-no-store' / 'default-no-store' / 'only-no-store' => 
+export const revalidate = false / number =>*
+export const fetchCache = 'auto' / 'default-cache' / 'only-cache' / 'force-cache' / 'force-no-store' / 'default-no-store' / 'only-no-store' 
 export const runtime = 'nodejs' / 'edge' => thường dùng edge cho middleware, còn lại render thì dùng nodejs runtime.
 export const preferredRegion = 'auto' / 'global' / 'home' / ['iad1', 'sfo1'] 
 export const maxDuration = 5 => mặc định nextjs k limit gì cả, set sẽ limit thời gian thực hiện server logics. VD server actions sẽ lỗi timeout nếu quá maxDuration => ít dùng
@@ -512,7 +555,7 @@ Parial Prerendering là việc server vẫn build trước 1 phần tĩnh vào C
 Dùng trong next: Phải enable option thì mọi component sẽ prerender hết trong lúc build. Các component dynamic cần fetch API cần wrap lại trong Suspense và fallback của Suspense phải là static component để nó prerender luôn.
 
 --> revalidate = false => set giá trị default cho revalidation time của pages, layout, dùng cho router handler thì là thời gian sống của cache lưu data.
-Nó là thời gian phải làm mới lại pages, nếu dùng với static site sẽ biến thành static site increment. K dùng được khi dùng runtime = 'edge
+Nó là thời gian phải làm mới lại pages, nếu dùng với static site sẽ biến thành static site increment. K dùng được khi dùng runtime = 'edge'
 Nó k override revalidate của hàm fetch mà chỉ sửa đổi giá trị default thôi. Khi kích hoạt nó fetch lại cả pages và cả api fetch luôn.
 Set là false (default) tương đương Infinity. Set là 0 thì luôn dynamic render lại dù pages k dùng dynamic apis, điều đb là case này sẽ ghi đè nếu fetch dùng force-cache or revalidate (vì nextjs luôn ưu tiên settings k cache). Set là 1 số sẽ đảm bảo endpoint invalidated và re-executed mỗi X phút.
 ---> Dynamic APIs là sử dụng các hàm cookies, headers, connection, draftMode, searchParams prop
@@ -537,6 +580,10 @@ export async function GET(
       'Set-Cookie': "name=value" // set cookie 
     }
   });
+}
+export async function POST(request: NextRequest, context: Context) {
+  await request.json();
+  return NextResponse.json({ data });
 }
 
 layout.tsx | page.tsx:
