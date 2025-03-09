@@ -24,6 +24,11 @@ export default (phase) => {
   return nextConfig
 } => npm run dev thì isDev mới = true, k check được trong component
 
+-> Partial rendering: https://www.youtube.com/watch?v=MTcPrTIBkpA
+Các component dùng cookies hay searchParams đều tự là dynamic và gọi lại liên tục khi vào rồi.
+Chú ý component Page có searchParams mà chưa await nó thì vẫn là phần static, khi truyền vào con và con gọi await searchParams; thì con mới là dynamic.
+Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở build time thì k cần, khi đó mọi dynamic part cần được wrap vào Suspense nha, phần static sẽ render ngay build time, phần dynamic sẽ render ở runtime.
+
 
 
 # Template layout trong app router
@@ -65,6 +70,19 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 
 -> *react-next-parallax
 
+-> Trending tạo website cực nhanh:
+*shadcn: thư viện giúp xây component, nó có re-usable component và code sẵn dùng các lib khác để ta tự copy paste và custom chứ kp component sẵn. shadcn có components, blocks, charts, themes, colors sẵn tuỳ ý custom. Kết hợp với cursor và v0 nữa. Nó khiến bước tự code design trở nên nhanh và dễ dàng.
+=> shadcn thay thế bằng https://originui.com/ tương tự nhưng lại có nhiều variants hơn
+Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải hẳn lib chỉ cần code thuần components dùng tailwind thôi.
+Kết hợp shadcn template, tailwinds template để có website ui luôn.
+Kết hợp *magic ui cho components độc lạ: https://magicui.design/
+
+Kết hợp https://enhanced-button.vercel.app/ mở rộng button cho shadcn
+Mở rộng thêm components cho shadcn: https://shadcn-extension.vercel.app/
+Mở rộng nữa nhưng khá xấu: https://shadcnui-expansions.typeart.cc/
+
+
+
 
 
 # Environment variables
@@ -77,6 +95,7 @@ Luôn để file .env*.local luôn để trong gitignore
 -> Ta thường chỉ dùng 2 môi trường với .env.development.local và .env.production.local, còn .env.local dùng với mọi môi trường thường làm set default values.
 VD truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env có thể chạy trực tiếp trên command nếu cài -g) => Khi dùng NODE_ENV, next tự động dùng đúng file .env developement hoặc production mà ta k cần set gì thêm 
 VD có thể dùng file .env lưu giá trị mặc định cho biến môi trường, .env.development lưu giá trị mặc định cho biến môi trường development để k set gì vẫn chạy được, các giá trị này k cần bảo mật, còn .env.development.local lưu giá trị secret ta set cho biến môi trường development nhưng cần che giấu và k cho lên git
+=> Hiện tại k cần dùng cross-env nữa. Ta có thể xác định NODE_ENV khi chạy để yêu cầu dùng file env nào luôn. Default NODE_ENV là development cho npm run dev, các lệnh còn lại tự là production.
 
 -> loadEnvConfig trong next/env giúp load env file vào process.env. Dùng khi cần chạy script or command ngoài nextjs vì nextjs chỉ tự load env var khi chạy next dev/build/start thôi. VD chạy script viết bằng JS => kbh dùng
 
@@ -226,10 +245,13 @@ Dù nói là App Router dùng Server Component nhưng k có việc đổi props 
 
 -> Chuyển trang đâu cần chia CSR hay SSR: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter và Router chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
 next/navigation cung redirect dùng ở server component, cũng cung hàng loạt hook như useRouter, useSearchParams, usePathname, useSelectedLayoutSegment cho CSR.
+useSelectedLayoutSegment thì client component phải nhét vào layout.js mới hoạt động, nó trả ra các path kể từ cái layout đó đến path mới nhất => ít dùng
 
--> Prefetch: - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể. Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào => prefetch chỉ có tác dụng trên production (build r start), k test được ở dev. Chỉ prefetch static pages chứ SSR pages vẫn fetch lại delay như thường.
-null (default) => static sẽ prefetch, dynamic thì loading sẽ prefetch; true là luôn prefetch, false là k.
+-> Prefetch: - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể. Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào => prefetch chỉ có tác dụng trên production (build r start), k test được ở dev.
 - Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang. URL là trang muốn prefetch chơi cả router fix or dynamic routes như /product/[id]
+Với page router: Chỉ prefetch static pages chứ SSR pages vẫn fetch lại delay như thường.
+Với app router: true false sẽ prefetch or not cả dynamic và static. Để default null là hay nhất vì static route sẽ prefetch hết bao gồm cả data bên trong. Còn dynamic route thì 1 phần route từ gốc cho tới phần segment gần nhất dùng loading.js sẽ được prefetch (phần segment là các cục /segment1/segment2/...) tức nó prefetch phần tĩnh nh nhất có thể.
+Thời gian nó cache prefetch là 30s, hết hạn sẽ tự prefetch tiếp luôn
 => prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch và set stale time cho đúng.
 
 -> Custom 404: app router dùng notfound.js, page router dùng 404.js
@@ -349,8 +371,7 @@ Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì r
 
 
 # Dynamic import
-Thường dùng dynamic import cho các hàm từ thư viện lớn mà code k dùng nhiều, VD phải ấn nút mới gọi. 
-Chú ý nội dung dynamic import k tính vào SEO nên cần đảm bảo k mất data qtr
+Thường dùng dynamic import cho các hàm từ thư viện lớn mà code k dùng nhiều, VD phải ấn nút mới gọi.
 
 Khi compile, mỗi page của app được NextJS compile thành từng file riêng gọi là chunk, khác với ReactJS khi chỉ sinh ra 1 file html và js duy nhất
 Khi browser request 1 pages, lần lượt: 
@@ -361,14 +382,15 @@ Nó đồng thời đọc file html hiển thị ra và request tiếp các data
 
 -> Trong next có cả server và client:
 Khi client request vào 1 url, server sẽ chạy trước quét qua tất cả 1 lần, bao gồm cả import hay các thứ sẽ làm hết r gửi lại file js mà client yêu cầu. 
-Khi dùng dynamic import cho 1 component, server vẫn làm như v và chạy qua cả file dynamic import, nhưng client sẽ k load các file dynamic import nữa nếu comp đó chưa cần hiển thị
+Khi dùng dynamic import cho 1 component, server vẫn làm như v và chạy qua cả file dynamic import, nhưng gửi về client sẽ k load các file dynamic import ngay nếu comp đó chưa cần hiển thị cho dynamic import component.
 VD: ta dùng dynamic import cho component Hello mà file chứa nó chưa được load, khi ta ấn nút nó mới hiển thị, để ý tab Network sẽ thấy nó tải file thêm JS lúc đó. Còn nếu component Hello mà import bth thì vào phát client tải luôn, ấn nút hiện ra sẽ k thấy tải thêm file js nx vì nó đã tải trước r.
 
-Chú ý server luôn load file js bất cứ lúc nào có kể cả dynamic import nhưng đôi khi component dynamic import đó cần dùng window hay document mà chỉ có ở browser thì có thể chặn lại với ssr: false, nó làm cho component k bị render trên server mà gửi cho client luôn khi cần, nó cũng k được SEO.
-Cần tránh nhầm là dynamic import k cản trở việc request data cho các file js khác vì bth cũng chả tự request data. Còn khi dùng kèm prefetch mới khiến phía server tiếp tục prefetch data ở trong các pages router khác, nó hoàn toàn klq gì vì ở đây là server xử lý. Còn dynamic import là phía client browser k load các file js chưa dùng mà thôi
+option ssr: false khiến dynamic client component cũng k bị pre-render và k có trong SEO luôn. Trước đó thì server vẫn chạy qua nên nó vẫn có ích cho SEO.
+Không liên quan tới prefetch, khi có thì server sẽ prefetch data như bth thôi. dynamic import chỉ delay client side và chỉ dùng với client component
 
 -> Có thể xử lý thêm loading cho dynamic import được với next/dynamic
 Dùng next/dynamic và React.lazy + Suspense cho kết quả như nhau
+=> Chốt: dynamic import từ next/dynamic, ssr false => chỉ dùng next/dynamic mà k dùng react lazy
 
 
 
@@ -535,7 +557,7 @@ export const config = {
 - redirects trong next.config.js sẽ chặn mọi request đến và redirect, thực hiện trước cả middleware, có option permanent true là permanent redirect
 - NextResponse.redirect để redirect trong middleware, nó nằm sau redirects trong next.config.js
 
--> rewrites trong next.config.js:
+-> rewrites thì chỉ có trong next.config.js: đổi page mà k đổi url
 module.exports = {
   async rewrites() {
     return [
@@ -550,6 +572,8 @@ module.exports = {
     ];
   },
 };
+
+-> Đổi url mà k đổi page với history.pushState({},"","/newurl");
 
 -> Chain middleware:
 - Có thê combine các middleware bằng cách viết logic từng cái liên tiếp trong 1 hàm middleware.js
@@ -731,12 +755,12 @@ VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên 
 
 
 # Dùng view transition API
-URL: https://www.youtube.com/watch?v=hpt7SsZUCbs
-***Dùng lib next-view-transition để animate cả page hoặc từng phần tử được.
-Dùng react-lenis giúp áp dụng scroll mượt cho toàn trang
-Điều qtr là view transition phải dùng ở client-side component "use client" nếu k sẽ k chạy.
-Trong js có hàm tag.animate giúp animate bằng JS cho 1 tag dễ như @keyframe của css
+Dùng như html thuần hoặc dùng ViewTransition có sẵn của react, chỉ cần thêm config vào next config là xong.
+URL: https://www.youtube.com/watch?v=xfzNXa8WYW8
+=> Muốn hoàn hảo thì dùng tanstack/router
+
 Animate bằng clip path khi 1 page xuất hiện đẹp hơn là cho nó di chuyển từ ngoài vào
+Trong js có hàm tag.animate giúp animate bằng JS cho 1 tag dễ như @keyframe của css
 
 
 

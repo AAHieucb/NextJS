@@ -44,7 +44,7 @@
 
 
 
--> next.config.mjs:
+-> next.config.mjs (v15.2):
 poweredByHeader: false, // *NextJS sẽ k thêm header "X-Powered-By: Next.js" vào các response HTTP, ẩn thông tin bảo mật
 logging: { fetches: { fullUrl: true } } => *Log thông tin full URL khi fetch API bằng "fetch" của nextjs ở dev mode.
 basePath: '' => *default load static files từ folder public. Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
@@ -146,6 +146,9 @@ cacheMaxMemorySize: 0, => disable default in-memory cache để dùng theo cache
 generateBuildId: async () => { return "xxx"; },
 compress: true,
 crossOrigin: 'anonymous', => sẽ thêm vào script tag crossOrigin="anonymous" hoặc crossOrigin="use-credentials"
+experimental: {
+  viewtransition: true
+}
 
 --> compress: Mặc định true và nextjs nén với gzip. Khi host trên vercel, nó dùng brotli trước r mới gzip. Check loại thuật toán trong Accept-Encoding và Content-Encoding header
 Muốn đổi thuật toán phải tự cài và disable compress mặc định của nextjs. VD set nginx compress với brotli và disable compress của nextjs để chỉ dùng của nginx.
@@ -210,8 +213,25 @@ module.exports = {
     autoprefixer: {}, // => nextjs có r, nhưng tự tạo file postcss.config sẽ ghi đè bị mất phải tự thêm lại
     ...(process.env.NODE_ENV === "production" ? { cssnano: {} } : {}), // cssnano: {} và cssnano: {preset: "default"} là giống nhau
   },
+  plugins: [ // or
+    "tailwindcss",
+    "postcss-flexbugs-fixes",
+    [
+      "postcss-preset-env",
+      {
+        "autoprefixer": {
+          "flexbox": "no-2009"
+        },
+        "stage": 0,
+        "features": {
+          "custom-properties": false,
+          "nesting-rules": true
+        }
+      }
+    ]
+  ]
 };
-
+  
 
 
 -> .prettierrc:
@@ -459,7 +479,7 @@ src
     dashboard
       layout.js
       loading.js
-      not-foundjs
+      not-found.js
       error.js
       template.js
       default.js => fallback nếu k có slot khi cần thế vào layout
@@ -692,7 +712,7 @@ router.replace('/new-route', {
   alt="Picture of the author"
   priority={true} => ưu tiên tải ngay lập tức 
   loading="lazy" => trì hoãn tải cho đến khi xuất hiện trong viewport
-  blurDataURL="data:image/jpeg..." => nếu ảnh là local image, sẽ tự có blur url do nextjs optimize mà k cần điền
+  blurDataURL="data:image/jpeg..." => nếu ảnh là local image, sẽ tự có blur url do nextjs optimize mà k cần điền => có tự éo đâu
   placeholder="empty" => empty default kcj, "blur" sẽ dùng ảnh của blurDataURL, hoặc truyền ảnh blur trực tiếp base64 "data:image/..." 
   onError={(e) => console.error(e.target.id)}
   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" => dùng như srcset
