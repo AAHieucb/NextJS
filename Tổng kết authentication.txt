@@ -192,11 +192,13 @@ Khi user login vào google với OAuth2.0 nhận về token sẽ có thể query
 # Authorization
 -> Dự án đơn giản thì lưu user kèm role. Mọi chỗ check role là gì thì được quyền làm gì.
 
--> Dự án lớn dùng RBAC:
-- Có bảng user và group
-- Bảng role lưu roles "admin", "user", "staff"
-
-Từng hành động gắn với 1 permission là 1 số cụ thể. 
+-> Dự án lớn dùng RBAC: khi chia role, admin, user, groups
+- Có bảng user và group. Khi 1 group được gán permission thì user trong group đó cũng có permission tương ứng.
+- Bảng permission lưu quyền và phạm resource được phép tác động
+Mỗi action thực hiện đều gắn với 1 permission là 1 số cụ thể.
+- Bảng role lưu các roles "admin", "user", "staff"
+Bảng này có thể k cần thiết mà gán trực tiếp quyền cho user group luôn cũng được
+- Sau đó ta chỉ cần set, user gắn với role nào, role nào thì gắn với permission nào.
 
 
 

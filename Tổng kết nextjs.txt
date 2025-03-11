@@ -76,13 +76,13 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải hẳn lib chỉ cần code thuần components dùng tailwind thôi.
 Kết hợp shadcn template, tailwinds template để có website ui luôn.
 Kết hợp *magic ui cho components độc lạ: https://magicui.design/
-Kết hợp tailwindcss-motion giúp tạo animation bằng tailwind class, có preset sẵn, có playground tùy ý custom, có chrome extension để test animation trên mọi web.
+Kết hợp tailwindcss-motion giúp tạo animation bằng tailwind class, có preset sẵn, có playground tùy ý custom, có chrome extension để test animation trên mọi web
+tailwindcss-animate, animate.css => cơ bản hơn có sẵn css class cho animation
+***https://auto-animate.formkit.com/ => best lib auto-animate nhưng k customize được gì cả. Khi cần animate thì thêm 1 dòng code và để nó tự động thôi.
 
 Kết hợp https://enhanced-button.vercel.app/ mở rộng button cho shadcn
 Mở rộng thêm components cho shadcn: https://shadcn-extension.vercel.app/
 Mở rộng nữa nhưng khá xấu: https://shadcnui-expansions.typeart.cc/
-
-
 
 
 

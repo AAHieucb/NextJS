@@ -202,6 +202,59 @@ module.exports = {
     },
   },
   plugins: [],
+  //!!!!!! đống aniamtion hình như là từ tailwindcss-animate yêu cầu
+  darkMode: ["dark"], // false
+  prefix: "",
+  theme: {
+    container: {
+      center: true,
+      padding: "2rem",
+      screens: {
+        "2xl": 1400px,
+      },
+    },
+    colors: {
+      foreground: "var(--foreground)",
+      primary: {
+        DEFAULT: "var(--primary)",
+        foreground: "var(--primary-foreground)",
+      },
+      muted: { // accent, card, popover, destructive, 
+        DEFAULT: "var(--muted)",
+        foreground: "var(--primary-muted)",
+      },
+    },
+    borderRadius: {
+      lg: "var(--radius)",
+      md: "calc(var(--radius) - 2px)",
+      sm: "calc(var(--radius) - 4px)",
+    },
+    keyframes: {
+      "accordion-down": {
+        from: { height: 0 },
+        to: { height: "var(--radix-accordion-content-height)" }
+      },
+      "accordion-up": {
+        from: { height: "var(--radix-accordion-content-height)" },
+        to: { height: 0 },
+      },
+      "fade-in-down": {
+        "0%": {
+          opacity: 0,
+          transform: "translateY(-10px)"
+        },
+        "100%": {
+          opacity: 1,
+          transform: "translateY(0)"
+        }
+      },
+    },
+    animation: {
+      "accordion-down": "accordion-down 0.2s ease-out",
+      "fade-in-down": "fade-in-down 0.2 easep-out"
+    }
+  },
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
 };
 
 
