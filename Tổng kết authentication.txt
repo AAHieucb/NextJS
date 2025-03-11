@@ -1,6 +1,10 @@
-
 ## Các loại authentication
+
+
+
 # HMAC (Session-based)
+HTTP là giao thức k trạng thái, session là thứ khiến nó có trạng thái chia sẻ giữa client-server.
+
 -> Sign up: 
 - user input username/password
 Nếu cho input email thì phải xử lý email dot trick.
@@ -9,8 +13,6 @@ Cũng phải xác thực email hợp lệ: sinh random userid lưu vào db kèm 
 Hash password phải kèm salt random để 2 password trùng nhau cho kết quả khác nhau, lưu cả salt vào user db.
 - server tạo 1 user session, lưu session data vào database
 Session có key là sessionId sinh random, value là user data.
-Thường lưu session data vào redis vì nó dạng key value.
-Khi scale multiple server, buộc lưu session data vào redis hoặc db external để mọi server cùng truy cập có cùng thông tin session của user.
 - server trả lại sessionId cho người dùng
 Coi là signup xong thì đã login luôn rồi.
 Session data có thể gửi trong cookies tự lưu ở client hoặc gửi trong response để user lưu localStorage ok. Nếu dùng cookie thì expiresTime của cookie và expires time của session phải ít nhất là bằng nhau.
@@ -33,7 +35,17 @@ Nếu username khác email thì cho phép người dùng sử dụng app trong t
 - Server toàn quyền ngắt session, bắt login lại vì lưu trong db.
 - HMAC sinh sessionid gửi lại, cũng có thể an toàn hơn là dùng 1 secret key mã hoá userinfo kèm timestamp dùng làm key gửi lại người dùng.
 - Để chống replica attack quá căng, server phải lưu thêm timestamp hoặc nonce vào session data. Sau 1 ktg, server update db session giá trị timestamp mới nhất, gửi lại cho client session mới. Yêu cầu timestamp trong request session phải lớn hơn timestamp trong db session.
-- HMAC k cần dùng token.
+- HMAC k cần dùng token. Nói là dùng session nhưng có thể kéo dài vô tận được chứ k chỉ dùng trong 1 lần login. Nếu dùng trong 1 lần login, lưu vào sessionStorage là đủ và k cần logic xóa.
+- Phía server có thể lưu session data in-memory, nodejs dùng package exress-session (thay cho cookie-session). 
+Có thể lưu vào redis vì nó dạng key value. Vd dùng RedisStore chuyên lưu session data.
+VD connect-mongo hỗ trợ lưu session data:
+store: new MongoStore ({ 
+  url: 'mongodb: // localhost: 27017 / test-app', // URL MONGODB CỦA BẠN 
+  ttl: 14 * 24 * 60 * 60, // thời gian hết hạn 1 session
+  autoRemove: 'native' 
+}), => Đăng nhập vào mongo atlas sẽ thấy session được lưu ở đó
+- Khi scale multiple server, buộc lưu session data vào redis hoặc db external để mọi server truy cập có cùng thông tin session của user. Nếu scale nhiều db thì phải replica chúng.
+Nếu không phải xử lý routing 1 user luôn tới 1 server.
 
 
 
@@ -117,67 +129,38 @@ Phiên bản mới nhất của OpenID là OpenID Connect, nó kết hợp OpenI
 
 
 # OAuth2.0
--> Login:
+Là chuẩn để authorization, không phải chuẩn để authentication như OpenId Connect. 
+Vd OAuth2 chia quyền token dùng được các data nào: Alice vào NewsApp và có tính năng tùy chọn xem ai là bạn bè cũng dùng NewsApp để kết nối với họ. Alice chọn login bằng facebook và được hỏi có muốn chia sẻ list bạn trên Facebook với NewsApp không. Nếu chọn có sẽ điều hướng trở lại NewsApp với 1 token, NewsApp dùng token này để lấy list friends. 
+Tuy nhiên hầu hết ứng dụng chỉ dùng OAuth để login chứng minh là có tk chứ k tương tác hẳn với data của github, gmail hay google làm gì. Do đó họ coi việc ủy quyền read thông tin cơ bản của user cũng là 1 hình thức xác thực chứng minh đã có tk, nên dùng OAuth2 login ok.
+
+-> Login bằng Authorization Code Flow:
 - User ấn login bằng discord
 - Server tạo ra 1 url và redirect user đến sign in của provider
 Phải tạo 1 application trong nền tảng đó, lưu lại clientid và clientsecret.
 URL để redirect là base authentication url `/authorize?client_id=${clientid}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}` => redirectUrl là url provider gửi code về server của ta sau khi login, scope là quyền ngăn cách bằng dấu cách, scope phải tra trong docs quyền tối thiểu để lấy được user.
 redirectUrl của server phải được thêm vào trong application của provider.
+Dùng cookie state để tránh giả mạo provider: tạo random state 64bytes hex lưu vào cookie (sameSite lax để provider lấy được) và thêm vào authentication url `?state=${state}`
+Dùng code verifier để tránh giả mạo server: tạo random state 64bytes hex lưu vào cookie sameSite lax, codeVerifier phải mã hóa giá trị đó với sha256 trả về dạng base64, và thêm vào url `?code_challenge=${code_verifier}&code_challenge_method=S256`
 - Tạo route là GET redirectUrl trên server nhận về code, fetch token, fetch user.
+Check cookie state hợp lệ trước khi fetch token: sẽ nhận về cả code cùng với state, check state nhận về trùng với state trong cookie là được.
 Url để fetch token là "/token" dùng x-wwww-form-urlencoded, body gồm: code (nhận về), redirect_uri(url hiẹn tại), grant_type "authorization_code", client_id, client_secret. Trả về nhiều thứ nhưng chỉ cần quan tâm access_token và token_type.
+Nếu dùng code verifier phải gửi vào "/token" kèm code_verifier từ cookie, provider server sẽ nhận và xác thực vì chỉ server của ta gửi cookie mới có code_verifier đó.
 Dùng để fetch user data, request có header là `{token_type} {access_token}`. Trả về thông tin user chắc chắn có id và email ở mọi loại OAuth.
-Do ta k có nhu cầu thao tác với nền tảng github lâu dài nên k cần lưu accesstoken hay refreshtoken mà chỉ fetch user là xong.
+Do ta k có nhu cầu thao tác với nền tảng github lâu dài nên k cần lưu accesstoken hay refreshtoken mà chỉ fetch user là xong. Nếu thực sự muốn tương tác phải lưu lại và chỉnh scope đủ quyền để làm mọi thứ.
 - Lưu user vào db kèm provider.
 1 user có thể login bằng nhiều cách nhưng cách nào thì vẫn chỉ là 1 user đó.
 Bên cạnh bảng user lưu thông tin user, còn phải lưu 1 bảng khác: userId, providerAccountId, providerName
 - Tạo user session.
 Bản chất khi login OAuth chỉ để xác thực rằng họ có tài khoản đó, lấy được thông tin của user, chứ thực tế user vẫn phải tương tác với hệ thống của ta nên vẫn phải dùng session hoặc jwt token do server ta tạo ra. Login OAuth đã thay thế việc nhập mk rồi check hashedPassword của user thôi.
-Có thể lưu tiếp vào redis (random session id, user) và set vào cookie cho user trùng expires times, r redirect user về trang chủ. Lưu ý cookie set lúc này chính là của client browser luôn, kp là set cookie cho OAuth nhé vì redirectUrl hiện ở browser của người dùng.
+Có thể lưu tiếp vào redis (random session id, user) và set vào cookie cho user trùng expires times, r redirect user về trang chủ. Cookie toàn bộ qtr sẽ gửi qua cả provider và client browser luôn, redirectUrl cũng hiện ở browser.
 
-
-
-Oauth 2.0 là chuẩn để authorization, không phải chuẩn để authentication như OpenId Connect. Tuy nhiên ủy quyền authorization cũng là 1 hình thức xác thực r nên dùng OAuth2 login ok
-Vd OAuth2 chia quyền token dùng được các data nào: Alice vào NewsApp và có tính năng tùy chọn xem ai là bạn bè cũng dùng NewsApp để kết nối với họ. Alice chọn login bằng facebook và được hỏi có muốn chia sẻ list bạn bè trên Facebook với NewsApp không. Nếu chọn có sẽ điều hướng trở lại NewsApp với 1 token, NewsApp dùng token này để lấy list friends. 
-
-//!!!!!!
--> Có nhiều loại flow nhưng web chỉ dùng Authorization Code Flow
-- Web đăng ký với nhà cung cấp dịch vụ (VD: Google) để nhận Client ID(định danh ứng dụng) và Client Secret.
-- Khi login, web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ. 
-Yêu cầu đó chứa Client ID và RedirectURL, Scope (Phạm vi quyền mà web yêu cầu), Response Type luôn là code (để nhận Authorization Code).
-User login và đồng ý cấp quyền truy cập cho ứng dụng. Nhà cung cấp dịch vụ chuyển hướng về RedirectURL kèm Authorization Code trong url.
-- Web gửi Authorization Code đến nhà cung cấp dịch vụ để đổi lấy Access Token. 
-Yêu cầu gồm Client ID và Client Secret để xác thực ứng dụng, Authorization Code nhận được từ bước trước, Redirect URI phải khớp với URI đã đăng ký.
-Nhà cung cấp dịch vụ trả về Access Token (và có thể cả Refresh Token) cho web.
-Khi Access Token hết hạn, ứng dụng web có thể sử dụng Refresh Token để yêu cầu Access Token mới mà không cần người dùng đăng nhập lại.
-=> Để làm thủ công, chỉ cần tạo các api url cho server xử lý tương tác với google là được, thì next-auth tạo sẵn các url đó cho ta r cung các callbacks để ta custom các qtr đó.
-
-Cơ chế: 
-- Đk cho App trên trang của Google Auth 1 ClientID và SecretCode và xác định luôn các chức năng Google API mà App muốn dùng. VD xem được thông tin cá nhân, hay chỉ cần login
-- User vào App và ấn GoogleSignIn button để chuyển đến trang của google, nhập username password để đăng nhập. 
-OAuth2 chuẩn url có dạng: https://accounts.google.com/....&client_id=<ClientId>&redirect_uri=<RedirectURL>. Để ý đúng tên miền accounts.google.com tránh giả mạo
-- User click "Allow" để đồng ý dùng OAuth2 truy cập đến tài nguyên cụ thể, GoogleAuth sẽ sinh 1 mã code và gửi cho App thông qua cái RedirectURL. Tức App cần setup sẵn sàng tại RedirectURL để nhận giá trị mã code kèm các thông tin xác thực khác. VD OAuth2 chuẩn url sẽ gửi dạng: http://localhost/?code=..<mã code dài>...
-Để đảm bảo cái url kia đúng là App thì cần có bước xác thực App với Google thông qua SecretCode được gửi ở dạng public trên url.
-- App nhận về mã code sẽ cung lại cho Google Auth server để nhận AccessToken, phải xác thực cả ClientID và SecretCode của App là hợp lệ. Gửi kèm AccessToken ở mỗi request.
-VD OAuth2 chuẩn request là: POST với body code=<Code>&redirect_uri=<RedirectURL>&client_id=<ClientId>&client_secret=<SecretCode>
-
-SecretCode thì private chứ mã code gửi có thể k an toàn, nên google mới bảo mật thêm là mã code chỉ được dùng 1 lần, sau khi sinh accesstoken thì code cũng hết giá trị. 
-Nếu lộ mã code -> k sao vì hacker kb SecretCode nên k sinh được accesstoken. 
-Nếu lộ SecretCode -> nó phải nghe lén được mã code hoặc biết tk mk để lấy được mã code để sinh accesstoken
-Nếu lộ accesstoken -> k sao vì có hạn sử dụng. 
-
-VD: Google là 1 SSO. Login vào gg xong là có accesstoken vào các server con, vì mỗi app có 1 resource server riêng như Google Resource Server của gmail, calendar. Luồng:
-Client -> Google: Đăng nhập và cấp quyền
-Google -> Client: Mã ủy quyền
-Client -> Server: Gửi mã ủy quyền
-Server -> Google Auth Server: Gửi mã ủy quyền + client_id + client_secret
-Google Auth Server -> Server: Trả về access token (và refresh token)
-Server -> Client: Trả access token
-Client -> Server: Gửi yêu cầu API kèm access token
-Server -> Google Resource Server: Truy vấn dữ liệu kèm access token
-Google Resource Server -> Server -> Client: Trả dữ liệu
-
-
-
+-> Logout: 
+- Khi jwt token ta cung cho user hết hạn, hoặc khi session hết hạn, hoặc chủ động ấn logout thì phải xóa hết session và token và login lại.
+- Nếu cần tương tác OAuth thì có thể lưu lại accessToken và refreshToken tùy ý quản lý. Logout phải xóa cả 2 token đi.
+- Về bảo mật: 
+Mã code nhận về trong redirectUrl có thể k an toàn chỉ dùng 1 lần, sau khi dùng để sinh accesstoken thì code cũng hết giá trị.
+Khi lấy token cần clientSecret vì nếu lộ code, hacker kb clientSecret sẽ k lấy được token.
+- Bản chất cho appA dùng data của appB mà k cần phải input mật khẩu appB vào appA, mà appA chỉ cần implement flow trên là đươc.
 
 
 
@@ -187,70 +170,14 @@ Mỗi lần login sau 1 ktg thì nhập 1 mã gửi về từ gmail, sms, authen
 
 
 # SSO hệ thống lớn
-Có thể mix cả với OAuth2.0 và SSO jwt.
-Dùng 1 identity server riêng quản lý token các ứng dụng bên trong. Sau khi login, có thể truy cập được mọi ứng dụng trong hệ thống, lấy token từ identity server.
+SSO có thể dùng token riêng để xác thực trong hệ thống, kết hợp với OAuth2.0 để cho các bên khác dùng data của mình.
+Có thể kết hợp với OAuth2.0 và SSO jwt.
+Với hệ thống nhỏ, khi mở rộng domainX sang domainY sao cho user login X thì tự login được Y thì bị chặn bởi browser theo same-origin policy.
+Do đó họ buộc phải thêm 1 central identity server riêng quản lý token các ứng dụng con. Sau khi login identity server, có thể truy cập được mọi ứng dụng trong hệ thống bằng token lấy từ identity server. Khi vào bất cứ domain nào mà chưa login cũng đều redirect đến identity server.
 Cơ chế nó quản lý user authen trong 1 single database cho mọi ứng dụng con chứ kp mỗi ứng dụng con là 1 database authen, phải phân quyền user để vào được hệ thống con.
 
-
-
-
-
-
-
-
-
-
-
-
-# Bảo mật SSO và OAuth2
--> SSO: Đăng nhập 1 hệ thống, gửi token để truy cập được tất cả hệ thống con.
-Nếu ta thấy hệ thống domain X mở rộng thêm 1 ứng dụng mới domain Y sao cho những ai đăng nhập X đều có thể đăng nhập Y thì dùng SSO. Tuy nhiên trình duyệt luôn tuân theo same origin policy. Tức domainX k thể truy cập cookie của domainY để tự động đăng nhập. Buộc phải thêm 1 central domain xử lý xác thực.
-
-User vào bất cứ domain nào, nó đều redirect đến 1 authentication server để check thông tin đăng nhập:
-Đã đăng nhập -> redirect về trang trước
-Chưa đăng nhập -> phải đăng nhập -> lưu lại nếu là sessionid, không thì thôi -> gửi lại cho client lưu và redirect về trang trước -> session id có thể dùng để truy cập bất cứ app con nào trong phạm vi 1 session.
-
-SSO có thể kết hợp OAuth2 để xác thực cho các app khác dùng data của mình. VD như OpenID Connect, Facebook Connect, SAML, Microsoft Account.
-
--> OAuth 2.0: đơn giản hơn OAuth 1.0
-Custom thêm tính năng là ứng dụng bên ngoài có thể lấy thông tin người dùng trong ứng dụng gốc. VD game lấy thông tin danh sách bạn bè trên facebook để kết nối chẳng hạn. Cụ thể OAuth nó cho phép app truy cập thông tin mà chả cần đưa password vẫn xác thực được
-
-VD: Client access Game, đăng nhập qua facebook
-Chuyển hướng đến máy chủ xác thực facebook và login, cho phép Game dùng thông tin người dùng
-Máy chủ xác thực của facebook chuyển hướng về url của Game (url này do người làm game đăng ký vào máy chủ xác thực của facebook), trả kèm id game + mật khẩu game + tham số mã
-Người dùng trải nghiệm game bth
-Game chạy nền bằng cách dùng id game + mật khẩu game + tham số mã để đăng nhập facebook dưới quyền người dùng
-Máy chủ facebook trả về accesstoken
-Game dùng accesstoken truy cập thông tin người dùng do facebook cung cấp
-
-URL OAuth2 với discord: https://discordjs.guide/oauth2/#a-quick-example
-
-
-
-
-
-# OAuth2 google gmail api
-Chạy apache server sẽ serve thư mục trong htdocs. VD Ta để 1 folder là 20194761 thì truy cập được index.html tự động với http://localhost/20194761
-
--> Tạo app user gửi bằng mail của họ phải đồng ý cấp quyền:
-Doc URL setup production: https://developers.google.com/gmail/api/auth/scopes
-Doc viết api: https://developers.google.com/gmail/api/reference/rest/v1/users.messages/get
-
-Setup: - Vào https://console.cloud.google.com/
-- Tạo 1 project mới nếu chưa có
-- Search Gmail API và Enable nó. Thực tế có nhiều loại API và ở đây ta đang chỉ dùng dịch vụ Gmail.
-- Setup từng bước: phần url phải ủy quyền localhost:5000 chẳng hạn nếu cho phép app chạy ở local như v
-
-Phần scope là các mức độ mà ta muốn app truy cập. VD chọn https://mail.google.com/ sẽ có full access như gửi mail nhưng k có nghĩa là có mọi thứ. VD muốn xem các email gửi thì phải thêm scope https://www.googleapis.com/auth/gmail.readonly
-Có 3 loại scope:
-Recommended là scope cơ bản nhất bất cứ ai cũng ok
-Sensitive và Restricted là 2 scope truy cập data quan trọng cần sự đồng ý của người dùng. Và developer cũng phải cho app đi qua Google Verification Process mới dùng được 2 loại scope này. Google Verification Process phải trả phí hàng tháng và phải quay video cam kết sẽ dùng thông tin nhạy cảm của user để làm gì.
-App chạy được trong 2 môi trường là testing và production. Đổi môi trường trong OAuth consent screen. 
-
--> Tạo ứng dụng nhúng video youtube dạng mp3 qua Youtube API: Có thể nhúng 1 video youtube bất kỳ vào web dạng video nhét vào src được nhưng để thao tác chi tiết với data thì phải dùng YoutubeAPI. Chỉ cần đăng ký project trong google cloud platform và enable youtube api và tạo 1 api key mới là được, k cần config gì thêm.
-Có thể làm đủ kiểu, phát nhạc, tua bài tiếp theo, tìm kiếm bài hát, lấy thumbnail
-
-
+VD: Google là 1 SSO. Login vào gg xong là có accesstoken vào các server con, vì mỗi app có 1 resource server riêng như Google Resource Server của gmail, calendar. 
+Khi user login vào google với OAuth2.0 nhận về token sẽ có thể query data từ mọi Resource Server theo quyền hạn của mình.
 
 
 
@@ -258,40 +185,28 @@ Có thể làm đủ kiểu, phát nhạc, tua bài tiếp theo, tìm kiếm bà
 -> Dự án đơn giản thì lưu user kèm role. Mọi chỗ check role là gì thì được quyền làm gì.
 
 -> Dự án lớn dùng RBAC:
-
 .....
 
 
 
+# VD OAuth2 google truy cập gmail api
+Doc URL setup production: https://developers.google.com/gmail/api/auth/scopes
+Doc viết api: https://developers.google.com/gmail/api/reference/rest/v1/users.messages/get
+
+Setup: 
+- Vào https://console.cloud.google.com/
+- Tạo 1 project mới nếu chưa có
+- Search Gmail API và Enable nó. Thực tế có nhiều loại API và ở đây ta đang chỉ dùng dịch vụ Gmail.
+- Setup từng bước
+Phần url phải ủy quyền localhost:5000 chẳng hạn nếu cho phép app chạy ở local như v
+Phần scope là các mức độ mà ta muốn app truy cập. VD chọn https://mail.google.com/ sẽ có full access như gửi mail nhưng k có nghĩa là có mọi thứ. VD muốn xem các email gửi thì phải thêm scope https://www.googleapis.com/auth/gmail.readonly
+- App chạy được trong 2 môi trường là testing và production. Đổi môi trường trong OAuth consent screen. 
+
+-> Gmail API có 3 loại scope:
+Recommended là scope cơ bản nhất bất cứ ai cũng ok
+Sensitive và Restricted là 2 scope truy cập data quan trọng cần sự đồng ý của người dùng. Và developer cũng phải cho app đi qua Google Verification Process mới dùng được 2 loại scope này. Google Verification Process phải trả phí hàng tháng và phải quay video cam kết sẽ dùng thông tin nhạy cảm của user để làm gì.
+
+-> Tương tự có thể tạo ứng dụng nhúng video youtube dạng mp3 qua YoutubeAPI: Có thể nhúng 1 video youtube bất kỳ vào web dạng video nhét vào src, phát nhạc, tua bài, tìm kiếm bài hát, lấy thumbnail. 
+Phải đăng ký project tương tự trong google cloud platform và enable youtubeAPI (thay vì gmail api bên trên) và tạo 1 api key mới là được, k cần config gì thêm.
 
 
-
-
-
-# Session và cookie
-Cookie có giới hạn bộ nhớ nhỏ, được lưu ở phía client lâu dài.
-Session là 1 loại data trao đổi giữa client và server. Session thường implement lưu data trong session storage cho 1 phiên làm việc thôi.
-Có thể dùng cookie lưu session data tùy ý implement. Chú ý session storage là khái niệm chỉ có ở FE, backend k có session storage mà chỉ có cookie.
-
--> Server k thể xác định được các requests HTTP có phải từ cùng 1 người hay không vì HTTP là 1 giao thức k trạng thái, cookie ra đời đã giải quyết vấn đề đó. VD Setup cookie middleware lưu data tự động truyền giữa client server trong phạm vi 1 session.
-=> Session chỉ nên lưu data 1 lần vào web, VD login data mà lưu lâu dài thì dùng jwt lưu cookies đi. Do đó session ít dùng trong dự án lớn.
-
--> Lưu session data ở server
-Có thể dùng express-session lưu cookie trong memory (restart server là mất) hoặc cookie-session để lưu session data trong cookie (bị lỗi memory leak). Để fix, ta k được lưu session trong cookie nữa mà phải lưu trong các database khác bằng cách thêm option store:
-- VD redis:
-store: new RedisStore(),
-- VD connect-mongo hỗ trợ lưu session data:
-store: new MongoStore ({ 
-  url: 'mongodb: // localhost: 27017 / test-app', // URL MONGODB CỦA BẠN 
-  ttl: 14 * 24 * 60 * 60, // thời gian hết hạn 1 session
-  autoRemove: 'native' 
-}), => Đăng nhập vào mongo atlas sẽ thấy session được lưu ở đó
-
--> Đồng bộ session trong hệ phân tán: client gửi request tới nhiều server khác nhau, server 1 lưu session data, server 2 lưu sẽ invalid yêu cầu login lại
-- Lưu session data chỉ ở client thông qua cookies / localStorage.
-- Lưu ở local server thì cấu hình nginx trung gian thuật toán chỉ gửi 1 user tới 1 server là được
-- Lưu ở 1 database or redis chung để nhiều server cùng lấy được, thường dùng cho SSO, nhược điểm là sập phát toang luôn
-- Lưu ở local 1 server, rồi gọi đồng bộ copy session data vào các server khác => éo ổn
-
-
--> Usecase: trong hệ thống phân tán nhiều server, các server thường đồng bộ session data của user thông qua 1 redis db chung thay vì mỗi máy lưu 1 session data riêng. Vừa tối ưu bộ nhớ và tốc độ, vừa giúp đồng bộ user k cần login lại nhiều lần. 
