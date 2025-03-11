@@ -5,21 +5,25 @@ Nextjs hỗ trợ mdx, có thể viết toàn page bằng mdx rồi hiển thị
 
 
 
-# CSR SSG SSR static web và hosting
+# CSR SSG SSR hosting hydrate resumability và static web
 CSR: browser gửi request lấy htm -> render tạm loading -> download JS -> fetch data API -> render với data đủ
-SSR: browser gửi request lấy html -> page hiện luôn nhưng không tương tác được -> download JS event file -> thực hiện được actions
-SSG thì fetch data lưu vào cache rồi build ra html tĩnh, cache stale thì nó tự fetch tiếp và build lại html tĩnh.
-NextJS mặc định là Universal SSR tốt nhất vì CSR data realtime, SSR data cần SEO.
-=> ***SSR có nhiều điểm lợi hơn CSR. Vd API dùng cookies httponly cản k truy cập từ FE thì server của SSR lại call đc. Vd biến môi trường secret ở client cần che giấu thì phải dùng SSR mới ẩn được
-=> Các trang web có thể hosting CSR cũng như các file tĩnh. Còn hosting SSR hay SSG đều cần hosting 1 server nodejs lên serve file.
+SSR: browser gửi request lấy html -> server fetch data r gửi lại html -> page hiện luôn nhưng không tương tác được -> download JS event file -> thực hiện được actions
+SSG thì server fetch data lưu vào cache rồi build ra html tĩnh sẵn, cache stale thì nó tự fetch tiếp và build lại html tĩnh.
+Universal SSR là két hợp của CSR data realtime, SSR data cần SEO.
+=> Dùng nextjs SSR có nh điểm lợi k thể thay thế bằng CSR. BFF server khi api bên thứ 3 dùng cookies httponly cản k truy cập từ FE thì server của SSR lại call đc. Biến môi trường secret ở component cần che giấu thì phải dùng SSR mới ẩn được.
 
+Hosting CSR cũng như các file tĩnh. Còn hosting SSR hay SSG đều cần hosting 1 server nodejs lên serve file.
 
+-> Khi hydrate, client tải code JS và thực thi để biết có event nào gắn vào component nào. Việc này server đã làm rồi nhưng k gửi cho client được nên client phải hydrate lại.
+Resumability là giải pháp thay thế hydration
+- Server serialize thông tin "event nào gắn với component nào" gửi cho client k cần tính toán lại.
+- Sử dụng lazy load, để khi user tương tác mới cần load thông tin event đó thôi. Khi trigger event, client biết sẵn nó cần event handler nào thì load về thực hiện luôn.
+- Sử dụng 1 global event handler bắt mọi event, k cần chờ event gắn vào element mới chạy được nữa. Vì hydration lưu hết event handler vào bộ nhớ rất tốn, cách này chỉ cần 1 global handler, user tương tác event nào mới load event đó.
+=> React k có resumability, Qwik* là framework thực hiện resumability có tốc độ vượt cả nextjs, được tích hợp sẵn nên chỉ cần dùng Qwik là có tốc độ nhanh => k dùng
 
-# Typescript trong NextJS
-Tích hợp được typescript vào nextjs có sẵn bằng cách thêm tsconfig.json và sửa các file js.
-ReturnType tạo ra 1 type mới là type trả về của function. VD: type T1 = ReturnType<(s: string) => void>; => T1 có type là void.
-VD: type T2 = ReturnType<<T>() => T>; => T2 có type T
-VD: declare function f1(): { a: number; b: string }; type T4 = ReturnType<typeof f1>; => thì type T4 = { a: number; b: string; }
+-> SS: - Ở lần load đầu tiên, SSR nhanh hơn do server xử lý html gửi lại client nhìn được ngay. Còn CSR thì người dùng nhìn thấy thanh loading cho đến khi browser xử lý DOM xong.
+- SSR thì mọi thao tác phải gửi tới server xử lý, render ra html mới. CSR thì lượng data load lần đầu khá nặng nhưng bù lại các lần sau sẽ xử lý cực nhanh do nó đã có hết trên client, k cần reload trang lại với mọi hành động.
+- CSR có SEO kém vì crawl vào web chả có gì, khi chuyển trang thì các thẻ metadata lại k thay đổi. Google đã giải quyết vấn đề này của search engine bằng cách cho phép crawler chạy code JS nhưng k hoàn hảo.
 
 
 
@@ -39,29 +43,6 @@ Cách tốt hơn là lưu ở file settings trong blob storage hoặc trong db, 
 
 Để đổi feature flag, có thể vào code đổi file settings, hoặc đổi trong db. Với ứng dụng mà customer admin có thể đổi thì phải xây giao diện và cho customer đổi feature flag qua API.
 Trong FE chỉ cần tạo component wrap lại và check env var thôi, trong BE dự án lớn sẽ rất phức tạp khi nhiều feature call api phụ thuộc lẫn nhau sẽ phải cô lập các feature ra riêng và chỉ call vào feature khác khi flag enable.
-
-
-
-# Hiểu OAuth và OAuth2 cho web
--> Luồng hoạt động của OAuth 1.0 cho ứng dụng web
-- Web (Consumer) đk với nhà cung cấp dịch vụ (VD: Twitter) để nhận Consumer Key và Consumer Secret.
-- Web gửi yêu cầu lấy Request Token đến nhà cung cấp dịch vụ. Nó chứa CallbackURL là nơi nhận phản hồi sau khi uỷ quyền, yêu cầu cũng được ký số bằng Consumer Secret.
-Web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ và để login và đồng ý cấp quyền truy cập cho web.
-Nhà cung cấp dịch vụ sẽ trả về callback url oauth_token (Request Token), oauth_token_secret (bí mật liên quan đến token) tới callbackurl.
-- Web gửi Request Token đã được ủy quyền đến nhà cung cấp dịch vụ để đổi lấy Access Token. Yêu cầu này cũng phải được ký số.
-- Web dùng Access Token để truy cập tài nguyên từ nhà cung cấp dịch vụ. Mỗi request đều phải được ký số bằng Consumer Secret và oauth_token_secret
-=> Bất tiện vì luôn phải ký số mọi request. K cần https luôn vì ký số luôn an toàn. K còn dùng nữa, bh mặc định chỉ dùng OAuth2.
-
--> Luồng hoạt động của OAuth 2.0 cho ứng dụng web: có nhiều luồng nhưng web chỉ dùng Authorization Code Flow
-- Web đăng ký với nhà cung cấp dịch vụ (VD: Google) để nhận Client ID(định danh ứng dụng) và Client Secret.
-- Khi login, web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ. 
-Yêu cầu đó chứa Client ID và RedirectURL, Scope (Phạm vi quyền mà web yêu cầu), Response Type luôn là code (để nhận Authorization Code).
-User login và đồng ý cấp quyền truy cập cho ứng dụng. Nhà cung cấp dịch vụ chuyển hướng về RedirectURL kèm Authorization Code trong url.
-- Web gửi Authorization Code đến nhà cung cấp dịch vụ để đổi lấy Access Token. 
-Yêu cầu gồm Client ID và Client Secret để xác thực ứng dụng, Authorization Code nhận được từ bước trước, Redirect URI phải khớp với URI đã đăng ký.
-Nhà cung cấp dịch vụ trả về Access Token (và có thể cả Refresh Token) cho web.
-Khi Access Token hết hạn, ứng dụng web có thể sử dụng Refresh Token để yêu cầu Access Token mới mà không cần người dùng đăng nhập lại.
-=> Để làm thủ công, chỉ cần tạo các api url cho server xử lý tương tác với google là được, thì next-auth tạo sẵn các url đó cho ta r cung các callbacks để ta custom các qtr đó.
 
 
 
@@ -119,17 +100,6 @@ VD chỉ cần thêm thẻ này vào header:
 
 
 
-# (xoá ngay) Bug cũ nextjs 
--> Call api tới external source ở server pages sẽ bị gọi 2 lần, nếu udpate db sau đó cũng sẽ update 2 lần. 
-Để fix, hoặc là dùng prefetch={true} thì khi xuất hiện ở view port sẽ tự prefetch chỉ 1 lần k sợ lặp. Hoặc là dùng router.push() thay cho thẻ Link
-
--> 1 bug nữa next14 là client side router cache vẫn tự cache với page.tsx dù trong docs nói là ta phải tự enable. Điều này khiến cho client tự cache k chịu gọi lại API fetch ở server. Mà éo có option opt out nó, buộc phải set staleTime trong next.config ép = 0 để opt out.
-
--> VD để đạt được getServerSideProps như page router, ta phải disable data cache và full route cache và client side cache trong app router rất dở. 
-Tức thêm cache:"no-store" để opt out data cache và full router cache, và thêm staleTime dynamic 0 vào config để opt out client side router cache. Lại còn k được dùng thẻ Link để tránh lỗi nữa.
-
-
-
 # Other
 -> Hook useFormState => deprecated thay bằng useActionState
 const [formState, formAction] = useFormState(addToCart, { itemID: "" });
@@ -140,4 +110,5 @@ Khi form thực hiện submit sẽ chạy hàm addToCard, hàm này trả ra gi�
 Có thể custom xử lý lỗi trả ra formState.pending, formState.error, formState.itemID.
 => useFormStatus lấy form status ở từng component, còn useFormState lấy status thực hiện action ở component ngoài cùng (server component fetch loading thì dùng Suspense)
 
+-> Có thể tích hợp được typescript vào nextjs có sẵn bằng cách thêm tsconfig.json và sửa các file js.
 

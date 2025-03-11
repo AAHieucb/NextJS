@@ -1,12 +1,297 @@
 
-# Các pp login
--> Dùng session data: là 1 cách để client call api tới server mà k cần tạo access token.
-Client signup/login sẽ chia sẻ với server cùng 1 session data. Server check session data từ client trùng với server thì là valid.
+## Các loại authentication
+# HMAC (Session-based)
+-> Sign up: 
+- user input username/password
+Nếu cho input email thì phải xử lý email dot trick.
+Cũng phải xác thực email hợp lệ: sinh random userid lưu vào db kèm emailverified false và expirestime -> gửi mail có url chứa userid -> user ấn link trong mail thì call tới server, thoả mãn expires time thì đổi emailverified là true. 
+- server check username k bị trùng, hash password, lưu vào db
+Hash password phải kèm salt random để 2 password trùng nhau cho kết quả khác nhau, lưu cả salt vào user db.
+- server tạo 1 user session, lưu session data vào database
+Session có key là sessionId sinh random, value là user data.
+Thường lưu session data vào redis vì nó dạng key value.
+Khi scale multiple server, buộc lưu session data vào redis hoặc db external để mọi server cùng truy cập có cùng thông tin session của user.
+- server trả lại sessionId cho người dùng
+Coi là signup xong thì đã login luôn rồi.
+Session data có thể gửi trong cookies tự lưu ở client hoặc gửi trong response để user lưu localStorage ok. Nếu dùng cookie thì expiresTime của cookie và expires time của session phải ít nhất là bằng nhau.
 
-Có nhiều giải pháp để server lưu session data và session id như: lưu trong db, bộ nhớ, cache.
-Có 1 cách khác là sử dụng 1 secret để mã hoá và chỉ cần lưu ở client: Client gửi session data tới server, server mã hoá bằng secret và gửi lại client 1 token, client lưu lại token trong cookie, khi có request sẽ gửi lại cho server decrypt.
-Ở phía client thì session cookie lưu trong browser, mục cookies có expires time là "Session" là session cookie, nếu expires time cụ thể thì là normal cookie.
+-> Sign in: 
+- user input username, password
+- server check username và hashed password có trong database
+- server trả lại sessionId nếu có hoặc tạo session mới cho người dùng nếu chưa có hoặc hết hạn
 
--> Dùng jwt: user vẫn gửi password tới server hash và check trong db. Server k cần check session từ db mà sinh token cho client lưu vào normal cookie hoặc localStorage luôn.
+-> Request:
+- user gửi request kèm sessionId
+- server check session data trong request hợp lệ với session data trong db
+Server check sessionId có trong db chưa hết hạn và đúng user là được.
+Session và cookie tự được nới expires time mỗi khi request nếu sắp hết hạn, đảm bảo có auto login.
+
+-> Note: 
+- Nên dùng email cho các tính năng reset password hoặc gửi notification. Reset password cũng có thể show ở FE rồi gửi lại server cũng được mà k cần mail.
+- Nếu username là email luôn thì buộc phải verify mail mới cho tiếp tục. VD verify mail mà bị hết hạn thì yêu cầu signup lại để gửi lại mail.
+Nếu username khác email thì cho phép người dùng sử dụng app trong trạng thái emailverified false được, coi mail độc lập klq tới authen. VD verify mail mà lỗi thì yêu cầu login lại và ấn nút verify thủ công để gửi lại mail.
+- Server toàn quyền ngắt session, bắt login lại vì lưu trong db.
+- HMAC sinh sessionid gửi lại, cũng có thể an toàn hơn là dùng 1 secret key mã hoá userinfo kèm timestamp dùng làm key gửi lại người dùng.
+- Để chống replica attack quá căng, server phải lưu thêm timestamp hoặc nonce vào session data. Sau 1 ktg, server update db session giá trị timestamp mới nhất, gửi lại cho client session mới. Yêu cầu timestamp trong request session phải lớn hơn timestamp trong db session.
+- HMAC k cần dùng token.
 
 
+
+# Dùng token jwt v1
+-> Y hệt HMAC nhưng: 
+- Server lưu 1 secret fix cứng random trong .env
+- Server encrypt userinfo + timestamp + expiresTime bằng secret và gửi lại client. 
+- Ở mỗi request, nếu server decrypt được user và expiresTime hợp lệ là ok. Timestamp để chống replica attack nếu cần thôi
+- Có thể sinh cả refreshToken có hạn lớn để lấy accessToken khi hết hạn.
+- Server k cần lưu data ở db hay gì cả mà chỉ cần client lưu token thôi.
+
+
+
+# Dùng token jwt v2 dự án lớn chuẩn
+Server sẽ k fix cứng secret gì hết mà mỗi user có 1 secret riêng cho từng key lưu trong db.
+
+-> Signup:
+- User input username password
+- Server check username k bị trùng, hash password, lưu vào db
+- Sinh ra 2 số random key, mỗi số dùng để sign bằng jwt tạo ra accessToken có hạn ngắn hơn refreshToken, payload là userInfo.
+Token gồm 3 phần: HEADER(thuật toán).PAYLOAD(userid,role,timestamp,expiration).SIGNATURE(phần mã hoá)
+Expiration nhét vào payload chứ k lưu ở FE để người dùng đổi tùy tiện. Payload luôn xem được từ token nên kbh lưu thông tin nhạy cảm vào, chỉ có phần SIGNATURE là k thể giải.
+- Lưu vào database là user nào gắn với 2 số random key kia 
+- Trả lại data kèm accesstoken và refreshtoken
+
+-> Login:
+- User input username password
+- Server check hased password hợp lệ
+- Y hệt signup, sinh 2 key, tạo 2 token, lưu vào db, gửi lại client.
+
+-> Request:
+- User input accesstoken + userid
+- Lấy random key trong db từ userid
+- Giải mã accessToken bằng jwt và random key, lấy ra payload chứa userInfo, ss trùng với userId là ok.
+Nếu client gửi kèm refreshToken thì ta làm mới cả accessToken và refreshToken luôn, random key giữ nguyên nhưng gửi lại 2 key mới cho user thôi.
+
+-> Logout:
+- Server xoá 2 random secret key khỏi db, đảm bảo mọi token bị loại bỏ vì key để giải mã đã mất.
+
+-> Note: 
+- Mặc định jwt dùng HS256 là thuật toán dùng 1 secret key fix cứng để mã hoá thành 1 token. Ở đây ta tạo ra 2 secret key riêng cho từng user để mã hoá thành accesstoken và refreshtoken.
+Cách khác là sinh ra cặp key public và private bằng rsa cho jwt dùng thuật toán RS256, cả accessToken và refreshToken được sign bằng public key và verify bằng private key. Cách này vẫn phải bảo vệ cả 2 key vì 1 key dùng cho sign, 1 key cho verify. Nhưng tốt hơn trong hệ thống phân tán khi 1 server sign, nhiều server verify được.
+=> ref tới "ECommerce"
+
+- JWT cũng dùng khi quá trình verify client server mất nhiều tg thì chỉ cho làm 1 lần rồi sau đó trao đổi qua lại an toàn với jwt cho nhanh. VD: ký message web3 rồi dùng jwt để giao tiếp.
+
+- Dùng redis vô hiệu hoá token: Usecase hệ thống bị hack và yêu cầu admin vô hiệu hóa 1 refresh token. Ta lưu tất cả refreshtoken vào redis và check thêm 1 bước, nếu nó k tồn tại trong redis, tức bị xoá hoặc expires thì login fail. Để vô hiệu hoá chỉ cần xoá khỏi redis. Tương tự nếu muốn vô hiệu accessToken
+Lưu redis kiểu key là user id, value là refreshtoken. Điều này đồng nghĩa token mới được lấy thì token cũ tự k dùng được nữa. 
+Cũng có thể lưu redis token (user => [blacklist token]) phải có logic check token hết hạn thì xoá khỏi blacklist thủ công. Tương tự với pp whitelist.
+=> Đây cũng là tính năng cho phép user logout mọi thiết bị hay các thiết bị cụ thể khi phát hiện bất thường
+
+-> Bài toán: ứng dụng cập nhật có tính năng mới, chỉ ai có accesstoken mới mới dùng được, mọi accesstoken cũ cần bị hủy, tức buộc người dùng phải đăng nhập lại.
+C1: Kể từ lúc cập nhật, mọi request của người dùng lên server lần đầu đều báo lỗi token k hợp lệ, yêu cầu login lại và lưu vào blacklist. Bất cứ ai chưa có trong blacklist đều báo k hợp lệ => K ổn nếu người dùng đăng nhập trên nhiều thiết bị và có nhiều token thì cái này chỉ báo có 1 lần là sai, các thiết bị khác sẽ pass cái blacklist => bỏ
+C2: Thay đổi cấu trúc token. 
+Lưu version vào payload. VD ban đầu là {id, email} thì thêm thành {id, email, version}. Mỗi request ngoài check expiretime, check thêm version phải trùng với version của hệ thống. Version hệ thống có thể lưu trong env or từng user database. Khi update thì tăng version lên, accesstoken mới tạo ra cũng tăng version lên là được
+Ta có thể custom chỉ update với list user xác định. Vd lưu vào user database thì đổi version của user nào sẽ chỉ hủy accessToken của user đó => Cũng có thể thêm tùy ý trường type vào payload để chỉ định áp dụng với user có type là gì
+
+-> Xây dựng hệ thống tự phát hiện token bị hacker cướp: mặc định xét 1 user có thể nhiều token vì login từ nhiều thiết bị.
+Mỗi khi có login từ 1 thiết bị mới, gửi mail thông báo cho user về ip và location của thiết bị đó, để họ tự xác thực.
+Chủ động bắt hacker trong ứng dụng yêu cầu bảo mật cao: Khi AT hay RT bị hết hạn, hoặc khi RT lên server để làm mới AT, FE nên gửi cả 2 giá trị để server lưu vào blacklist trong 1 ktg. Nếu 1 request mà dùng lại AT và RT này thì khả năng cao là token đã bị hack, server sẽ vô hiệu hoá mọi token của user vào blacklist luôn và gửi mail thông báo. 
+
+
+
+# OAuth1.0 SAML và OpenId Connect => bỏ
+-> Luồng hoạt động của OAuth 1.0 cho ứng dụng web 
+- Web (Consumer) đk với nhà cung cấp dịch vụ (VD: Twitter) để nhận Consumer Key và Consumer Secret.
+- Web gửi yêu cầu lấy Request Token đến nhà cung cấp dịch vụ. Nó chứa CallbackURL là nơi nhận phản hồi sau khi uỷ quyền, yêu cầu cũng được ký số bằng Consumer Secret.
+Web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ và để login và đồng ý cấp quyền truy cập cho web.
+Nhà cung cấp dịch vụ sẽ trả về callback url oauth_token (Request Token), oauth_token_secret (bí mật liên quan đến token) tới callbackurl.
+- Web gửi Request Token đã được ủy quyền đến nhà cung cấp dịch vụ để đổi lấy Access Token. Yêu cầu này cũng phải được ký số.
+- Web dùng Access Token để truy cập tài nguyên từ nhà cung cấp dịch vụ. Mỗi request đều phải được ký số bằng Consumer Secret và oauth_token_secret
+=> Bất tiện vì luôn phải ký số mọi request. K cần https luôn vì ký số luôn an toàn.
+
+-> SAML: Security Assertion Markup Language là chuẩn cũ cung cả authentication và authorization, có SAML 2.0
+
+-> OpenId Connect là chuẩn để authentication. 
+VD Google là 1 OpenID identity provider cung cho 1 người thì người này có thể login bất cứ website nào chấp nhận xác thực bằng OpenID như Youtube, Okta, Facebook.
+VD có thể dùng firebase tạo OpenID connect với google cho website được rất tiện lợi.
+Phiên bản mới nhất của OpenID là OpenID Connect, nó kết hợp OpenID authentication và OAuth2 authorization để vừa xác thực vừa ủy quyền.
+
+
+
+# OAuth2.0
+-> Login:
+- User ấn login bằng discord
+- Server tạo ra 1 url và redirect user đến sign in của provider
+Phải tạo 1 application trong nền tảng đó, lưu lại clientid và clientsecret.
+URL để redirect là base authentication url `/authorize?client_id=${clientid}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}` => redirectUrl là url provider gửi code về server của ta sau khi login, scope là quyền ngăn cách bằng dấu cách, scope phải tra trong docs quyền tối thiểu để lấy được user.
+redirectUrl của server phải được thêm vào trong application của provider.
+- Tạo route là GET redirectUrl trên server nhận về code, fetch token, fetch user.
+Url để fetch token là "/token" dùng x-wwww-form-urlencoded, body gồm: code (nhận về), redirect_uri(url hiẹn tại), grant_type "authorization_code", client_id, client_secret. Trả về nhiều thứ nhưng chỉ cần quan tâm access_token và token_type.
+Dùng để fetch user data, request có header là `{token_type} {access_token}`. Trả về thông tin user chắc chắn có id và email ở mọi loại OAuth.
+Do ta k có nhu cầu thao tác với nền tảng github lâu dài nên k cần lưu accesstoken hay refreshtoken mà chỉ fetch user là xong.
+- Lưu user vào db kèm provider.
+1 user có thể login bằng nhiều cách nhưng cách nào thì vẫn chỉ là 1 user đó.
+Bên cạnh bảng user lưu thông tin user, còn phải lưu 1 bảng khác: userId, providerAccountId, providerName
+- Tạo user session.
+Bản chất khi login OAuth chỉ để xác thực rằng họ có tài khoản đó, lấy được thông tin của user, chứ thực tế user vẫn phải tương tác với hệ thống của ta nên vẫn phải dùng session hoặc jwt token do server ta tạo ra. Login OAuth đã thay thế việc nhập mk rồi check hashedPassword của user thôi.
+Có thể lưu tiếp vào redis (random session id, user) và set vào cookie cho user trùng expires times, r redirect user về trang chủ. Lưu ý cookie set lúc này chính là của client browser luôn, kp là set cookie cho OAuth nhé vì redirectUrl hiện ở browser của người dùng.
+
+
+
+Oauth 2.0 là chuẩn để authorization, không phải chuẩn để authentication như OpenId Connect. Tuy nhiên ủy quyền authorization cũng là 1 hình thức xác thực r nên dùng OAuth2 login ok
+Vd OAuth2 chia quyền token dùng được các data nào: Alice vào NewsApp và có tính năng tùy chọn xem ai là bạn bè cũng dùng NewsApp để kết nối với họ. Alice chọn login bằng facebook và được hỏi có muốn chia sẻ list bạn bè trên Facebook với NewsApp không. Nếu chọn có sẽ điều hướng trở lại NewsApp với 1 token, NewsApp dùng token này để lấy list friends. 
+
+//!!!!!!
+-> Có nhiều loại flow nhưng web chỉ dùng Authorization Code Flow
+- Web đăng ký với nhà cung cấp dịch vụ (VD: Google) để nhận Client ID(định danh ứng dụng) và Client Secret.
+- Khi login, web chuyển hướng người dùng đến trang ủy quyền của nhà cung cấp dịch vụ. 
+Yêu cầu đó chứa Client ID và RedirectURL, Scope (Phạm vi quyền mà web yêu cầu), Response Type luôn là code (để nhận Authorization Code).
+User login và đồng ý cấp quyền truy cập cho ứng dụng. Nhà cung cấp dịch vụ chuyển hướng về RedirectURL kèm Authorization Code trong url.
+- Web gửi Authorization Code đến nhà cung cấp dịch vụ để đổi lấy Access Token. 
+Yêu cầu gồm Client ID và Client Secret để xác thực ứng dụng, Authorization Code nhận được từ bước trước, Redirect URI phải khớp với URI đã đăng ký.
+Nhà cung cấp dịch vụ trả về Access Token (và có thể cả Refresh Token) cho web.
+Khi Access Token hết hạn, ứng dụng web có thể sử dụng Refresh Token để yêu cầu Access Token mới mà không cần người dùng đăng nhập lại.
+=> Để làm thủ công, chỉ cần tạo các api url cho server xử lý tương tác với google là được, thì next-auth tạo sẵn các url đó cho ta r cung các callbacks để ta custom các qtr đó.
+
+Cơ chế: 
+- Đk cho App trên trang của Google Auth 1 ClientID và SecretCode và xác định luôn các chức năng Google API mà App muốn dùng. VD xem được thông tin cá nhân, hay chỉ cần login
+- User vào App và ấn GoogleSignIn button để chuyển đến trang của google, nhập username password để đăng nhập. 
+OAuth2 chuẩn url có dạng: https://accounts.google.com/....&client_id=<ClientId>&redirect_uri=<RedirectURL>. Để ý đúng tên miền accounts.google.com tránh giả mạo
+- User click "Allow" để đồng ý dùng OAuth2 truy cập đến tài nguyên cụ thể, GoogleAuth sẽ sinh 1 mã code và gửi cho App thông qua cái RedirectURL. Tức App cần setup sẵn sàng tại RedirectURL để nhận giá trị mã code kèm các thông tin xác thực khác. VD OAuth2 chuẩn url sẽ gửi dạng: http://localhost/?code=..<mã code dài>...
+Để đảm bảo cái url kia đúng là App thì cần có bước xác thực App với Google thông qua SecretCode được gửi ở dạng public trên url.
+- App nhận về mã code sẽ cung lại cho Google Auth server để nhận AccessToken, phải xác thực cả ClientID và SecretCode của App là hợp lệ. Gửi kèm AccessToken ở mỗi request.
+VD OAuth2 chuẩn request là: POST với body code=<Code>&redirect_uri=<RedirectURL>&client_id=<ClientId>&client_secret=<SecretCode>
+
+SecretCode thì private chứ mã code gửi có thể k an toàn, nên google mới bảo mật thêm là mã code chỉ được dùng 1 lần, sau khi sinh accesstoken thì code cũng hết giá trị. 
+Nếu lộ mã code -> k sao vì hacker kb SecretCode nên k sinh được accesstoken. 
+Nếu lộ SecretCode -> nó phải nghe lén được mã code hoặc biết tk mk để lấy được mã code để sinh accesstoken
+Nếu lộ accesstoken -> k sao vì có hạn sử dụng. 
+
+VD: Google là 1 SSO. Login vào gg xong là có accesstoken vào các server con, vì mỗi app có 1 resource server riêng như Google Resource Server của gmail, calendar. Luồng:
+Client -> Google: Đăng nhập và cấp quyền
+Google -> Client: Mã ủy quyền
+Client -> Server: Gửi mã ủy quyền
+Server -> Google Auth Server: Gửi mã ủy quyền + client_id + client_secret
+Google Auth Server -> Server: Trả về access token (và refresh token)
+Server -> Client: Trả access token
+Client -> Server: Gửi yêu cầu API kèm access token
+Server -> Google Resource Server: Truy vấn dữ liệu kèm access token
+Google Resource Server -> Server -> Client: Trả dữ liệu
+
+
+
+
+
+
+# 2FA
+Mỗi lần login sau 1 ktg thì nhập 1 mã gửi về từ gmail, sms, authenticator application.
+
+
+
+# SSO hệ thống lớn
+Có thể mix cả với OAuth2.0 và SSO jwt.
+Dùng 1 identity server riêng quản lý token các ứng dụng bên trong. Sau khi login, có thể truy cập được mọi ứng dụng trong hệ thống, lấy token từ identity server.
+Cơ chế nó quản lý user authen trong 1 single database cho mọi ứng dụng con chứ kp mỗi ứng dụng con là 1 database authen, phải phân quyền user để vào được hệ thống con.
+
+
+
+
+
+
+
+
+
+
+
+
+# Bảo mật SSO và OAuth2
+-> SSO: Đăng nhập 1 hệ thống, gửi token để truy cập được tất cả hệ thống con.
+Nếu ta thấy hệ thống domain X mở rộng thêm 1 ứng dụng mới domain Y sao cho những ai đăng nhập X đều có thể đăng nhập Y thì dùng SSO. Tuy nhiên trình duyệt luôn tuân theo same origin policy. Tức domainX k thể truy cập cookie của domainY để tự động đăng nhập. Buộc phải thêm 1 central domain xử lý xác thực.
+
+User vào bất cứ domain nào, nó đều redirect đến 1 authentication server để check thông tin đăng nhập:
+Đã đăng nhập -> redirect về trang trước
+Chưa đăng nhập -> phải đăng nhập -> lưu lại nếu là sessionid, không thì thôi -> gửi lại cho client lưu và redirect về trang trước -> session id có thể dùng để truy cập bất cứ app con nào trong phạm vi 1 session.
+
+SSO có thể kết hợp OAuth2 để xác thực cho các app khác dùng data của mình. VD như OpenID Connect, Facebook Connect, SAML, Microsoft Account.
+
+-> OAuth 2.0: đơn giản hơn OAuth 1.0
+Custom thêm tính năng là ứng dụng bên ngoài có thể lấy thông tin người dùng trong ứng dụng gốc. VD game lấy thông tin danh sách bạn bè trên facebook để kết nối chẳng hạn. Cụ thể OAuth nó cho phép app truy cập thông tin mà chả cần đưa password vẫn xác thực được
+
+VD: Client access Game, đăng nhập qua facebook
+Chuyển hướng đến máy chủ xác thực facebook và login, cho phép Game dùng thông tin người dùng
+Máy chủ xác thực của facebook chuyển hướng về url của Game (url này do người làm game đăng ký vào máy chủ xác thực của facebook), trả kèm id game + mật khẩu game + tham số mã
+Người dùng trải nghiệm game bth
+Game chạy nền bằng cách dùng id game + mật khẩu game + tham số mã để đăng nhập facebook dưới quyền người dùng
+Máy chủ facebook trả về accesstoken
+Game dùng accesstoken truy cập thông tin người dùng do facebook cung cấp
+
+URL OAuth2 với discord: https://discordjs.guide/oauth2/#a-quick-example
+
+
+
+
+
+# OAuth2 google gmail api
+Chạy apache server sẽ serve thư mục trong htdocs. VD Ta để 1 folder là 20194761 thì truy cập được index.html tự động với http://localhost/20194761
+
+-> Tạo app user gửi bằng mail của họ phải đồng ý cấp quyền:
+Doc URL setup production: https://developers.google.com/gmail/api/auth/scopes
+Doc viết api: https://developers.google.com/gmail/api/reference/rest/v1/users.messages/get
+
+Setup: - Vào https://console.cloud.google.com/
+- Tạo 1 project mới nếu chưa có
+- Search Gmail API và Enable nó. Thực tế có nhiều loại API và ở đây ta đang chỉ dùng dịch vụ Gmail.
+- Setup từng bước: phần url phải ủy quyền localhost:5000 chẳng hạn nếu cho phép app chạy ở local như v
+
+Phần scope là các mức độ mà ta muốn app truy cập. VD chọn https://mail.google.com/ sẽ có full access như gửi mail nhưng k có nghĩa là có mọi thứ. VD muốn xem các email gửi thì phải thêm scope https://www.googleapis.com/auth/gmail.readonly
+Có 3 loại scope:
+Recommended là scope cơ bản nhất bất cứ ai cũng ok
+Sensitive và Restricted là 2 scope truy cập data quan trọng cần sự đồng ý của người dùng. Và developer cũng phải cho app đi qua Google Verification Process mới dùng được 2 loại scope này. Google Verification Process phải trả phí hàng tháng và phải quay video cam kết sẽ dùng thông tin nhạy cảm của user để làm gì.
+App chạy được trong 2 môi trường là testing và production. Đổi môi trường trong OAuth consent screen. 
+
+-> Tạo ứng dụng nhúng video youtube dạng mp3 qua Youtube API: Có thể nhúng 1 video youtube bất kỳ vào web dạng video nhét vào src được nhưng để thao tác chi tiết với data thì phải dùng YoutubeAPI. Chỉ cần đăng ký project trong google cloud platform và enable youtube api và tạo 1 api key mới là được, k cần config gì thêm.
+Có thể làm đủ kiểu, phát nhạc, tua bài tiếp theo, tìm kiếm bài hát, lấy thumbnail
+
+
+
+
+
+# Authorization
+-> Dự án đơn giản thì lưu user kèm role. Mọi chỗ check role là gì thì được quyền làm gì.
+
+-> Dự án lớn dùng RBAC:
+
+.....
+
+
+
+
+
+
+
+
+# Session và cookie
+Cookie có giới hạn bộ nhớ nhỏ, được lưu ở phía client lâu dài.
+Session là 1 loại data trao đổi giữa client và server. Session thường implement lưu data trong session storage cho 1 phiên làm việc thôi.
+Có thể dùng cookie lưu session data tùy ý implement. Chú ý session storage là khái niệm chỉ có ở FE, backend k có session storage mà chỉ có cookie.
+
+-> Server k thể xác định được các requests HTTP có phải từ cùng 1 người hay không vì HTTP là 1 giao thức k trạng thái, cookie ra đời đã giải quyết vấn đề đó. VD Setup cookie middleware lưu data tự động truyền giữa client server trong phạm vi 1 session.
+=> Session chỉ nên lưu data 1 lần vào web, VD login data mà lưu lâu dài thì dùng jwt lưu cookies đi. Do đó session ít dùng trong dự án lớn.
+
+-> Lưu session data ở server
+Có thể dùng express-session lưu cookie trong memory (restart server là mất) hoặc cookie-session để lưu session data trong cookie (bị lỗi memory leak). Để fix, ta k được lưu session trong cookie nữa mà phải lưu trong các database khác bằng cách thêm option store:
+- VD redis:
+store: new RedisStore(),
+- VD connect-mongo hỗ trợ lưu session data:
+store: new MongoStore ({ 
+  url: 'mongodb: // localhost: 27017 / test-app', // URL MONGODB CỦA BẠN 
+  ttl: 14 * 24 * 60 * 60, // thời gian hết hạn 1 session
+  autoRemove: 'native' 
+}), => Đăng nhập vào mongo atlas sẽ thấy session được lưu ở đó
+
+-> Đồng bộ session trong hệ phân tán: client gửi request tới nhiều server khác nhau, server 1 lưu session data, server 2 lưu sẽ invalid yêu cầu login lại
+- Lưu session data chỉ ở client thông qua cookies / localStorage.
+- Lưu ở local server thì cấu hình nginx trung gian thuật toán chỉ gửi 1 user tới 1 server là được
+- Lưu ở 1 database or redis chung để nhiều server cùng lấy được, thường dùng cho SSO, nhược điểm là sập phát toang luôn
+- Lưu ở local 1 server, rồi gọi đồng bộ copy session data vào các server khác => éo ổn
+
+
+-> Usecase: trong hệ thống phân tán nhiều server, các server thường đồng bộ session data của user thông qua 1 redis db chung thay vì mỗi máy lưu 1 session data riêng. Vừa tối ưu bộ nhớ và tốc độ, vừa giúp đồng bộ user k cần login lại nhiều lần. 
