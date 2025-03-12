@@ -468,7 +468,7 @@ extendTheme({
 
 
 
--> Project structure có sẵn:
+-> Project structure app router:
 public
 src
   pages
