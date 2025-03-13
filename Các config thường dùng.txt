@@ -1,3 +1,33 @@
+-> drizzle.config.ts:
+export default defineConfig({
+  schema: "./src/utils/drizzle/schema.ts", // Nơi ta code file schema
+  out: "./src/utils/drizzle/migrations", // Nơi sinh ra code migration
+  dialect: "postgresql",
+  driver: "pglite",
+  introspect: {
+    casing: "camel", // default, lúc query column có thể dùng camel key dù cột trong db thực chất là preserve, nó sẽ tự convert chuẩn
+  },
+  dbCredentials: {
+    host: "db.example.com",
+    port: 5432, // Default PostgreSQL port
+    user: "my_user", // Database username
+    password: "my_secure_password", // Database password
+    database: "my_database", // Database name
+    ssl: "require", // Enforce SSL connection, còn true là chỉ đơn giản bật SSL, nhưng không kiểm tra chứng chỉ.
+    ssl: { // or
+      rejectUnauthorized: false,
+    },
+    url: process.env.DATABASE_URL!, // or // truyền 1 URL phải có password
+  },
+  verbose: true, // Hiện rõ mọi sql statement khi dùng drizzle-kit push
+  strict: true, // Nếu thay đổi db mà sai trường, k có default value, xoá table thì phải đưa ra cảnh báo
+});
+
+--> driver: "pglite" => Nếu có dialect, thường để driver trống sẽ tự lấy chuẩn theo dialect. 
+VD tự xác dịnh pglite là chạy postgre trên browser và nodejs, driver này sẽ dùng package nhẹ để tạo in-memory db. Khi đó phải set dbCredentials là url tới folder lưu db.
+
+
+
 -> tsconfig.json:
 {
   "compilerOptions": {

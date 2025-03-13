@@ -98,7 +98,7 @@ VD truy xuất bằng .env.$(NODE_ENV).local với package cross-env (cross-env 
 VD có thể dùng file .env lưu giá trị mặc định cho biến môi trường, .env.development lưu giá trị mặc định cho biến môi trường development để k set gì vẫn chạy được, các giá trị này k cần bảo mật, còn .env.development.local lưu giá trị secret ta set cho biến môi trường development nhưng cần che giấu và k cho lên git
 => Hiện tại k cần dùng cross-env nữa. Ta có thể xác định NODE_ENV khi chạy để yêu cầu dùng file env nào luôn. Default NODE_ENV là development cho npm run dev, các lệnh còn lại tự là production.
 
--> loadEnvConfig trong next/env giúp load env file vào process.env. Dùng khi cần chạy script or command ngoài nextjs vì nextjs chỉ tự load env var khi chạy next dev/build/start thôi. VD chạy script viết bằng JS => kbh dùng
+-> loadEnvConfig trong next/env giúp load env file vào process.env. Dùng khi cần chạy script or command ngoài nextjs vì nextjs chỉ tự load env var khi chạy next dev/build/start thôi. VD chạy script viết bằng JS, dùng cho ORM, commandline cần dùng process.env
 
 -> Cách tạo ứng dụng multi-env với docker: example with-docker-multi-env
 Cơ ché là tạo mỗi môi trường 1 file .env rồi tạo Dockerfile cho từng môi trường, mỗi môi trường chỉ cần copy code và file .env tương ứng vào container r build và start.
