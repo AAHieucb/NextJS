@@ -1,0 +1,101 @@
+# Setup formatter
+Ta muốn là lúc code sẽ báo lỗi eslint bth từ VSC theo config file. Lúc commit sẽ check báo các lỗi eslint. Nếu có lỗi thì tự chạy prettier để format lại.
+
+-> Setup eslint:
+Chạy npx eslint --init tự sinh file eslintrc, là VSC tự báo lỗi theo chuẩn nếu có extension ESLint r.
+Dùng thêm extension Prettier và "Prettier Eslint" thì mỗi khi format bằng prettier trong VSC sẽ tự sửa theo rules trong eslint config. VD setting format on save và default formatter là prettier thì save tự sửa theo rules trong eslint config.
+
+-> Setup prettier: 
+Cài prettier và thêm .prettierrc
+Cài eslint-config-prettier và thêm vào eslint config để tránh conflict
+Thế là format bằng prettier extension trong VSC hoặc npx prettier --write . sẽ dùng quy tắc của prettier và eslint nếu có
+
+-> Setup husky: Bắt sự kiện trên repo thì làm gì tự động
+Cài package husky, thêm prepare (version mới k cần poinstall nữa hay sao), chạy "npx husky init"
+Thêm lệnh cần chạy vào .husky/pre-commit thì trước khi commit sẽ tự chạy lệnh đó thành công mới được. Hoặc dùng npx husky add .husky/pre-commit "npx lint-staged"
+Lưu ý husky chỉ hoạt động khi chạy init mà có file .husky/_, phải dùng git init trước, rồi mới cài husky sau. Mỗi khi xoá git, cũng phải xoá husky và cài chạy lại như v.
+
+-> Setup commitlint: đảm bảo commit message phải chuẩn
+Cài npm install --save-dev @commitlint/config-conventional @commitlint/cli
+Thêm package.json setting của nó
+Thêm vào husky là được: npx husky add .husky/commit-msg "" -> hiện file .husky/commit-msg -> mở file đó ra và sửa undefined thành: npx --no-install commitlint --edit "$1" 
+
+-> Setup lint-staged: 
+Cài lint-staged, thêm vào package json thì lệnh đó sẽ chỉ chạy tác động lên các file được add staged thôi. 
+Add lệnh đó vào husky để tự chạy.
+
+-> Commitizen + cz-conventional-changelog: giúp generate commit message chuẩn conventional => K dùng cũng được
+npm i -D commitizen -> cài global nữa để dùng command -> npm install cz-conventional-changelog --save-dev -> commitizen init cz-conventional-changelog --dev --exact [--force] thì nó sẽ thêm config url vào file packagejson -> Để dùng: git add . rồi k dùng git commit nữa mà dùng git cz -> git push như bth
+
+
+
+# Note
+- Eslint: 
+Dùng ESLint thì bỏ hết JSLint, JSHint. 
+Có thể cấu hình từng file bằng cách thêm comment trực tiếp vào file chứa code JS. VD: /* eslint quotes: ["error", "double"], curly: 2 */ => k dùng
+Cài extension thì ở commandline tab output chọn task hoặc tab problems có thể xem debug của các tools này.
+Mọi rule: https://eslint.org/docs/rules/
+
+-> Prettier:
+Eslint chuyên check lỗi hay chấm phẩy, cách đặt tên. Kết hợp Prettier chuyên format kiểu căn lề, khoảng cách.
+File config của prettier sẽ đè lên config của extension prettier.
+
+eslint-plugin-prettier giúp viết prettier ngay trong file eslint => k dùng vì rối. 
+VD: "plugins": ["prettier"],
+"rules": {
+  "prettier/prettier": [
+    "error",
+    {
+      "printWidth": 80,
+      "trailingComma": "es5",
+      "semi": false
+    }
+  ]
+}
+
+-> lint-staged: 
+Có thể thêm script: "lint:staged": "lint-staged" để chạy hoặc thêm vào husky tự động ok.
+
+Có thể tách file config .lintstagedrc và thêm vào các option để chạy. 
+VD: {
+	"*.(js|ts)": "eslint --fix"
+} 
+
+-> Commitizen + cz-conventional-changelog: 
+Thêm vào README biểu tượng commitizen|friendly badge bằng: [![Commitizen friendly](https://img.shield.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
+
+-> Husky:
+VD khi ta thêm rules vào file pre-commit: Nếu file đó đã có rồi thì chỉ cần sửa, nếu chưa thì có thể tạo mới bằng cách sử dụng mẫu trong file ẩn .git với "cp .git/hooks/pre-commit.sample .git/hooks/pre-commit" -> sửa 2 dòng cuối cho chạy eslint chẳng hạn:
+set -e
+npm run eslint
+# If there are whitespace errors, print the offending file names and fail.
+exec git diff-index --check --cached $against --
+=> Thường thì viết thẳng vào file pre-commit trống luôn chứ chả cần file mẫu làm gì.
+=> Có thể thêm exit 1 vào cuối file pre-commit của husky để nó luôn fail nếu chỉ muốn test
+
+Có thể dùng mọi loại hook trong git/hooks chứ k chỉ pre-commit với husky. VD: npx husky add .husky/pre-receive 'echo "pre-received"' => để dùng hook pre-receive
+
+-> Commitlint: 
+Có thể dùng file .commitlintrc.js hoặc thêm trong package.json
+Mẫu commit chuẩn "type(scope?): subject" với:
+scope (optional) nếu có thì nó nên là tên của package mà commit hiện tại làm ảnh hưởng. Scope thường dùng ở các repo mà chứa nhiều packages dạng monorepo.
+subject là nội dung của commit
+type ở trên có thể là:
+- build: Changes that affect the build system or external dependencies (example scopes: gulp, broccoli, npm)
+- ci: Changes to our CI configuration files and scripts (example scopes: Gitlab CI, Circle, BrowserStack, SauceLabs)
+- chore: add something without touching production code (Eg: update npm dependencies)
+- docs: Documentation only changes
+- feat: A new feature
+- fix: A bug fix
+- perf: A code change that improves performance
+- refactor: A code change that neither fixes a bug nor adds a feature
+- revert: Reverts a previous commit
+- style: Changes that do not affect the meaning of the code (Eg: adding white-space, formatting, missing semi-colons, etc)
+- test: Adding missing tests or correcting existing tests
+
+Husky có thể k check được nếu thêm option --no-verify, VD: git commit -m "test dummy message" --no-verify -> vẫn commit như thg kể cả commitLint => có thể fix với CICD gitlab.
+Thực tế commitlint có thể thay thế bằng git hooks là commit-msg rồi  tự check message commit có theo chuẩn k do ta tự custom. Nhưng người ta vẫn dùng commitlint vì cấu hình file commit-msg cho husky phức tạp.
+
+
+
+

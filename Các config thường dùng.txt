@@ -331,12 +331,32 @@ module.exports = {
 
 
 
--> .eslintrc.json:
+-> .eslintrc.json v1:
 {
+  settings:{ // settings là giá trị mà plugins sử dụng 
+    react: {
+      version: "detect", // Tự động xác định react version trong dự án để format react.
+    },
+  },
+  "plugins": [ // Dùng các plugins mở rộng thêm cho eslint 
+    "import", // Tránh import thừa, sai thứ tự
+    "react", // Thêm quy tắc cho react.
+    "@typescript-eslint", // ESLint check typescript chính xác hơn
+    "prettier" // K chuẩn prettier, eslint cũng báo lỗi.
+  ],
+  "parserOptions": {
+    "ecmaVersion": 13, // Hỗ trợ check cho phien bản ES2022
+    "sourceType": "module", // "script" là k dùng imort/export, module là có
+    "ecmaFeatures": {
+      "jsx": true, // Kích hoạt JSX trong ESLint, làm việc với React thì cần
+    }
+  },
   // Áp dụng mọi file
   "extends": [ // Kế thừa các quy tắc mặc định từ các cấu hình ESLint có sẵn 
     "next/core-web-vitals", // *Sử dụng bộ quy tắc chính thức từ Next.js, tránh các warning lỗi vớ vẩn
-    "plugin:prettier/recommended",
+    "plugin:prettier/recommended", // *Khuyên dùng nếu có prettier
+    "eslint:recommended", // extends có config có sẵn recommended mà ta có thể dùng
+    "plugin:react/recommended"
   ],
   "rules": { => Ghi đè hoặc thêm các quy tắc tùy chỉnh.
     "prefer-const": "error", // Buộc dùng const thay vì let nếu biến k được gán lại
@@ -365,13 +385,51 @@ module.exports = {
         "react-hooks/exhaustive-deps": "off", // *Vô hiệu hóa cảnh báo về thiếu dependency trong useEffect
         "@typescript-eslint/ban-ts-comment": ["warn", "off"], // *Vô hiệu hóa cảnh báo khi sử dụng chú thích @ts-ignore
         "react-hooks/rules-of-hooks": "off", // *Vô hiệu hóa kiểm tra các rules-of-hooks
-        "quotes": ["error", "double"],
-        "semi": ["error", "always"],
-        "@typescript-eslint/no-unused-vars": "off"
+        "quotes": ["error", "double"], //*
+        "semi": ["error", "always"], //*
+        "@typescript-eslint/no-unused-vars": "off",
+        "no-unused-vars": ["error"],
+        "no-mixed-spaces-and-tabs": ["error", "smart-tabs"], // space và tabs k được mix, nếu mix thì tab dùng để indent, space để căn chỉnh thôi.
+        "react/jsx-uses-react": 2, // phải import React khi dùng component jsx, nếu k sẽ báo lỗi
+        "indent": [2, 2, { "SwitchCase": 1 } ], // Lùi dòng là 1 tab hoặc 2 spaces, nếu là switchcase thì chỉ 1.
+        "linebreak-style": ["error", process.platform === "win32" ? "windows" : "unix"], // dùng đúng kiểu xuống dòng. off(0), warn(1), error(2)
+        "curly": [2, "all"], // Phải có {} chứ k được bỏ nhanh như kiểu if else
+        "camelcase": ["error", { "properties": "always" }], // K dùng camelCase sẽ báo lỗi
+        "eqeqeq": [2, "smart"], // Phải dùng === or !== khi so sánh. "smart" tức là trừ các TH ss với typeof, literal value, ss với null thì k cần
+        "one-var-declaration-per-line": [2, "always"], // 1 dòng chỉ được khai báo 1 biến.
+        "new-cap": [2, { "capIsNew": true }] // new Constructor phải viết hoa tên Constructor
+        "no-case-declarations": 0 // let const function class khai báo trong case của switch case thì phải có { } bao case đó. var thì thoải mái
+	      "no-empty": "warn", // Cảnh bảo nếu {} bị bỏ trống bên trong {}
       }
     }
   ]
 }
+
+{
+    "env": {
+        "browser": true,
+        "es6": true
+    },
+    ...
+} => Cấu hình môi trường mà code chạy. VD browser có biến window, document còn ES6 sẽ có các kiểu dữ liệu mới như Set chẳng hạn
+{
+    "globals": {
+        "arguments": true,
+        ...
+    }
+} => List các global var dùng trong dự án, nếu không khi truy cập vào biến global, eslint sẽ báo lỗi truy cập biến chưa định nghĩa, nên list toàn bộ biến global ra. window, document không cần định nghĩa lại vì env có sắn r. VD JS có 1 object truyền vào hàm là arguments mà không có môi trường định nghĩa nó, muốn dùng phải đưa vào global như trên
+
+
+-> eslint.config.mjs v2:
+const eslintConfig = [
+  ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
+  {
+    rules: {
+      quotes: ["error", "single"],
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  },
+];
 
 
 
@@ -409,13 +467,14 @@ module.exports = {
   "browserslist": ["> 1%", "last 2 versions", "not ie <= 8"],
   "scripts": {
     "lint": "next lint", // check rules eslint và show cảnh báo 
+    "lint": "eslint src --ext .ts,.tsx", // or
     "format": "prettier --check --ignore-path .gitignore .", // check rules prettier và show cảnh báo
     "format:fix": "prettier --write --ignore-path .gitignore .", // check và fix rules prettier
     "prepare": "husky install"
   },
   "lint-staged": { // Kết hợp husky, khi commit sẽ tự fix format các file đã được staged
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix",
+      "eslint --fix", // --fix để tự động fix nếu có lỗi
       "git add ."
     ],
     "*.{ts,js,jsx,ts,tsx,json,yml,md}": [
@@ -449,7 +508,7 @@ lastest luôn dùng phiên bản newest -> k nên vì cú pháp code cũ có th�
 
 -> .commitlint.config.js:
 {
-  extends: ['@commitlint/config-conventional']
+  extends: ['@commitlint/config-conventional'] // commit message dựa theo chuẩn commit của Angular 
 }
 
 
