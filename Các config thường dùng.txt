@@ -388,12 +388,10 @@ const eslintConfig = [
   },
   "lint-staged": { // Kết hợp husky, khi commit sẽ tự fix format các file đã được staged
     "*.{js,jsx,ts,tsx}": [
-      "eslint --fix", // --fix để tự động fix nếu có lỗi
-      "git add ."
+      "eslint --fix" // --fix để tự động fix nếu có lỗi
     ],
     "*.{ts,js,jsx,ts,tsx,json,yml}": [
-      "prettier --write",
-      "git add ."
+      "prettier --write"
     ]
   },
   "dependencies": {

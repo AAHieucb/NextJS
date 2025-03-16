@@ -1,4 +1,4 @@
-# Setup formatter
+# Setup formatter => ref tới "SetupProjectNextJS"
 Ta muốn là lúc code sẽ báo lỗi eslint bth từ VSC theo config file. Lúc commit sẽ check báo các lỗi eslint. Nếu có lỗi thì tự chạy prettier để format lại.
 
 -> Setup eslint:
