@@ -198,97 +198,6 @@ images.imageSizes: Set image width, nối với deviceSizes tạo full array. im
 
 
 
--> tailwind.config.js:
-module.exports = {
-  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
-  theme: {
-    screens: {
-      sm: "480px",
-      md: "768px",
-      lg: "976px",
-      xl: "1100px",
-      xxl: "1300px",
-    },
-    fontSize: {
-      xs: '0.75rem',
-      sm: '0.875rem',
-      base: '1rem',
-      lg: '1.125rem',
-      xl: '1.25rem',
-      '2xl': '1.5rem',
-      '6xl': '4rem',
-    },
-    extend: {
-      colors: {
-        gray: {
-          100: '#f7fafc',
-          200: '#edf2f7',
-          300: '#e2e8f0',
-          900: '#1a202c',
-        },
-        pink: "#ff49db",
-        "gray-dark": "#273444",
-      },
-    },
-  },
-  plugins: [],
-  //!!!!!! đống aniamtion hình như là từ tailwindcss-animate yêu cầu
-  darkMode: ["dark"], // false
-  prefix: "",
-  theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: {
-        "2xl": 1400px,
-      },
-    },
-    colors: {
-      foreground: "var(--foreground)",
-      primary: {
-        DEFAULT: "var(--primary)",
-        foreground: "var(--primary-foreground)",
-      },
-      muted: { // accent, card, popover, destructive, 
-        DEFAULT: "var(--muted)",
-        foreground: "var(--primary-muted)",
-      },
-    },
-    borderRadius: {
-      lg: "var(--radius)",
-      md: "calc(var(--radius) - 2px)",
-      sm: "calc(var(--radius) - 4px)",
-    },
-    keyframes: {
-      "accordion-down": {
-        from: { height: 0 },
-        to: { height: "var(--radix-accordion-content-height)" }
-      },
-      "accordion-up": {
-        from: { height: "var(--radix-accordion-content-height)" },
-        to: { height: 0 },
-      },
-      "fade-in-down": {
-        "0%": {
-          opacity: 0,
-          transform: "translateY(-10px)"
-        },
-        "100%": {
-          opacity: 1,
-          transform: "translateY(0)"
-        }
-      },
-    },
-    animation: {
-      "accordion-down": "accordion-down 0.2s ease-out",
-      "fade-in-down": "fade-in-down 0.2 easep-out"
-    }
-  },
-  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
-};
-
-
-
 -> posstcss.config.js
 module.exports = {
   plugins: {
@@ -333,6 +242,14 @@ module.exports = {
 
 -> .eslintrc.json v1:
 {
+  env: {
+    browser: true, // Cho phép dùng API của trình duyệt (FE)
+    node: true, // Cho phép dùng API của NodeJS (BE). VD nếu chỉ dùng FE thì bỏ đi
+    es2021: true, // Hỗ trợ tính năng JS từ ECMAScript 2021 trở xuống.
+  },
+  "globals": {
+    "arguments": true, // List các global var dùng trong dự án, nếu không khi truy cập vào biến global, eslint sẽ báo lỗi truy cập biến chưa định nghĩa, list toàn bộ biến global ra. VD window, document không cần định nghĩa lại vì tự có sẵn r. VD dùng "arguments" trong hàm thì phải có.
+  },
   settings:{ // settings là giá trị mà plugins sử dụng 
     react: {
       version: "detect", // Tự động xác định react version trong dự án để format react.
@@ -345,7 +262,7 @@ module.exports = {
     "prettier" // K chuẩn prettier, eslint cũng báo lỗi.
   ],
   "parserOptions": {
-    "ecmaVersion": 13, // Hỗ trợ check cho phien bản ES2022
+    "ecmaVersion": 13, // Hỗ trợ check cho phien bản ES2022, nên dùng "latest"
     "sourceType": "module", // "script" là k dùng imort/export, module là có
     "ecmaFeatures": {
       "jsx": true, // Kích hoạt JSX trong ESLint, làm việc với React thì cần
@@ -356,7 +273,8 @@ module.exports = {
     "next/core-web-vitals", // *Sử dụng bộ quy tắc chính thức từ Next.js, tránh các warning lỗi vớ vẩn
     "plugin:prettier/recommended", // *Khuyên dùng nếu có prettier
     "eslint:recommended", // extends có config có sẵn recommended mà ta có thể dùng
-    "plugin:react/recommended"
+    "plugin:react/recommended",
+    "prettier", // Tắt các quy tắc ESLint có thể xung đột với prettier, phải cài package eslint-plugin-prettier, hoặc dùng trong rules như dưới
   ],
   "rules": { => Ghi đè hoặc thêm các quy tắc tùy chỉnh.
     "prefer-const": "error", // Buộc dùng const thay vì let nếu biến k được gán lại
@@ -389,6 +307,15 @@ module.exports = {
         "semi": ["error", "always"], //*
         "@typescript-eslint/no-unused-vars": "off",
         "no-unused-vars": ["error"],
+        "no-unused-vars": [ // or
+          "warn",
+          {
+            vars: "all",
+            varsIgnorePattern: "^_$", 
+            argsIgnorePattern: "^_$", 
+            ignoreRestSiblings: true, 
+          },
+        ],
         "no-mixed-spaces-and-tabs": ["error", "smart-tabs"], // space và tabs k được mix, nếu mix thì tab dùng để indent, space để căn chỉnh thôi.
         "react/jsx-uses-react": 2, // phải import React khi dùng component jsx, nếu k sẽ báo lỗi
         "indent": [2, 2, { "SwitchCase": 1 } ], // Lùi dòng là 1 tab hoặc 2 spaces, nếu là switchcase thì chỉ 1.
@@ -400,25 +327,12 @@ module.exports = {
         "new-cap": [2, { "capIsNew": true }] // new Constructor phải viết hoa tên Constructor
         "no-case-declarations": 0 // let const function class khai báo trong case của switch case thì phải có { } bao case đó. var thì thoải mái
 	      "no-empty": "warn", // Cảnh bảo nếu {} bị bỏ trống bên trong {}
+        "no-prototype-builtins": "off", // default, k cảnh báo khi dùng hasOwnProperty, isPrototypeOf, propertyIsEnumerable, chỉ là để tránh ghi đè phương thức gốc
+        "react/prop-types": "off", // default, k cảnh báo khi dùng react component mà k có props type, dùng typescript thì tự có type mà k cần propTypes làm gì.
       }
     }
   ]
 }
-
-{
-    "env": {
-        "browser": true,
-        "es6": true
-    },
-    ...
-} => Cấu hình môi trường mà code chạy. VD browser có biến window, document còn ES6 sẽ có các kiểu dữ liệu mới như Set chẳng hạn
-{
-    "globals": {
-        "arguments": true,
-        ...
-    }
-} => List các global var dùng trong dự án, nếu không khi truy cập vào biến global, eslint sẽ báo lỗi truy cập biến chưa định nghĩa, nên list toàn bộ biến global ra. window, document không cần định nghĩa lại vì env có sắn r. VD JS có 1 object truyền vào hàm là arguments mà không có môi trường định nghĩa nó, muốn dùng phải đưa vào global như trên
-
 
 -> eslint.config.mjs v2:
 const eslintConfig = [
@@ -477,7 +391,7 @@ const eslintConfig = [
       "eslint --fix", // --fix để tự động fix nếu có lỗi
       "git add ."
     ],
-    "*.{ts,js,jsx,ts,tsx,json,yml,md}": [
+    "*.{ts,js,jsx,ts,tsx,json,yml}": [
       "prettier --write",
       "git add ."
     ]
@@ -517,6 +431,8 @@ lastest luôn dùng phiên bản newest -> k nên vì cú pháp code cũ có th�
 node_modules
 out
 .next
+/build/**
+!.eslintrc.js
 
 
 
@@ -525,7 +441,6 @@ out
 out
 yarn.lock
 package-lock.json
-public
 **/*.svg
 package.json
 .eslintignore
@@ -537,13 +452,20 @@ LICENSE
 .eslintcache
 *.lock
 yarn-error.log
-node_modules
 **/.next/**
 **/_next/**
 **/dist/**
 **/__tmp__/**
 lerna.json
 .github
+/build
+.dockerignore
+.history
+CNAME
+Dockerfile*
+docker
+.editorconfig
+.DS_Store
 
 
 
@@ -610,6 +532,28 @@ extendTheme({
 
 
 
+-> thêm .gitignore:
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+# testing
+/coverage
+# production
+/build
+# misc
+.DS_Store
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+/.vscode
+
+
+
 -> Project structure app router:
 public
 src
@@ -657,6 +601,7 @@ src
     robots.txt
   middleware.ts
   instrumentation.ts
+  manifest.js
 package.json
 next.config.js
 .env.$(NODE_ENV).local > .env.local > .env.$(NODE_ENV) > .env

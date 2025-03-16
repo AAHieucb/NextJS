@@ -32,9 +32,12 @@ Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở b
 
 
 # Template layout trong app router
-template.js giống layout.js có thể wrap ngoài layout hoặc pages. Đb là template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. 
-=> Layout thì state được giữ nguyên khi navigate sang page khác dùng cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
-layout.tsx thay thế _app.tsx và _document.tsx
+template.js giống layout.js, layout wrap template, template wrap pages. Đb là template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. 
+Tức layout thì state được giữ nguyên khi navigate sang page khác dùng cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
+VD: layout chỉ hiện fallback của Suspense ở lần đầu vào, các lần sau quay lại k hiện vì nó preserve state rồi, template sẽ hiện Suspense mọi lúc navigate tới.
+
+layout.tsx thay thế _app.tsx và _document.tsx của pages router
+Thẻ để trong <head> trong layout sẽ tự chuyển xuống cuối của <head> trong html đích
 
 
 
@@ -165,7 +168,8 @@ VD: truy cập vào http://localhost:3000/robots.txt được sau khi tạo xong
 
 -> Còn có import { cookies, headers } from 'next/headers' lấy cookies từ header
 NextJS v15 luôn dùng await khi dùng async: const cookieStore = await cookies(); const headersList = await headers()
-Dùng được ở hàm server component, route handler, server actions để read/write cookies. Thường thì client k cần truy cập, dùng document.cookies để acccess nếu cần, nếu muốn đổi, nên gọi tới server để đổi.
+Phía server như middleware, server component, route handler, server actions luôn có thể read/write cookies. 
+Phía client thường k cần truy cập, dùng document.cookies để acccess httpOnly false nếu cần, nếu muốn đổi, nên gọi tới server để đổi, hoặc gọi tới server để get cũng được. Có thể truyền data từ server tới client props hoặc nhét vào params để dùng useParams. 
 
 
 
@@ -188,6 +192,7 @@ Khi dùng như v mà resize màn hình thì nó sẽ liên tục query image t�
 URL ảnh có thể từ bên ngoài nhưng tối ưu nhất là dùng ảnh static trong thư mục public
 Ưu tiên load image với nextjs dùng thuộc tính priority, tương tự thuộc tính preload của <img/> trong html => dùng ít vì càng nhiều ảnh sẽ càng giảm tốc độ tải trang.
 Còn có: onLoadingComplete, quality, onLoad, sizes. URL: https://nextjs.org/docs/pages/api-reference/components/image
+=> Chú ý dùng các event với on sẽ biến nó thành client side component, nhưng k thể viết hàm xử lý sự kiện client trong server component được nên phải tách ra client file.
 
 -> Setting next.config.js
 VD bỏ optimize: "images: { unoptimized: true }"
@@ -225,6 +230,8 @@ export async function generateMetadata(
 Nếu sync usage: 
 const params = use(params)
 const searchParams = use(searchParams)
+
+=>*** Điều đặc biệt là params truy cập ở server phải dùng await và khi await thì kể cả page là static dùng static build cũng thành dynamic build. Còn client truy cập lại éo cần await gì cả, useParams luôn.
 
 -> Page Routes: thư mục pages chứa file chia routing. 
 Fetch data qua getServerSideProps, getStaticProps, revalidate, getStaticPaths.
@@ -361,6 +368,7 @@ Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì r
 -> Dùng "npm install --save-dev sass". import relative như css, tuân thủ quy tắc đặt tên bth
 
 -> Style inline chỉ ảnh hưởng 1 component với <style jsx>{``}</style>
+<style jsx> sẽ inject style class css lúc runtime vì nó hiện ra như 1 tag rồi browser mới dùng để style, điều này làm client side bị lag, button hiện ra rồi mới styles nhảy. Dùng file index.module.css tốt hơn vì nextjs bundle nó ở build time và lúc server render sẽ dùng luôn là chuẩn => kbh dùng <style jsx>
 
 -> Next cũng hỗ trợ sẵn styled-components xem trong docs => Có thể dùng nó để tạo component custom như 1 bộ thư viện riêng cho mình
 
@@ -438,8 +446,6 @@ Trong component: const updateUserWithId = updateUser.bind(null, userId);
 - Server actions call được từ client nên cho vào react query call thoải mái
 - So với route handler, server action gọn hơn và k cần xử lý cors, nên ưu tiên dùng.
 => API route cho kết quả tương tự, server actions hơn ở chỗ nó trả về html đã được xử lý luôn và k cần phải viết 1 api route mới nên tối ưu hơn thôi.
-
--> Tương tự có thể dùng redis, cookies, db như 1 server nodejs bth. Dùng như 1 điểm lưu data mà an toàn hơn localStorage.
 
 -> Update db trong server actions: VD update thông tin của dogs/[id] trong db
 Trước kia ta viết 1 api "api/dogs/[id].ts rồi phía "use client" fetch tới nó. Rồi call router.refresh() cả page hoặc nhận về data r update
@@ -531,6 +537,8 @@ matcher: [
   }
 ] => (?!...) là loại trừ các đường dẫn chứa, .* là match bất cứ ký tự nào với số lượng tuỳ thích. Với điều kiện là header phải k có 2 trường kia nữa.
 
+=>*** Chú ý middleware nếu tự custom phải đủ url cả file ảnh nữa vì néu thiếu sẽ k load được ảnh
+
 -> Middleware chỉ có 1 file nên muốn tách nhiều hàm xử lý với nhiều matcher khác nhau thì buộc phải nhét hết vào 1 matcher rồi tự check với req.nextUrl.pathname
 VD: export function middleware(req: NextRequest, event: NextFetchEvent) {
   if (req.nextUrl.startsWith('/api/auth')) {
@@ -553,7 +561,7 @@ export const config = {
 => event.waitUntil giúp thực hiện thêm task call api nếu cần.
 
 -> redirect:
-- import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side.
+- import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side từ next/navigation => chú ý k được bao try catch
 - client side dùng useRouter có
 - redirects trong next.config.js sẽ chặn mọi request đến và redirect, thực hiện trước cả middleware, có option permanent true là permanent redirect
 - NextResponse.redirect để redirect trong middleware, nó nằm sau redirects trong next.config.js
@@ -756,12 +764,24 @@ VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên 
 
 
 # Dùng view transition API
-Dùng như html thuần hoặc dùng ViewTransition có sẵn của react, chỉ cần thêm config vào next config là xong.
 URL: https://www.youtube.com/watch?v=xfzNXa8WYW8
-=> Muốn hoàn hảo thì dùng tanstack/router
 
 Animate bằng clip path khi 1 page xuất hiện đẹp hơn là cho nó di chuyển từ ngoài vào
 Trong js có hàm tag.animate giúp animate bằng JS cho 1 tag dễ như @keyframe của css
+
+-> Chốt v15 view transition api: 
+C1: Dùng như html thuần
+C2: Thêm nextconfig và dùng unstable_ViewTransition của react bao từng thẻ trường name như <ViewTransition name>  thay thế view-transition-name. 
+=> Cả 2 cách với MPA đều hoạt động k chuẩn, lúc được lúc không.
+
+
+
+# PWA
+-> Home screen icon: Tạo file manifest là xong.
+Web chuyên tạo icon: https://realfavicongenerator.net/
+
+-> NextJS có cả server nên tạo web push notification hoàn chỉnh được.
+URL từng bước: https://nextjs.org/docs/app/building-your-application/configuring/progressive-web-apps
 
 
 
