@@ -398,7 +398,8 @@ const eslintConfig = [
   "dependencies": {
   },
   "devDependencies": {
-  }
+  },
+  "proxy": "http://localhost:3000"
 }
 
 --> "browserslist": ["> 1%", "last 2 versions", "not ie <= 8"], => là hỗ trợ 2 phiên bản chính cuối cùng của tất cả các trình duyệt với ít nhất 1% mức sử dụng ngoại trừ IE8 trở xuống. 

@@ -51,7 +51,7 @@ Static chỉ có tác dụng trong các TH link hay ref, còn import thì ta c�
 
 
 # Thư viện đi kèm
-URL: https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thứ khác như threejs, redux toolkit, tailwindcss, mui
+URL: https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thứ khác như threejs, redux toolkit, tailwindcss
 
 -> chakra-ui
 -> *tailwind: có nhiều utility class cho animation: https://tailwindcss.com/docs/animation
@@ -124,13 +124,12 @@ VD: export default async function Page() {
 Export ra 1 hàm register, hàm này sẽ tự động chạy 1 lần ngay khi 1 instance nextjs server được khởi tạo. Kiểu constructor của server.
 VD tích hợp thêm các tool monitoring, logging vào server 
 
--> after(callback) giúp thực hiện callback sau khi response hoàn thàn, kiểu 1 side effect k muốn block rendering. VD log or analytics.
-Có thể dùng trong Server Components (bao hàm generateMetadata), Server Actions, Route Handlers, and Middleware.
-
+-> after(callback) giúp thực hiện callback sau khi response hoàn thành, kiểu 1 side effect k muốn block rendering. VD log or analytics.
+Có thể dùng trong Server Components (hàm generateMetadata), Server Actions, Route Handlers, and Middleware.
 after tự hỗ trợ khi self host, nhưng nếu tắt app nên tắt chuẩn bằng cách gửi SIGINT or SIGTERM. Nó đảm bảo chờ promise trong after done mới tắt.
-Vercel hỗ trợ hàm tương tự là waitUtil().
+Vercel hỗ trợ hàm tương tự là waitUtil(), dùng nếu deploy vercel.
 
---> NextJS tự detect các page k dùng dynamic API thì là static page, khi có await connection() sẽ thành dynamic page. 
+--> NextJS tự detect các page k dùng dynamic API thì là static page, khi có await connection() cũng thành dynamic page. 
 Chú ý khi dùng after, nó không phải dynamic api và k khiến static page trở thành dynamic. Nếu dùng static build nó sẽ chạy 1 lần lúc build time, hoặc chạy lại nếu có revalidate
 
 
