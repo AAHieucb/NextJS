@@ -6,7 +6,7 @@ Có thể tạo constructor cho functional component như class component để 
 -> npm run build + npm run start => build từng page dạng HTML và lệnh start sẽ chạy 1 server nodejs serve các file đó là SSR
 npm run build + npm run export => build từng page và xuất đống đó thành html tĩnh, có thể host lên thành static web.
 
-"next dev --turbo" dùng turbopack nhanh hơn bth => luôn dùng
+"next dev --turbo" dùng turbopack nhanh hơn bth
 
 -> Thêm font: Có thể thêm font bằng CDN thẻ link từng pages
 Dùng next/font => ưu tiên
@@ -32,9 +32,14 @@ Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở b
 
 
 # Template layout trong app router
-template.js giống layout.js có thể wrap ngoài layout hoặc pages. Đb là template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. 
-=> Layout thì state được giữ nguyên khi navigate sang page khác dùng cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
-layout.tsx thay thế _app.tsx và _document.tsx
+template.js giống layout.js, layout wrap template, template wrap pages. Đb là template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. 
+Tức layout thì state được giữ nguyên khi navigate sang page khác dùng cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
+VD: layout chỉ hiện fallback của Suspense ở lần đầu vào, các lần sau quay lại k hiện vì nó preserve state rồi, template sẽ hiện Suspense mọi lúc navigate tới.
+
+layout.tsx thay thế _app.tsx và _document.tsx của pages router
+Thẻ để trong <head> trong layout sẽ tự chuyển xuống cuối của <head> trong html đích
+
+-> default.js sẽ thay thế slots. Buộc phải có nếu route thiếu nested slots, k sẽ lỗi 404.
 
 
 
@@ -73,12 +78,11 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 -> Trending tạo website cực nhanh:
 *shadcn: thư viện giúp xây component, nó có re-usable component và code sẵn dùng các lib khác để ta tự copy paste và custom chứ kp component sẵn. shadcn có components, blocks, charts, themes, colors sẵn tuỳ ý custom. Kết hợp với cursor và v0 nữa. Nó khiến bước tự code design trở nên nhanh và dễ dàng.
 => shadcn thay thế bằng https://originui.com/ tương tự nhưng lại có nhiều variants hơn
-Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải hẳn lib chỉ cần code thuần components dùng tailwind thôi.
+Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải thêm lib mà chỉ cần code thuần components dùng tailwind thôi.
 Kết hợp shadcn template, tailwinds template để có website ui luôn.
 Kết hợp *magic ui cho components độc lạ: https://magicui.design/
-Kết hợp tailwindcss-motion giúp tạo animation bằng tailwind class, có preset sẵn, có playground tùy ý custom, có chrome extension để test animation trên mọi web
-tailwindcss-animate, animate.css => cơ bản hơn có sẵn css class cho animation
-***https://auto-animate.formkit.com/ => best lib auto-animate nhưng k customize được gì cả. Khi cần animate thì thêm 1 dòng code và để nó tự động thôi.
+Kết hợp tailwindcss-motion tạo animation, có preset sẵn, có playground tùy ý custom, có chrome extension. Còn có tailwindcss-animate, animate.css.
+***https://auto-animate.formkit.com/ => best lib auto-animate nhưng k customize được gì cả. Khi cần animate nhẹ thì thêm 1 dòng code và để nó tự động thôi.
 
 Kết hợp https://enhanced-button.vercel.app/ mở rộng button cho shadcn
 Mở rộng thêm components cho shadcn: https://shadcn-extension.vercel.app/
@@ -151,7 +155,7 @@ Nextjs v15 dùng await khi gọi trong hàm async: const { isEnabled } = await d
 
 
 # Dùng next/head 
-Có thể chỉnh sửa <head> của web. Nên dùng kết hợp next-seo 
+Có thể chỉnh sửa <head> của web. 
 
 VD muốn thay đổi thẻ title mà dựa vào 1 biến, ta phải tạo 1 biến string title và truyền cả vào chứ k nên dùng {<biến>} vì ta muốn truyền vào 1 node nhưng nếu dùng {} nó sẽ tách ra thành nhiều node. VD: Hello {"World"} nó sẽ sinh ra Hello <!----!> World tức <text><comment><text> là 3 node k nên => cứ view source page xem có đúng tên title k là được
 
@@ -165,18 +169,20 @@ VD: truy cập vào http://localhost:3000/robots.txt được sau khi tạo xong
 
 -> Còn có import { cookies, headers } from 'next/headers' lấy cookies từ header
 NextJS v15 luôn dùng await khi dùng async: const cookieStore = await cookies(); const headersList = await headers()
-Dùng được ở hàm server component, route handler, server actions để read/write cookies. Thường thì client k cần truy cập, dùng document.cookies để acccess nếu cần, nếu muốn đổi, nên gọi tới server để đổi.
+Phía server như middleware, server component, route handler, server actions luôn có thể read/write cookies. 
+Phía client thường k cần truy cập, dùng document.cookies để acccess httpOnly false nếu cần, nếu muốn đổi, nên gọi tới server để đổi, hoặc gọi tới server để get cũng được. Có thể truyền data từ server tới client props hoặc nhét vào params để dùng useParams. 
 
 
 
-# Metadata
-Export trong file layout.js or pages.js => thay thế các tag metadata thông thường nhưng k linh hoạt bằng next/seo
+# Metadata => bỏ next-seo
 export metadata => fix metadata
 export generateMetadata({params}) => dynamic metadata
 
 -> NextJS có ImageResponse giúp tạo component hiển thị Image động là code html css. Ta tạo 1 api route trả về ImageResponse và dùng nó trong src của <Image>, nhận tham số và trả ra data tương ứng với tham số (tức là data động theo url đó). Hoặc tạo icon.tsx export default hàm trả ra ImageResponse tương tự.
 export generateImageMetadata k có tác dụng gì cho SEO, chỉ cung thêm thông tin cho image động.
 generateImageMetadata trả ra 1 mảng là nhiều version khác nhau của image mà người dùng nhận về khi nhét url vào src. Các phần tử trong mảng có trường id và params của component image cũng nhận object có trường id để lấy đúng metadata tương ứng, metadata quyết định kích thước hay extension các thứ, từ đó nextjs sinh ra các ảnh khác nhau để dùng.
+
+-> Set opengraph-image tự có twitter tag. Set twitter tag sẽ ghi đè phần twitter. File route con đè route cha 
 
 
 
@@ -188,6 +194,7 @@ Khi dùng như v mà resize màn hình thì nó sẽ liên tục query image t�
 URL ảnh có thể từ bên ngoài nhưng tối ưu nhất là dùng ảnh static trong thư mục public
 Ưu tiên load image với nextjs dùng thuộc tính priority, tương tự thuộc tính preload của <img/> trong html => dùng ít vì càng nhiều ảnh sẽ càng giảm tốc độ tải trang.
 Còn có: onLoadingComplete, quality, onLoad, sizes. URL: https://nextjs.org/docs/pages/api-reference/components/image
+=> Chú ý dùng các event với on sẽ biến nó thành client side component, nhưng k thể viết hàm xử lý sự kiện client trong server component được nên phải tách ra client file.
 
 -> Setting next.config.js
 VD bỏ optimize: "images: { unoptimized: true }"
@@ -225,6 +232,8 @@ export async function generateMetadata(
 Nếu sync usage: 
 const params = use(params)
 const searchParams = use(searchParams)
+
+=>*** Điều đặc biệt là params truy cập ở server phải dùng await và khi await thì kể cả page là static dùng static build cũng thành dynamic build. Còn client truy cập lại éo cần await gì cả, useParams luôn.
 
 -> Page Routes: thư mục pages chứa file chia routing. 
 Fetch data qua getServerSideProps, getStaticProps, revalidate, getStaticPaths.
@@ -361,6 +370,8 @@ Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì r
 -> Dùng "npm install --save-dev sass". import relative như css, tuân thủ quy tắc đặt tên bth
 
 -> Style inline chỉ ảnh hưởng 1 component với <style jsx>{``}</style>
+<style jsx> sẽ inject style class css lúc runtime vì nó hiện ra như 1 tag rồi browser mới dùng để style, điều này làm client side bị lag, button hiện ra rồi mới styles nhảy. Dùng file index.module.css tốt hơn vì nextjs bundle nó ở build time và lúc server render sẽ dùng luôn là chuẩn
+Dùng <style jsx> phải để ở cuối component để tránh lỗi hydration. Dùng có thể cản các lỗi css unsupported.
 
 -> Next cũng hỗ trợ sẵn styled-components xem trong docs => Có thể dùng nó để tạo component custom như 1 bộ thư viện riêng cho mình
 
@@ -438,8 +449,6 @@ Trong component: const updateUserWithId = updateUser.bind(null, userId);
 - Server actions call được từ client nên cho vào react query call thoải mái
 - So với route handler, server action gọn hơn và k cần xử lý cors, nên ưu tiên dùng.
 => API route cho kết quả tương tự, server actions hơn ở chỗ nó trả về html đã được xử lý luôn và k cần phải viết 1 api route mới nên tối ưu hơn thôi.
-
--> Tương tự có thể dùng redis, cookies, db như 1 server nodejs bth. Dùng như 1 điểm lưu data mà an toàn hơn localStorage.
 
 -> Update db trong server actions: VD update thông tin của dogs/[id] trong db
 Trước kia ta viết 1 api "api/dogs/[id].ts rồi phía "use client" fetch tới nó. Rồi call router.refresh() cả page hoặc nhận về data r update
@@ -531,6 +540,8 @@ matcher: [
   }
 ] => (?!...) là loại trừ các đường dẫn chứa, .* là match bất cứ ký tự nào với số lượng tuỳ thích. Với điều kiện là header phải k có 2 trường kia nữa.
 
+=>*** Chú ý middleware nếu tự custom phải đủ url cả file ảnh nữa vì néu thiếu sẽ k load được ảnh
+
 -> Middleware chỉ có 1 file nên muốn tách nhiều hàm xử lý với nhiều matcher khác nhau thì buộc phải nhét hết vào 1 matcher rồi tự check với req.nextUrl.pathname
 VD: export function middleware(req: NextRequest, event: NextFetchEvent) {
   if (req.nextUrl.startsWith('/api/auth')) {
@@ -553,7 +564,7 @@ export const config = {
 => event.waitUntil giúp thực hiện thêm task call api nếu cần.
 
 -> redirect:
-- import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side.
+- import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side từ next/navigation => chú ý k được bao try catch
 - client side dùng useRouter có
 - redirects trong next.config.js sẽ chặn mọi request đến và redirect, thực hiện trước cả middleware, có option permanent true là permanent redirect
 - NextResponse.redirect để redirect trong middleware, nó nằm sau redirects trong next.config.js
@@ -654,13 +665,17 @@ Muốn post thì dùng server action, còn action là string sẽ navigate tới
 -> Phân biệt:
 1) HTML <form>: 
 onsubmit trigger hàm khi ấn vào type="submit" hoặc dùng JS form.submit(), có reload page nếu không dùng e.preventDefault
-action nhận 1 string sẽ gửi request đến url đó kết hợp với method, enctype, target. Trigger khi ấn type="submit"
-K hỗ trợ action nhận 1 hàm
-2) React form: giống html form nhưng là onSubmit. action có nhận 1 hàm thì vẫn trigger hàm và reload page nếu k dùng e.preventDefault. formAction 
-formAction có thể dùng trong button or input type submit để override action trong <form>
-3) Next form: giống react form bth. action nhận 1 hàm có thể là 1 hàm ở server để call server action, còn onSubmit không được gọi hàm ở server.
-Khi có formAction sẽ k support prefetching
-4) <Form> của next/form: giống next form nhưng ở riêng case action là string sẽ hỗ trợ thêm prefetch và vài attribute replace, scroll, prefetch
+action luôn nhận 1 string sẽ gửi request đến url đó kết hợp với method, enctype, target. Method get hay post đều redirect get tới url kia.
+formAction dùng ở 1 button type "submit" thì khi ấn nó sẽ chạy như bth nhưng sẽ dùng url của formAction thay vì url gốc của form.
+2) React form: giống html form.
+Điểm khác biệt là có thêm onSubmit có thể nhận 1 hàm, sẽ trigger hàm. Sau đó thực hiện như behavior của form bth. 
+VD nếu có cả action và onSubmit thì gọi onSubmit trước, nếu có e.preventDefault sẽ dừng luôn, nếu k có sẽ trigger tiếp redirect url trong action như html form
+action là 1 hàm sẽ k redirect
+3) Next form: giống react form. 
+Điểm khác biệt là action nhận 1 hàm có thể call server action, còn onSubmit không được gọi hàm ở server mà là client side => nên ưu tiên chỉ dùng actions
+Chú ý khi có formAction sẽ như html thuần và k còn support prefetching
+4) <Form> của next/form: giống next form
+Riêng case action là string GET sẽ hỗ trợ thêm prefetch và vài attribute replace, scroll, prefetch => chỉ dùng khi cần chuyển trang
 
 -> Các form hooks thường dùng chỉ dùng ở client component:
 - useFormStatus cung status của last form submission: https://react.dev/reference/react-dom/hooks/useFormStatus
@@ -680,7 +695,7 @@ const [data, submitAction, isPending] = useActionState(
   <input type="text" name="itemID" />
   <button type="submit" disabled={isPending}>Update</button>
 </form>
-=> Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi
+=> Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi. K lưu state, k render lại mỗi khi gõ vào
 => Tham số 3 kbh dùng: https://www.youtube.com/watch?v=-aBKrvK5Vn8
 
 
@@ -748,7 +763,9 @@ Còn global error phải code lại từ html tag vì nó replace tất cả roo
 # Hiện loading khi server fetching
 VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
 
--> App router nó dùng Suspense fallback rồi, hoặc viết loading.js
+-> App router dùng Suspense fallback thì server component khi load api sẽ tự hiện. Hoặc viết loading.js sẽ load ở cấp độ page.js, nếu page.js call api hoặc server child component call api mà k có boundary thì boundary ngoài cùng cũng bắt.
+Có thể trigger Suspense boundary trong React Developer Tools.
+Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
 
 -> Với pages routes: K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
 => Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
@@ -756,12 +773,24 @@ VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên 
 
 
 # Dùng view transition API
-Dùng như html thuần hoặc dùng ViewTransition có sẵn của react, chỉ cần thêm config vào next config là xong.
 URL: https://www.youtube.com/watch?v=xfzNXa8WYW8
-=> Muốn hoàn hảo thì dùng tanstack/router
 
 Animate bằng clip path khi 1 page xuất hiện đẹp hơn là cho nó di chuyển từ ngoài vào
 Trong js có hàm tag.animate giúp animate bằng JS cho 1 tag dễ như @keyframe của css
+
+-> Chốt v15 view transition api: 
+C1: Dùng như html thuần
+C2: Thêm nextconfig và dùng unstable_ViewTransition của react bao từng thẻ trường name như <ViewTransition name>  thay thế view-transition-name. 
+=> Cả 2 cách với MPA đều hoạt động k chuẩn, lúc được lúc không.
+
+
+
+# PWA
+-> Home screen icon: Tạo file manifest là xong.
+Web chuyên tạo icon: https://realfavicongenerator.net/
+
+-> NextJS có cả server nên tạo web push notification hoàn chỉnh được.
+URL từng bước: https://nextjs.org/docs/app/building-your-application/configuring/progressive-web-apps
 
 
 
