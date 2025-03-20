@@ -6,7 +6,7 @@ Có thể tạo constructor cho functional component như class component để 
 -> npm run build + npm run start => build từng page dạng HTML và lệnh start sẽ chạy 1 server nodejs serve các file đó là SSR
 npm run build + npm run export => build từng page và xuất đống đó thành html tĩnh, có thể host lên thành static web.
 
-"next dev --turbo" dùng turbopack nhanh hơn bth => luôn dùng
+"next dev --turbo" dùng turbopack nhanh hơn bth
 
 -> Thêm font: Có thể thêm font bằng CDN thẻ link từng pages
 Dùng next/font => ưu tiên
@@ -78,12 +78,11 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 -> Trending tạo website cực nhanh:
 *shadcn: thư viện giúp xây component, nó có re-usable component và code sẵn dùng các lib khác để ta tự copy paste và custom chứ kp component sẵn. shadcn có components, blocks, charts, themes, colors sẵn tuỳ ý custom. Kết hợp với cursor và v0 nữa. Nó khiến bước tự code design trở nên nhanh và dễ dàng.
 => shadcn thay thế bằng https://originui.com/ tương tự nhưng lại có nhiều variants hơn
-Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải hẳn lib chỉ cần code thuần components dùng tailwind thôi.
+Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải thêm lib mà chỉ cần code thuần components dùng tailwind thôi.
 Kết hợp shadcn template, tailwinds template để có website ui luôn.
 Kết hợp *magic ui cho components độc lạ: https://magicui.design/
-Kết hợp tailwindcss-motion giúp tạo animation bằng tailwind class, có preset sẵn, có playground tùy ý custom, có chrome extension để test animation trên mọi web
-tailwindcss-animate, animate.css => cơ bản hơn có sẵn css class cho animation
-***https://auto-animate.formkit.com/ => best lib auto-animate nhưng k customize được gì cả. Khi cần animate thì thêm 1 dòng code và để nó tự động thôi.
+Kết hợp tailwindcss-motion tạo animation, có preset sẵn, có playground tùy ý custom, có chrome extension. Còn có tailwindcss-animate, animate.css.
+***https://auto-animate.formkit.com/ => best lib auto-animate nhưng k customize được gì cả. Khi cần animate nhẹ thì thêm 1 dòng code và để nó tự động thôi.
 
 Kết hợp https://enhanced-button.vercel.app/ mở rộng button cho shadcn
 Mở rộng thêm components cho shadcn: https://shadcn-extension.vercel.app/
@@ -156,7 +155,7 @@ Nextjs v15 dùng await khi gọi trong hàm async: const { isEnabled } = await d
 
 
 # Dùng next/head 
-Có thể chỉnh sửa <head> của web. Nên dùng kết hợp next-seo 
+Có thể chỉnh sửa <head> của web. 
 
 VD muốn thay đổi thẻ title mà dựa vào 1 biến, ta phải tạo 1 biến string title và truyền cả vào chứ k nên dùng {<biến>} vì ta muốn truyền vào 1 node nhưng nếu dùng {} nó sẽ tách ra thành nhiều node. VD: Hello {"World"} nó sẽ sinh ra Hello <!----!> World tức <text><comment><text> là 3 node k nên => cứ view source page xem có đúng tên title k là được
 
@@ -175,14 +174,15 @@ Phía client thường k cần truy cập, dùng document.cookies để acccess 
 
 
 
-# Metadata
-Export trong file layout.js or pages.js => thay thế các tag metadata thông thường nhưng k linh hoạt bằng next/seo
+# Metadata => bỏ next-seo
 export metadata => fix metadata
 export generateMetadata({params}) => dynamic metadata
 
 -> NextJS có ImageResponse giúp tạo component hiển thị Image động là code html css. Ta tạo 1 api route trả về ImageResponse và dùng nó trong src của <Image>, nhận tham số và trả ra data tương ứng với tham số (tức là data động theo url đó). Hoặc tạo icon.tsx export default hàm trả ra ImageResponse tương tự.
 export generateImageMetadata k có tác dụng gì cho SEO, chỉ cung thêm thông tin cho image động.
 generateImageMetadata trả ra 1 mảng là nhiều version khác nhau của image mà người dùng nhận về khi nhét url vào src. Các phần tử trong mảng có trường id và params của component image cũng nhận object có trường id để lấy đúng metadata tương ứng, metadata quyết định kích thước hay extension các thứ, từ đó nextjs sinh ra các ảnh khác nhau để dùng.
+
+-> Set opengraph-image tự có twitter tag. Set twitter tag sẽ ghi đè phần twitter. File route con đè route cha 
 
 
 
@@ -370,7 +370,8 @@ Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì r
 -> Dùng "npm install --save-dev sass". import relative như css, tuân thủ quy tắc đặt tên bth
 
 -> Style inline chỉ ảnh hưởng 1 component với <style jsx>{``}</style>
-<style jsx> sẽ inject style class css lúc runtime vì nó hiện ra như 1 tag rồi browser mới dùng để style, điều này làm client side bị lag, button hiện ra rồi mới styles nhảy. Dùng file index.module.css tốt hơn vì nextjs bundle nó ở build time và lúc server render sẽ dùng luôn là chuẩn => kbh dùng <style jsx>
+<style jsx> sẽ inject style class css lúc runtime vì nó hiện ra như 1 tag rồi browser mới dùng để style, điều này làm client side bị lag, button hiện ra rồi mới styles nhảy. Dùng file index.module.css tốt hơn vì nextjs bundle nó ở build time và lúc server render sẽ dùng luôn là chuẩn
+Dùng <style jsx> phải để ở cuối component để tránh lỗi hydration. Dùng có thể cản các lỗi css unsupported.
 
 -> Next cũng hỗ trợ sẵn styled-components xem trong docs => Có thể dùng nó để tạo component custom như 1 bộ thư viện riêng cho mình
 
@@ -664,13 +665,17 @@ Muốn post thì dùng server action, còn action là string sẽ navigate
 -> Phân biệt:
 1) HTML <form>: 
 onsubmit trigger hàm khi ấn vào type="submit" hoặc dùng JS form.submit(), có reload page nếu không dùng e.preventDefault
-action nhận 1 string sẽ gửi request đến url đó kết hợp với method, enctype, target. Trigger khi ấn type="submit"
-K hỗ trợ action nhận 1 hàm
-2) React form: giống html form nhưng là onSubmit. action có nhận 1 hàm thì vẫn trigger hàm và reload page nếu k dùng e.preventDefault. formAction 
-formAction có thể dùng trong button or input type submit để override action trong <form>
-3) Next form: giống react form bth. action nhận 1 hàm có thể là 1 hàm ở server để call server action, còn onSubmit không được gọi hàm ở server.
-Khi có formAction sẽ k support prefetching
-4) <Form> của next/form: giống next form nhưng ở riêng case action là string sẽ hỗ trợ thêm prefetch và vài attribute replace, scroll, prefetch
+action luôn nhận 1 string sẽ gửi request đến url đó kết hợp với method, enctype, target. Method get hay post đều redirect get tới url kia.
+formAction dùng ở 1 button type "submit" thì khi ấn nó sẽ chạy như bth nhưng sẽ dùng url của formAction thay vì url gốc của form.
+2) React form: giống html form.
+Điểm khác biệt là có thêm onSubmit có thể nhận 1 hàm, sẽ trigger hàm. Sau đó thực hiện như behavior của form bth. 
+VD nếu có cả action và onSubmit thì gọi onSubmit trước, nếu có e.preventDefault sẽ dừng luôn, nếu k có sẽ trigger tiếp redirect url trong action như html form
+action là 1 hàm sẽ k redirect
+3) Next form: giống react form. 
+Điểm khác biệt là action nhận 1 hàm có thể call server action, còn onSubmit không được gọi hàm ở server mà là client side => nên ưu tiên chỉ dùng actions
+Chú ý khi có formAction sẽ như html thuần và k còn support prefetching
+4) <Form> của next/form: giống next form
+Riêng case action là string GET sẽ hỗ trợ thêm prefetch và vài attribute replace, scroll, prefetch => chỉ dùng khi cần chuyển trang
 
 -> Các form hooks thường dùng chỉ dùng ở client component:
 - useFormStatus cung status của last form submission: https://react.dev/reference/react-dom/hooks/useFormStatus
@@ -690,7 +695,7 @@ const [data, submitAction, isPending] = useActionState(
   <input type="text" name="itemID" />
   <button type="submit" disabled={isPending}>Update</button>
 </form>
-=> Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi
+=> Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi. K lưu state, k render lại mỗi khi gõ vào
 => Tham số 3 kbh dùng: https://www.youtube.com/watch?v=-aBKrvK5Vn8
 
 

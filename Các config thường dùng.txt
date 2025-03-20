@@ -177,7 +177,8 @@ generateBuildId: async () => { return "xxx"; },
 compress: true,
 crossOrigin: 'anonymous', => sẽ thêm vào script tag crossOrigin="anonymous" hoặc crossOrigin="use-credentials"
 experimental: {
-  viewtransition: true
+  viewtransition: true,
+  reactCompiler: true
 }
 
 --> compress: Mặc định true và nextjs nén với gzip. Khi host trên vercel, nó dùng brotli trước r mới gzip. Check loại thuật toán trong Accept-Encoding và Content-Encoding header
@@ -589,8 +590,9 @@ src
       (...)folder
         page.js
       page.js
-      opengraph-image.png
+      opengraph-image.jsx
       twitter-image.png
+      twitter-image.alt.txt
     global-error.js
     favicon.ico
     icon.ico
@@ -677,6 +679,7 @@ export async function GET(
   request: Request,
   segmentData: { params: Promise<{ slug: string }> }
 ) {
+  const { slug } = await segmentData.params; // nếu dùng [slug] trong path
   return Response.json({
     data,
   }, {
@@ -781,7 +784,7 @@ router.replace('/new-route', {
   replace={false} => true sẽ replace route k thể back về
   scroll={true} => default true sẽ luôn scroll lên top của new route
   prefetch={true} => default true sẽ prefetch khi visible trên viewport.
-  onSubmit={(e) => {e.preventDefault();}} => xử lý thêm cho form submit action, nhưng nếu action là string và onSubmit e.preventDefault thì override k navigate chả làm j
+  onSubmit={(e) => {e.preventDefault();}} 
 >
   <input type="submit"
     formAction="/test" // override action của <Form> y hệt nhưng k prefetch
