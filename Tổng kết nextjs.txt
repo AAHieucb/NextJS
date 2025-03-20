@@ -649,7 +649,7 @@ scroll={true} => default là true sẽ luôn scroll lên top của new route tha
 prefetch={true} => default là true sẽ prefetch khi visible trên viewport.
 
 Dùng formMethod, formEncType, và formTarget cho form giống như method, encType, target sẽ khiến form quay trở về hoạt động như form bth của html => khi đó thà dùng <form> thường
-Muốn post thì dùng server action, còn action là string sẽ navigate
+Muốn post thì dùng server action, còn action là string sẽ navigate tới url đó kèm searchParams là nội dung form
 
 -> Phân biệt:
 1) HTML <form>: 
