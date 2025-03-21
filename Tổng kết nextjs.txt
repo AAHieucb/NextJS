@@ -72,6 +72,8 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 -> *hero icons
 
 -> *Payload: là 1 headless CMS chỉ cung cấp API k có FE. Điểm đb là có thể nhúng thẳng vào NextJS codebase mà k cần hosted. Cài 1 phát tự có sẵn hàng loạt tính năng phức tạp.
+Self host CMS là loại tự cài vào dự án và tự host lên bth. SaaS CMS là loại có dịch vụ đám mây sẵn, k cần quản lý gì, chỉ cần gọi api của nó thôi. Payload là best self host CMS, Contentful là best SaaS CMS.
+NextJS có cả BE và FE rồi nhưng vẫn nên dùng thêm CMS sẽ hỗ trợ thêm các tính năng của server mạnh mẽ hơn như authen, quản lý bài viết (kiểu blog web), draftmode, đa ngôn ngữ, tích hợp với các dịch vụ ngoài như google analytics, CRM, strapi api. Nó chỉ giúp làm dễ hơn thôi.
 
 -> *react-next-parallax
 
@@ -135,21 +137,19 @@ Chú ý khi dùng after, nó không phải dynamic api và k khiến static page
 
 
 # draftMode
-Nó là 1 flag được set bởi 1 người dùng và chỉ có tác dụng trong 1 phiên hiện tại, chỉ ảnh hưởng chính ngừoi dùng đó. Nó lưu trong session-cookies 
-Thường dùng làm các tính năng như chuyển giữa draft preview và production. VD blog web cho người dùng preview url
-- Dùng trong api handler:
-export default function handler(req, res) {
-  res.draftMode().disable();
-}
-- Dùng trong các hàm như getStaticProps:
-export async function getStaticProps(context) {
-  if (context.draftMode) {
-    return await fetchDraftContent();
-  }
-  return await fetchPublishedContent();
-}
-- import { draftMode } from 'next/headers'; => dùng ở component, api handler đều được
-Nextjs v15 dùng await khi gọi trong hàm async: const { isEnabled } = await draftMode()
+draftMode là 1 flag được set bởi 1 người dùng và chỉ có tác dụng trong 1 phiên hiện tại, flag lưu trong session-cookies, chỉ ảnh hưởng chính ngừoi dùng đó.
+Thường dùng khi nextjs kết hợp CMS support draftmode, làm các tính năng như chuyển giữa draft preview và production. VD blog web.
+
+Cơ chế: 
+- Tạo 1 route handler /draft nhận 1 secret và url. Check secret hợp lệ và url route hợp lệ thì redirect đến url đó. 
+- Tại url redirect đó, check nếu draft mode enable thì fetch API của draft mode, nếu k thì fetch như bth. 
+API lấy bài viết dạng draft được cung bởi CMS luôn nếu nó support. Nếu k có CMS mà tự custom lưu vào db table draft thì lấy từ đó.
+- Tắt preview thì xóa khỏi session cookie thôi.
+
+1 số CMS có UI, 1 số chỉ cung BE API. 1 số cho ta input redirect url khi ấn preview mode trên CMS thì ta nhập cái url draft của nextjs vào, kèm secret token.
+User ấn nút preview 1 bài viết ở trên nextjs, hoặc trên CMS hay bất cứ đâu miễn là call vào route handler draft mà chuẩn secret token thì sẽ toggle draftmode trong session cookie và redirect đến bài viết ở dạng draft.
+secret token chỉ được lưu trong .env của nextjs và preview url của CMS. 
+Page router dùng context.draftMode, app router dùng (await draftMode()).enable();
 
 
 
