@@ -1,3 +1,15 @@
+-> const rawCookie = await cookies();
+rawCookie.set("lang", lang, {
+  httpOnly: true,
+  path: "/",
+  sameSite: "strict",
+  secure: true,
+  maxAge: 31536000,
+  priority: "medium"
+});
+
+
+
 -> drizzle.config.ts:
 export default defineConfig({
   schema: "./src/utils/drizzle/schema.ts", // Nơi ta code file schema
@@ -574,7 +586,7 @@ src
       (settings)
         test
           page.js => /dashboard/test
-      [slug] 
+      [slug]
         page.js => /dashboard/a
       [...slug]
         page.js => /dashboard/a/b/c
@@ -586,9 +598,9 @@ src
         page.js => intercept current route
       (..)settings
         page.js
-      (..)(..)folder
+      (..)(..)folder => intercept 2 cấp
         page.js
-      (...)folder
+      (...)folder => intercept từ root
         page.js
       page.js
       opengraph-image.jsx

@@ -135,3 +135,14 @@ FE call relative, BE call absolute.
 
 
 
+# dynamicIO và "use cache"
+Nhiều lúc cần call async function sinh data động nhưng k dùng fetch, nextjs không hiẻu mà tưởng nó là static pages. Trên bản production sẽ chạy qua async 1 lần sinh data fix cứng luôn. Khi đó buộc ta phải thêm await connection để thành pages dynamic (enable partial rendering).
+*** Khi call hàm async, nên tách riêng component và cho vào Suspense thì mọi thứ được load ngay lập tức. Nếu call async k tách riêng comp mà viết chung vào page k có Suspense thì cả pages sẽ bị lag chờ api thực hiện xong cơ.
+
+Giải pháp khác là dùng dynamicIO sẽ đổi default:
+dynamicIO là options config khiến cho page luôn là dynamic miễn là có bất cứ hàm async nào được gọi trong page đó, đồng thời opt-out hét mọi cache.
+Khi app ở chế độ dynamicIO, mọi call async phải wrap trong Suspense hoặc dùng "use cache", kể cả await searchParams.
+URL: https://www.youtube.com/watch?v=nHnw3pusFXw => dừng ở "use cache basics"
+
+
+
