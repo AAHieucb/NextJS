@@ -145,6 +145,7 @@ Cơ chế:
 - Tại url redirect đó, check nếu draft mode enable thì fetch API của draft mode, nếu k thì fetch như bth. 
 API lấy bài viết dạng draft được cung bởi CMS luôn nếu nó support. Nếu k có CMS mà tự custom lưu vào db table draft thì lấy từ đó.
 - Tắt preview thì xóa khỏi session cookie thôi.
+Lưu ý draftMode lấy hay k chỉ được ở server, client muốn lấy phải gọi api đến server (với app router).
 
 1 số CMS có UI, 1 số chỉ cung BE API. 1 số cho ta input redirect url khi ấn preview mode trên CMS thì ta nhập cái url draft của nextjs vào, kèm secret token.
 User ấn nút preview 1 bài viết ở trên nextjs, hoặc trên CMS hay bất cứ đâu miễn là call vào route handler draft mà chuẩn secret token thì sẽ toggle draftmode trong session cookie và redirect đến bài viết ở dạng draft.

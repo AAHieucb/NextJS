@@ -12,7 +12,9 @@ export const Quotes = () => {
   const count = useAppSelector(selectCount);
   // Using a query hook automatically fetches data and returns query values
   const { data, isError, isLoading, isSuccess } =
-    useGetQuotesQuery(numberOfQuotes);
+    useGetQuotesQuery(numberOfQuotes, {
+      pollingInterval: 200000, // auto refetch sau 200s, thay thế react-query được
+    });
 
   if (isError) {
     return (
