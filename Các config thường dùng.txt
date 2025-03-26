@@ -272,7 +272,8 @@ module.exports = {
     "import", // Tránh import thừa, sai thứ tự
     "react", // Thêm quy tắc cho react.
     "@typescript-eslint", // ESLint check typescript chính xác hơn
-    "prettier" // K chuẩn prettier, eslint cũng báo lỗi.
+    "prettier", // K chuẩn prettier, eslint cũng báo lỗi.
+    "react-refresh", // Kích hoạt plugin React Refresh trong ESLint, dùng hỗ trợ Fast Refresh.
   ],
   "parserOptions": {
     "ecmaVersion": 13, // Hỗ trợ check cho phien bản ES2022, nên dùng "latest"
@@ -288,6 +289,8 @@ module.exports = {
     "eslint:recommended", // extends có config có sẵn recommended mà ta có thể dùng
     "plugin:react/recommended",
     "prettier", // Tắt các quy tắc ESLint có thể xung đột với prettier, phải cài package eslint-plugin-prettier, hoặc dùng trong rules như dưới
+    "plugin:react/jsx-runtime", // Kế thừa quy tắc jsx runtim, VD k cần import React ở đầu mỗi file jsx
+    "plugin:react-hooks/recommended", // Áp dụng các quy tác khuyến nghị của react hook
   ],
   "rules": { => Ghi đè hoặc thêm các quy tắc tùy chỉnh.
     "prefer-const": "error", // Buộc dùng const thay vì let nếu biến k được gán lại
@@ -298,7 +301,8 @@ module.exports = {
         "singleQuote": true,
         "endOfLine": "auto", // auto tự động điều chỉnh ký tự xuống dòng phù hợp với OS, window là \r\n, linux là \n
       }
-    ]
+    ],
+    "react-refresh/only-export-components": "warn", // warn nếu có export không phải là component React trong một file chứa JSX. 
   },
   // Quy định cấu hình riêng cho các loại file khác nhau
   "overrides": [ 
