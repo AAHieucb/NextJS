@@ -2,11 +2,14 @@
 import { useGetQuotesQuery } from "@/lib/features/quotes/quotesApiSlice";
 import { useState } from "react";
 import styles from "./Quotes.module.css";
+import { selectCount } from "@/lib/features/counter/counterSlice";
+import { useAppSelector } from "@/lib/hooks";
 
 const options = [5, 10, 20, 30];
 
 export const Quotes = () => {
   const [numberOfQuotes, setNumberOfQuotes] = useState(10);
+  const count = useAppSelector(selectCount);
   // Using a query hook automatically fetches data and returns query values
   const { data, isError, isLoading, isSuccess } =
     useGetQuotesQuery(numberOfQuotes);
@@ -30,7 +33,7 @@ export const Quotes = () => {
   if (isSuccess) {
     return (
       <div className={styles.container}>
-        <h3>Select the Quantity of Quotes to Fetch:</h3>
+        <h3>Select the Quantity of Quotes to Fetch:: {count}</h3>
         <select
           className={styles.select}
           value={numberOfQuotes}
