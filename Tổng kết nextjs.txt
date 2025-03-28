@@ -813,7 +813,7 @@ Mặc định next nó luôn tuân thủ 3 bước đó. Nhưng thực tế, tro
 => Người dùng muốn tương tác sẽ lâu hơn 1 tí ở trang landing page nhưng tốc độ load trang và performance rất nhanh.
 => Dùng dynamic import khác là nó sẽ delay cả 3 bước cho đến khi component được render trên DOM tree chứ k chỉ visible.
 
--> Tồng kết tối ưu SEO và performance NextJS => ref tới "Projects / MoveWorld"
+-> Tổng kết tối ưu SEO và performance NextJS => ref tới "Projects / MoveWorld"
 Thiết kế placeholder sao cho k có layout shift ở mọi màn hình cả text và ảnh.
 Thuộc tính priority của Image có tác dụng xđ hình ảnh ưu tiên cần tải trước các hình khác trên trang. Nên dùng <Image/> với local image hơn là url để next tối ưu và tự động có lazy loading. Dùng onError và blurData tạo hiệu ứng. 
 Tối ưu hóa ảnh và font trong docs nextjs, tải hẳn về chứ k dùng API.
