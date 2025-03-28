@@ -124,7 +124,7 @@ VD: export default async function Page() {
 
 # instrumentation.ts
 Export ra 1 hàm register, hàm này sẽ tự động chạy 1 lần ngay khi 1 instance nextjs server được khởi tạo. Kiểu constructor của server.
-VD tích hợp thêm các tool monitoring, logging vào server 
+VD tích hợp thêm các tool monitoring, logging vào server. Có thể dùng module nodejs.
 
 -> after(callback) giúp thực hiện callback sau khi response hoàn thành, kiểu 1 side effect k muốn block rendering. VD log or analytics.
 Có thể dùng trong Server Components (hàm generateMetadata), Server Actions, Route Handlers, and Middleware.
@@ -145,6 +145,7 @@ Cơ chế:
 - Tại url redirect đó, check nếu draft mode enable thì fetch API của draft mode, nếu k thì fetch như bth. 
 API lấy bài viết dạng draft được cung bởi CMS luôn nếu nó support. Nếu k có CMS mà tự custom lưu vào db table draft thì lấy từ đó.
 - Tắt preview thì xóa khỏi session cookie thôi.
+Lưu ý draftMode lấy hay k chỉ được ở server, client muốn lấy phải gọi api đến server (với app router).
 
 1 số CMS có UI, 1 số chỉ cung BE API. 1 số cho ta input redirect url khi ấn preview mode trên CMS thì ta nhập cái url draft của nextjs vào, kèm secret token.
 User ấn nút preview 1 bài viết ở trên nextjs, hoặc trên CMS hay bất cứ đâu miễn là call vào route handler draft mà chuẩn secret token thì sẽ toggle draftmode trong session cookie và redirect đến bài viết ở dạng draft.
@@ -182,6 +183,9 @@ export generateImageMetadata k có tác dụng gì cho SEO, chỉ cung thêm th�
 generateImageMetadata trả ra 1 mảng là nhiều version khác nhau của image mà người dùng nhận về khi nhét url vào src. Các phần tử trong mảng có trường id và params của component image cũng nhận object có trường id để lấy đúng metadata tương ứng, metadata quyết định kích thước hay extension các thứ, từ đó nextjs sinh ra các ảnh khác nhau để dùng.
 
 -> Set opengraph-image tự có twitter tag. Set twitter tag sẽ ghi đè phần twitter. File route con đè route cha 
+opengraph-image.tsx thì font lấy từ chuẩn gg, lấy font trang khác bị lỗi khi build
+
+-> Nếu cấp ngoài cùng có metadata, thì it nhất cũng phải có export metadataBase ở cấp ngoài cùng để tránh warning k có canonical url. Rồi metadata ở con sẽ đè hoặc thêm vào cha dần khi set.
 
 
 
@@ -281,6 +285,7 @@ Lỗi thì error.tsx
 => Ref tới "Projects / Portfolio"
 
 -> intercept route: ghi đè hiển thị khi navigate từ 1 route sang 1 route khác, nó sẽ hiển thị khác đi trong case đó, VD hiển thị dạng modal preview, khi close sẽ vẫn ở trang gốc.
+Chú ý phải xoá .next folder và chạy lại mới ăn.
 
 
 

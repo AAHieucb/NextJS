@@ -112,3 +112,4 @@ Có thể custom xử lý lỗi trả ra formState.pending, formState.error, for
 
 -> Có thể tích hợp được typescript vào nextjs có sẵn bằng cách thêm tsconfig.json và sửa các file js.
 
+-> Dừng:

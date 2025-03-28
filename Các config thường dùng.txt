@@ -1,3 +1,15 @@
+-> const rawCookie = await cookies();
+rawCookie.set("lang", lang, {
+  httpOnly: true,
+  path: "/",
+  sameSite: "strict",
+  secure: true,
+  maxAge: 31536000,
+  priority: "medium"
+});
+
+
+
 -> drizzle.config.ts:
 export default defineConfig({
   schema: "./src/utils/drizzle/schema.ts", // Nơi ta code file schema
@@ -253,14 +265,15 @@ module.exports = {
   },
   settings:{ // settings là giá trị mà plugins sử dụng 
     react: {
-      version: "detect", // Tự động xác định react version trong dự án để format react.
+      version: "detect", // Tự động xác định react version trong dự án để format react. Hoặc chỉ định rõ version: "18.3"
     },
   },
   "plugins": [ // Dùng các plugins mở rộng thêm cho eslint 
     "import", // Tránh import thừa, sai thứ tự
     "react", // Thêm quy tắc cho react.
     "@typescript-eslint", // ESLint check typescript chính xác hơn
-    "prettier" // K chuẩn prettier, eslint cũng báo lỗi.
+    "prettier", // K chuẩn prettier, eslint cũng báo lỗi.
+    "react-refresh", // Kích hoạt plugin React Refresh trong ESLint, dùng hỗ trợ Fast Refresh.
   ],
   "parserOptions": {
     "ecmaVersion": 13, // Hỗ trợ check cho phien bản ES2022, nên dùng "latest"
@@ -276,6 +289,8 @@ module.exports = {
     "eslint:recommended", // extends có config có sẵn recommended mà ta có thể dùng
     "plugin:react/recommended",
     "prettier", // Tắt các quy tắc ESLint có thể xung đột với prettier, phải cài package eslint-plugin-prettier, hoặc dùng trong rules như dưới
+    "plugin:react/jsx-runtime", // Kế thừa quy tắc jsx runtim, VD k cần import React ở đầu mỗi file jsx
+    "plugin:react-hooks/recommended", // Áp dụng các quy tác khuyến nghị của react hook
   ],
   "rules": { => Ghi đè hoặc thêm các quy tắc tùy chỉnh.
     "prefer-const": "error", // Buộc dùng const thay vì let nếu biến k được gán lại
@@ -286,7 +301,8 @@ module.exports = {
         "singleQuote": true,
         "endOfLine": "auto", // auto tự động điều chỉnh ký tự xuống dòng phù hợp với OS, window là \r\n, linux là \n
       }
-    ]
+    ],
+    "react-refresh/only-export-components": "warn", // warn nếu có export không phải là component React trong một file chứa JSX. 
   },
   // Quy định cấu hình riêng cho các loại file khác nhau
   "overrides": [ 
@@ -334,6 +350,44 @@ module.exports = {
     }
   ]
 }
+
+-> esling.config.js:
+import js from '@eslint/js'
+import globals from 'globals'
+import react from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+export default [
+  { ignores: ['dist'] }, // bỏ qua folder dist
+  {
+    files: ['**/*.{js,jsx}'], // cấu hình cho các file js và jsx
+    languageOptions: {
+      ecmaVersion: 2020, // cú pháp ECMAScript 2020
+      globals: globals.browser, // cung cấp biến toàn cục cho môi trường browser
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true }, // cú pháp jsx
+        sourceType: 'module', // cho phép mã nguồn dùng import/export (ES Modules).
+      },
+    },
+    plugins: {
+      react, // check các quy tắc chung của react
+      'react-hooks': reactHooks, // đảm bảo react hook dùng đúng cách
+      'react-refresh': reactRefresh, // hỗ trợ Hot Module Replacement (HMR) với React Refresh
+    },
+    rules: {
+      ...js.configs.recommended.rules, // Xác định các rules recommend
+      ...react.configs.recommended.rules,
+      ...react.configs['jsx-runtime'].rules,
+      ...reactHooks.configs.recommended.rules,
+      'react/jsx-no-target-blank': 'off', // K cảnh báo khi dùng target="_blank" mà không có rel="noopener noreferrer".
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true }, // Cho phép export các giá trị hằng số.
+      ],
+    },
+  },
+]
 
 -> eslint.config.mjs v2:
 const eslintConfig = [
@@ -574,7 +628,7 @@ src
       (settings)
         test
           page.js => /dashboard/test
-      [slug] 
+      [slug]
         page.js => /dashboard/a
       [...slug]
         page.js => /dashboard/a/b/c
@@ -586,9 +640,9 @@ src
         page.js => intercept current route
       (..)settings
         page.js
-      (..)(..)folder
+      (..)(..)folder => intercept 2 cấp
         page.js
-      (...)folder
+      (...)folder => intercept từ root
         page.js
       page.js
       opengraph-image.jsx

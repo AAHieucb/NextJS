@@ -35,6 +35,7 @@ Dùng ESLint thì bỏ hết JSLint, JSHint.
 Có thể cấu hình từng file bằng cách thêm comment trực tiếp vào file chứa code JS. VD: /* eslint quotes: ["error", "double"], curly: 2 */ => k dùng
 Cài extension thì ở commandline tab output chọn task hoặc tab problems có thể xem debug của các tools này.
 Mọi rule: https://eslint.org/docs/rules/
+Command: eslint src --ext js,jsx --report-unused-disable-directives --max-warnings 0
 
 -> Prettier:
 Eslint chuyên check lỗi hay chấm phẩy, cách đặt tên. Kết hợp Prettier chuyên format kiểu căn lề, khoảng cách.
