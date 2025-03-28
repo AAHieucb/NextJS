@@ -265,7 +265,7 @@ module.exports = {
   },
   settings:{ // settings là giá trị mà plugins sử dụng 
     react: {
-      version: "detect", // Tự động xác định react version trong dự án để format react.
+      version: "detect", // Tự động xác định react version trong dự án để format react. Hoặc chỉ định rõ version: "18.3"
     },
   },
   "plugins": [ // Dùng các plugins mở rộng thêm cho eslint 
@@ -350,6 +350,44 @@ module.exports = {
     }
   ]
 }
+
+-> esling.config.js:
+import js from '@eslint/js'
+import globals from 'globals'
+import react from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+export default [
+  { ignores: ['dist'] }, // bỏ qua folder dist
+  {
+    files: ['**/*.{js,jsx}'], // cấu hình cho các file js và jsx
+    languageOptions: {
+      ecmaVersion: 2020, // cú pháp ECMAScript 2020
+      globals: globals.browser, // cung cấp biến toàn cục cho môi trường browser
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true }, // cú pháp jsx
+        sourceType: 'module', // cho phép mã nguồn dùng import/export (ES Modules).
+      },
+    },
+    plugins: {
+      react, // check các quy tắc chung của react
+      'react-hooks': reactHooks, // đảm bảo react hook dùng đúng cách
+      'react-refresh': reactRefresh, // hỗ trợ Hot Module Replacement (HMR) với React Refresh
+    },
+    rules: {
+      ...js.configs.recommended.rules, // Xác định các rules recommend
+      ...react.configs.recommended.rules,
+      ...react.configs['jsx-runtime'].rules,
+      ...reactHooks.configs.recommended.rules,
+      'react/jsx-no-target-blank': 'off', // K cảnh báo khi dùng target="_blank" mà không có rel="noopener noreferrer".
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true }, // Cho phép export các giá trị hằng số.
+      ],
+    },
+  },
+]
 
 -> eslint.config.mjs v2:
 const eslintConfig = [
