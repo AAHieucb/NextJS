@@ -10,6 +10,25 @@ rawCookie.set("lang", lang, {
 
 
 
+-> schema.ts:
+const UserTable = pgTable("test", {
+  id: uuid().primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(), // text k có tham số tự tạo cột trùng với tên trường
+  role: pgEnum("user_roles", ["admin", "user"])().notNull().default("user"),
+  createdAt: timestamp("created_at"), // tạo cột tên là created_at kiểu TIMESTAMP trong SQL
+  updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+pgTable("user_oauth_accounts", 
+  {
+    userId: uuid().notNull().references(() => UserTable.id, { onDelete: "cascade" }),
+    providerAccountId: serial("id"), // serial là số int tự động tăng dần
+    count: integer()
+  },
+  t => [primaryKey({ columns: [t.providerAccountId, t.userId] })]
+)
+
+
+
 -> drizzle.config.ts:
 export default defineConfig({
   schema: "./src/utils/drizzle/schema.ts", // Nơi ta code file schema

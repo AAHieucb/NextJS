@@ -257,8 +257,9 @@ Có thể viết common component ở các vị trí mà next ignore for routing
 Dù nói là App Router dùng Server Component nhưng k có việc đổi props mà phải chạy fetch lại, nó chỉ là kiểu thay thế các hàm fetch phía server của Page Router thôi.
 
 -> Chuyển trang đâu cần chia CSR hay SSR: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter và Router chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
-next/navigation cung redirect dùng ở server component, cũng cung hàng loạt hook như useRouter, useSearchParams, usePathname, useSelectedLayoutSegment cho CSR.
+next/navigation cung redirect dùng ở server component, cũng cung hàng loạt hook như useRouter, usePathname, useSelectedLayoutSegment cho CSR.
 useSelectedLayoutSegment thì client component phải nhét vào layout.js mới hoạt động, nó trả ra các path kể từ cái layout đó đến path mới nhất => ít dùng
+useSearchParams trả ra readonly version thôi
 
 -> Prefetch: - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể. Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào => prefetch chỉ có tác dụng trên production (build r start), k test được ở dev.
 - Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang. URL là trang muốn prefetch chơi cả router fix or dynamic routes như /product/[id]
@@ -568,7 +569,7 @@ export const config = {
 => event.waitUntil giúp thực hiện thêm task call api nếu cần.
 
 -> redirect:
-- import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side từ next/navigation => chú ý k được bao try catch
+- import 2 hàm redirect và permanentRedirect để chuyển hướng ở server side từ next/navigation => chú ý k được bao try catch vì redirect nó internally throw error r
 - client side dùng useRouter có
 - redirects trong next.config.js sẽ chặn mọi request đến và redirect, thực hiện trước cả middleware, có option permanent true là permanent redirect
 - NextResponse.redirect để redirect trong middleware, nó nằm sau redirects trong next.config.js
@@ -681,6 +682,12 @@ Chú ý khi có formAction sẽ như html thuần và k còn support prefetching
 4) <Form> của next/form: giống next form
 Riêng case action là string GET sẽ hỗ trợ thêm prefetch và vài attribute replace, scroll, prefetch => chỉ dùng khi cần chuyển trang
 
+--> Tuỳ biến nextjs: 
+server component gọi 1 hàm async thì là gọi hàm ở server bth, k gọi được hàm của client. 
+client component gọi hàm async sẽ mặc định là hàm của client side. Client component gọi hàm async "use server" trực tiếp (k cần qua form), gọi là server actions và gửi request tới server để thực hiện.
+Trong nextjs <Form> mà action là string thì dùng được trong server component, còn truyền vào hàm server thì nó phải nằm ở client component, nếu k sẽ lỗi.
+Khi dùng server actions, hãy thêm "use server" ở function để tránh nó nhầm rằng client side tự gọi hàm phía client.
+
 -> Các form hooks thường dùng chỉ dùng ở client component:
 - useFormStatus cung status của last form submission: https://react.dev/reference/react-dom/hooks/useFormStatus
 Dùng trong 1 client component (nằm trong 1 form) sẽ tự detect component hiẹn tại ở trong form nào và cung status của form đó:
@@ -691,7 +698,7 @@ const { pending, data, method, action } = useFormStatus();
 - useActionState => dùng ở component chứa cái form để truyền vào form
 const [data, submitAction, isPending] = useActionState(
   async (prevState, queryData) => {
-    const itemID = queryData.get('itemID'); return { itemID };
+    const itemID = queryData.get("itemID"); return { itemID };
   },
   { itemID: "" }
 )
@@ -700,6 +707,7 @@ const [data, submitAction, isPending] = useActionState(
   <button type="submit" disabled={isPending}>Update</button>
 </form>
 => Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi. K lưu state, k render lại mỗi khi gõ vào
+=> async (previousState: FormField, formData: FormData): Promise<FormField> vì previousState và return field phải giống nhau
 => Tham số 3 kbh dùng: https://www.youtube.com/watch?v=-aBKrvK5Vn8
 
 
