@@ -614,6 +614,11 @@ Khi deploy self-host nodejs server, nó dựng server và chạy tất cả như
 => Nếu tuân theo recommend của nextjs, middleware buộc dùng edge runtime, page.js và route.js dùng node runtime thì ta chả cần lo gì cả, deploy self host vẫn chạy được hết. Chỉ có 2 vấn đề: nếu middleware cần dùng nodejs api mà edge runtime k hỗ trợ, hoặc nếu case hy hữu xảy ra là dùng hàm edge runtime hiếm nào đó k chạy được ở node runtime. 
 Giải pháp là chuyển đổi logic đó sang page.js server component thay vì xử lý ở middleware, hoặc tìm các api mà thực sự hô trợ, dùng rewrites redirects trong next.config.js thay vì middleware
 
+-> export const config = {
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.png$|.*\\.jpg$).*)"]
+}; => Bỏ tất cả /api/*, /_next/static, /_next/image, /favicon.ico, /sitemap.xml, /robots.txt mọi file kết thúc với .png và .jpg
+=> Chú ý cần bỏ cả file ảnh để tránh sai
+
 
 
 # NextJS support giúp tạo i18n 
@@ -684,9 +689,10 @@ Riêng case action là string GET sẽ hỗ trợ thêm prefetch và vài attrib
 
 --> Tuỳ biến nextjs: 
 server component gọi 1 hàm async thì là gọi hàm ở server bth, k gọi được hàm của client. 
-client component gọi hàm async sẽ mặc định là hàm của client side. Client component gọi hàm async "use server" trực tiếp (k cần qua form), gọi là server actions và gửi request tới server để thực hiện.
+client component gọi hàm async sẽ mặc định là hàm của client side. Client component gọi hàm async "use server" trực tiếp (k cần qua form), gọi là server actions và gửi request tới server để thực hiện. 
 Trong nextjs <Form> mà action là string thì dùng được trong server component, còn truyền vào hàm server thì nó phải nằm ở client component, nếu k sẽ lỗi.
 Khi dùng server actions, hãy thêm "use server" ở function để tránh nó nhầm rằng client side tự gọi hàm phía client.
+Chú ý file "use server" chỉ cho export các hàm là async
 
 -> Các form hooks thường dùng chỉ dùng ở client component:
 - useFormStatus cung status của last form submission: https://react.dev/reference/react-dom/hooks/useFormStatus
@@ -768,7 +774,7 @@ if (!res.ok) {
 -> Unexpected error
 Dùng error.js với error ở từng route (thật ra error sẽ bubble up lên parent từ từ), dùng global-error.js với error trong root layout
 error.js là client side comps.
-Còn global error phải code lại từ html tag vì nó replace tất cả root layout và template khi hiện
+Còn global error sẽ replace tất cả root hay layout. Nếu có error mà error.ts k bắt thì global-error sẽ bắt.
 
 
 
