@@ -752,10 +752,17 @@ Chỉ dùng ở server side nên nếu client side muốn gọi phải tạo api
 
 
 # Feature flags
-NextJS hỗ trợ sẵn feature flags, giúp bật tắt feature mà không cần deploy lại code => hoàn toàn free
-Flags phải lưu ở db or file nào đó chứ vercel k hỗ trợ. Vercel chỉ có thư viện flags để lấy cờ, thư viện toolbar giúp edit config ngay trên toolbar.
-Phải admin login mới tương tác được toolbar
-URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM
+Giúp bật tắt feature mà k cần deploy lại code. 
+Flag thường được lưu trong 1 file, hoặc 1 database. VD lưu vào 1 file để lên cloud S3 và lấy qua API, khi cần thì vào cloud sửa file settings là được.
+User phải có quyền mới đổi dược flags.
+
+-> Thư viện flag sdk của vercel chỉ giúp thao tác lấy flag dễ dàng thôi, ta vẫn lưu flag và db rồi lấy như bth được. Dùng rất đơn giản là tạo 1 file flag.ts lấy flag là xóng
+Dùng hàm flag() của nó sẽ ép page thành dynamic rendering.
+Hàm dedupe() của nó giống y cache của react tránh gọi lại nhiều lần
+
+-> Thư viện toolbar của vercel giúp dùng toolbar của vercel ngay trong app để edit config flag ngay trên toolbar được.
+Dùng @vercel/toolbar yêu cầu phải link project với vercel và deploy lên vercel, tạo FLAG_SECRETS nữa
+URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM\
 
 
 
