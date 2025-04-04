@@ -150,7 +150,7 @@ redirectUrl của server phải được thêm vào trong application của prov
 Dùng cookie state để tránh giả mạo provider: tạo random state 64bytes hex lưu vào cookie (sameSite lax để provider lấy được) và thêm vào authentication url `?state=${state}`
 Dùng code verifier để tránh giả mạo server: tạo random state 64bytes hex lưu vào cookie sameSite lax, codeVerifier phải mã hóa giá trị đó với sha256 trả về dạng base64, và thêm vào url `?code_challenge=${code_verifier}&code_challenge_method=S256`
 - Tạo route là GET redirectUrl trên server nhận về code, fetch token, fetch user.
-Check cookie state hợp lệ trước khi fetch token: sẽ nhận về cả code cùng với state, check state nhận về trùng với state trong cookie là được.
+Check cookie state hợp lệ trước khi fetch token: sẽ nhận về cả code cùng với state, check state nhận về trùng với state trong cookie là được. Nếu sai phải redirect về trang lỗi
 Url để fetch token là "/token" dùng x-wwww-form-urlencoded, body gồm: code (nhận về), redirect_uri(url hiẹn tại), grant_type "authorization_code", client_id, client_secret. Trả về nhiều thứ nhưng chỉ cần quan tâm access_token và token_type.
 Nếu dùng code verifier phải gửi vào "/token" kèm code_verifier từ cookie, provider server sẽ nhận và xác thực vì chỉ server của ta gửi cookie mới có code_verifier đó.
 Dùng để fetch user data, request có header là `{token_type} {access_token}`. Trả về thông tin user chắc chắn có id và email ở mọi loại OAuth.
