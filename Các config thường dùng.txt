@@ -430,6 +430,7 @@ const eslintConfig = [
   "keywords": ["a","b","c"],
   "version": "0.1.0",
   "author": "John Doe <john.doe@whatever.com> (https://whatever.com)",
+  "license": "MIT", // ISC, GPL-3.0
   "author": { // or
     "name": "John Doe",
     "email": "john.doe@whatever.com",
