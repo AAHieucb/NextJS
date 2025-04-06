@@ -745,9 +745,11 @@ export const config = {
 
 
 
-# Dùng tốt với vercel kv db 
-Chỉ dùng ở server side nên nếu client side muốn gọi phải tạo api cho client gọi. Có thể dùng cơ bản thay thế cho redis.
-=> Thay thế thành upstash kv trong marketplace
+# Dùng lib vercel kv
+Là lib giúp connect và tương tác với kv db provider. Chỉ dùng ở server side nên nếu client side muốn gọi phải tạo api cho client gọi.
+Chỉ cần cài, setup biến .env là dùng được luôn.
+VD có thể dùng cho redis local, hay redis upstash chỉ cần set biến .env
+VD deploy lên vercel có thể link upstash redis vào project vercel cũng được.
 
 
 
