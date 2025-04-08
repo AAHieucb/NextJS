@@ -10,7 +10,7 @@ HTTP là giao thức k trạng thái, session là thứ khiến nó có trạng 
 Nếu cho input email thì phải xử lý email dot trick.
 Cũng phải xác thực email hợp lệ: sinh random userid lưu vào db kèm emailverified false và expirestime -> gửi mail có url chứa userid -> user ấn link trong mail thì call tới server, thoả mãn expires time thì đổi emailverified là true. 
 - server check username k bị trùng, hash password, lưu vào db
-Hash password phải kèm salt random để 2 password trùng nhau cho kết quả khác nhau, lưu cả salt vào user db.
+Hash password phải kèm salt random để 2 password trùng nhau cho kết quả khác nhau, chú ý là có cách verify mà k cần salt nên có thể k cần lưu salt vào db
 - server tạo 1 user session, lưu session data vào database
 Session có key là sessionId sinh random, value là user data.
 - server trả lại sessionId cho người dùng
@@ -140,6 +140,7 @@ Phiên bản mới nhất của OpenID là OpenID Connect, nó kết hợp OpenI
 Là chuẩn để authorization, không phải chuẩn để authentication như OpenId Connect. 
 Vd OAuth2 chia quyền token dùng được các data nào: Alice vào NewsApp và có tính năng tùy chọn xem ai là bạn bè cũng dùng NewsApp để kết nối với họ. Alice chọn login bằng facebook và được hỏi có muốn chia sẻ list bạn trên Facebook với NewsApp không. Nếu chọn có sẽ điều hướng trở lại NewsApp với 1 token, NewsApp dùng token này để lấy list friends. 
 Tuy nhiên hầu hết ứng dụng chỉ dùng OAuth để login chứng minh là có tk chứ k tương tác hẳn với data của github, gmail hay google làm gì. Do đó họ coi việc ủy quyền read thông tin cơ bản của user cũng là 1 hình thức xác thực chứng minh đã có tk, nên dùng OAuth2 login ok.
+=> OAuth còn có Device Flow dành riêng cho client app only, ở đây k dùng vì ta có 1 server
 
 -> Login bằng Authorization Code Flow:
 - User ấn login bằng discord
@@ -153,7 +154,7 @@ Dùng code verifier để tránh giả mạo server: tạo random state 64bytes 
 Check cookie state hợp lệ trước khi fetch token: sẽ nhận về cả code cùng với state, check state nhận về trùng với state trong cookie là được. Nếu sai phải redirect về trang lỗi
 Url để fetch token là "/token" dùng x-wwww-form-urlencoded, body gồm: code (nhận về), redirect_uri(url hiẹn tại), grant_type "authorization_code", client_id, client_secret. Trả về nhiều thứ nhưng chỉ cần quan tâm access_token và token_type.
 Nếu dùng code verifier phải gửi vào "/token" kèm code_verifier từ cookie, provider server sẽ nhận và xác thực vì chỉ server của ta gửi cookie mới có code_verifier đó.
-Dùng để fetch user data, request có header là `{token_type} {access_token}`. Trả về thông tin user chắc chắn có id và email ở mọi loại OAuth.
+Dùng để fetch user data, request có header là `{token_type} {access_token}`. Trả về thông tin user chắc chắn có id và email ở mọi loại OAuth. Chú ý email cũng là duy nhất và tìm trong db cũng dựa vào mail thôi.
 Do ta k có nhu cầu thao tác với nền tảng github lâu dài nên k cần lưu accesstoken hay refreshtoken mà chỉ fetch user là xong. Nếu thực sự muốn tương tác phải lưu lại và chỉnh scope đủ quyền để làm mọi thứ.
 - Lưu user vào db kèm provider.
 1 user có thể login bằng nhiều cách nhưng cách nào thì vẫn chỉ là 1 user đó.
@@ -161,6 +162,9 @@ Bên cạnh bảng user lưu thông tin user, còn phải lưu 1 bảng khác: u
 - Tạo user session.
 Bản chất khi login OAuth chỉ để xác thực rằng họ có tài khoản đó, lấy được thông tin của user, chứ thực tế user vẫn phải tương tác với hệ thống của ta nên vẫn phải dùng session hoặc jwt token do server ta tạo ra. Login OAuth đã thay thế việc nhập mk rồi check hashedPassword của user thôi.
 Có thể lưu tiếp vào redis (random session id, user) và set vào cookie cho user trùng expires times, r redirect user về trang chủ. Cookie toàn bộ qtr sẽ gửi qua cả provider và client browser luôn, redirectUrl cũng hiện ở browser.
+
+--> Bản chất chống giả mạo với cookie state thì khi tạo redirect url, tạo 1 random state lưu vào cookies và gửi kèm url, khi trả về code sẽ kèm state đó. Check ss state trong cookies là được. Nó đảm bảo từ lúc login đến lúc nhận về token đều trong cùng phiên đăng nhập của 1 ngừoi, chứ kp 1 người login xong gửi url cho người khác lấy token.
+Tương tự bảo mật với code verifier cũng sinh random lưu vào cookie và gửi, nhưng oauth provider sẽ lưu nó và lấy ra check.
 
 -> Logout: 
 - Khi jwt token ta cung cho user hết hạn, hoặc khi session hết hạn, hoặc chủ động ấn logout thì phải xóa hết session và token và login lại.

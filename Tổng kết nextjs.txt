@@ -48,12 +48,15 @@ Thẻ để trong <head> trong layout sẽ tự chuyển xuống cuối của <h
 Chú ý truy xuất k được có relative ở đầu kiểu: ./abc.png vì như này nó k tìm trong thư mục public mà tính từ đường dẫn router hiện tại.
 Static chỉ có tác dụng trong các TH link hay ref, còn import thì ta cứ import thoải mái theo relative thư mục.
 
+-> import.meta.url trả về url tuyệt đối của file hiện tại
+process.cwd() url relative đến dự án hiện tại. VD: /Users/mac/Desktop/MyLaptop/SetupProjectNextjs
+
 
 
 # Thư viện đi kèm
 URL: https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thứ khác như threejs, redux toolkit, tailwindcss
 
--> chakra-ui
+-> chakra-ui, chakra-react-select
 -> *tailwind: có nhiều utility class cho animation: https://tailwindcss.com/docs/animation
 daisy: thư viện component mạnh của tailwind. URL: https://daisyui.com/docs/install/
 
@@ -621,20 +624,22 @@ Giải pháp là chuyển đổi logic đó sang page.js server component thay v
 
 
 
-# NextJS support giúp tạo i18n 
+# NextJS i18n 
 Có hàng loạt thư viện hỗ trợ hoặc dùng sẵn của nextJS: https://nextjs.org/docs/app/building-your-application/routing/internationalization
-Luôn phải tự định nghĩa từng text cho từng ngôn ngữ support. 
+Lib @replexica/react giúp tự động dịch text bằng AI
 
--> 2 cách:
-- Tạo 1 settings lưu vào localstorage. 
-- Mỗi ngôn ngữ có 1 route riêng, trong app lấy lang từ params và dùng text tương ứng. Phải thêm lang vào html header. 
-Check nếu url thiếu lang thì redirect sang lang mặc định. Package "negotiator" giúp lấy locale từ url. Có thể tạo middleware xử lý điều này.
+Best practice => ref tới "SetupProjectnNextJS"
+Mỗi lang có 1 route riêng. Dùng middleware check k có lang thì redirect lang mặc định.
 
 
 
 #*** Hiểu client/server component
 -> Client component được server chạy qua 1 lần, nhưng k chạy code useEffect. Nếu dùng window object trong client component trực tiếp sẽ lỗi, dùng conditional check cũng lỗi hydration vì html render ở server và client phải giống nhau. Dùng trong useEffect thì ok, FE sẽ bị jump giá trị khi useEffect chạy.
 Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data. Hoặc dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh, nhưng k nên làm v.
+
+--> Fix hydration error new Date() ở server: - K render time ra nữa
+- Time k đóng vai trò gì trong SEO thì cho vào useState default "", set giá trị trong useEffect chỉ dùng ở client.
+- Chỉ lấy đơn vị phút và giờ, k lấy second thì xác suất bị lỗi giảm nhưng kp là hoàn toàn. K có cách nào SEO cả time mà chuẩn từng giây được.
 
 -> Kp file nào cũng cần "use client", 1 client component import 1 component khác thì component được import phải là client component, khi đó k cần "use client" ở file con. Chú ý client component cố tình import server comp gây lỗi.
 Nhưng 1 client component có thể truyền { children } là 1 server component. Do đó thêm "use client" vào provider k biến cả app thành client component

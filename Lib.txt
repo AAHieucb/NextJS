@@ -1,0 +1,87 @@
+# Socketio => bỏ vì nextjs host lên vercel không thể dùng socket io vì serverless function k hỗ trợ duy trì connection. Dùng Ably hoặc Pusher provider để thay thế.
+Khi dùng trong socketio connect trong useEffect, component render sẽ connect, unmount sẽ đóng connection, nên phải dùng 1 instance global component ngoài cùng để connect.
+
+Chú ý socket nằm ở client, server k có.
+VD file src/socket.js:
+"use client";
+import { io } from "socket.io-client";
+export const socket = io();
+File client:
+import { socket } from "../socket";
+const [isConnected, setIsConnected] = useState(socket.connected); => sai vì k có socket ở server, sẽ bị lỗi hydration server và client khác nhau.
+const [isConnected, setIsConnected] = useState(false); useEffect(() => { if (socket.connected) setIsConnected(true); }); => cách này chuẩn 
+
+
+
+# Redux toolkit
+Nextjs khi có request lấy html thì html được render 1 lần ở server, nội dung component cũng chạy ở server 1 lần. Lúc đó các thuộc tính chỉ có ở client k tồn tại ở server sẽ k thể truy cập. Client nhận về sẽ chạy 1 lần nữa tương tự để hydration. HTML trước và sau khi chạy phải giống nhau, nếu k sẽ hydration error. Sau đó sẽ chạy các hook useEffect.
+Các hook ở client k dùng được ở server nhưng khi lấy giá trị ban đầu thì được, VD giá trị ban đầu của useState thì server truy cập được. 
+VD dùng useState(new Date()) sẽ hydration error ngay vì server truy cập và client truy cập ra giá trị khác nhau.
+
+VD 1 file export ra biến, và được import ở cả client và server thì mỗi client sẽ có giá trị riêng vì browser khác nhau, và độc lập với server có giá trị riêng. 
+Bth thì server dùng 1 biến đó là global chia sẻ giữa các request. Ở phía client thì navigate giữa các page k xoá biến, phải reload mới mất biến. Khác với case biến được khởi tạo trong component sẽ khởi tạo lại mỗi khi server chạy. 
+
+-> Nếu dùng redux ở client, và wrap toàn ứng dụng bằng 1 client component là StoreProvider thì nextjs dùng redux thoải mái. Khi đó, navigate bằng thẻ link sẽ k mất store vì k rời khỏi page, reload page mới mất store. Vì bản chất redux data được lưu trong RAM của client là 1 instance duy nhất.
+=> K cần làm gì cả, nếu chỉ dùng ở client thì luôn ok
+
+Nếu dùng ở server:
+1) Page router: redux tự dùng lib next-redux-wrapper giúp tạo 1 store ở phía server giống với store trên client ở mỗi request, khi server gửi về client sẽ tự đồng bộ store server vào store client và ngược lại nên có thể dùng redux ở server side ok. 
+VD hàm getServerSideProps có thể gọi store.dispatch bên trong và store của client sẽ update. API route thì k nên.
+Nếu tự implement sẽ phải dùng kiểu tự trả lại data cho client update vào store phía client.
+
+2) NextJS app router dùng ở server side:
+Vì server luôn chạy qua mọi component 1 lần mới toanh như chưa có data gì cả ở mỗi request nên chỉ cần check store k tồn tại thì init lại là được. Nó tự đồng bộ store server và client rồi. Tương tự là store được lưu trong RAM nên navigate các page thoải mái.
+Store có thể tạo global or ở từng route với app router. Chú ý instance store tạo global thì k mất chứ instance store tạo ở từng route mà navigate sang route khác sẽ mất vì biến JS đó bị xoá rồi.
+Chú ý là server k thể xem hay dispatch actions từ redux vì store nhét vào react context, server k thể lấy vì context chỉ dùng ở client side.
+
+-> RTK Query trong redux toolkit giúp fetch API tối ưu với caching, refetching, tự động update data, thay thế react-query.
+Chính là hàm gọi api trong createApi, cứ gọi là tự động caching, refetching. Đơn giản tạo slice với createApi và add middleware của nó vào store là dùng được.
+
+
+
+# Tailwind
+Chỉ dùng khi styles nhanh trong vài TH, chứ thực tế nên dùng file css chia module và định nghĩa custom variables ra.
+
+-> Darkmode: 
+Browser dùng dark mode sẽ tự apply mọi thứ trong @media (prefers-color-scheme: dark), prefix dark: của tailwind cũng tự được nhét vào @media (prefers-color-scheme: dark)
+Mặc định bg là white, text là dark, dù browser ở mode nào. Khi dùng tailwind, mặc định cũng thế. text-black mặc định là black, text-white mặc định là white, tương tự với bg-white, border-white.
+Sửa foreground và background css chỉ ảnh hưởng màu kiểu bg-foreground, bg-background của tailwind thôi chứ k ảnh hưởng text-white hay border-black các kiểu, các kiểu đó fix cứng.
+
+Các cách tạo darkmode:
+- Viết text-black và dark:text-white ở mọi thẻ, tương tự với các styles khác để áp dụng cho từng mode
+Prefix darks có thể custom k còn theo prefers-color-scheme. VD dùng @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *)); rồi nhét <html data-theme="dark"> là xong.
+- Config màu cho tailwind như foreground, background phụ thuộc vào css variables và đổi css variables đó theo prefers-color-scheme trong css, thì dùng nó là tự đổi màu theo mode
+- Darkmode như css thuần. Nếu có checkbox thì theo check box đổi css var ghi đè prefers-color-scheme, nếu k có thì đổi css var trong prefers-color-scheme là ok.
+
+-> first: focus: hover: active: dark:md:hover:bg-fuchsia-600
+[&_input] => mọi tag input con
+md:grid-cols-4 => @media theo kích thước trong config
+[&.is-dragging]:active:cursor-grabbing => tag hiện tại đang active và có class is-dragging thì áp dụng style đổi con trỏ chuột thành bàn tay grabbing
+
+<div class="@container">
+  <div class="flex flex-col @md:flex-row">
+  </div>
+</div>
+=> @container là 1 container, @md sẽ dùng container query theo container bao ngoài
+
+
+
+
+# Dùng drizzle orm
+URL master drizzle version cũ***: https://www.youtube.com/watch?v=7-NZ0MlPpJA&t=523s
+
+npx drizzle-kit generate => sinh lệnh đổi db, ghi lịch sử đổi vào thư mục migrations
+npx drizzle-kit migrate => chạy migrate trên drizzle
+npx drizzle-kit push => update migrate từ drizzle lên cloud trực tiếp. Đổi url từ 6543 thành 5432 nếu lỗi
+npx drizzle-kit studio => chạy studio cho bất cứ db nào. Dùng kèm loadEnvConfig vì dùng process.env.DBURL ngoài nextjs runtime.
+
+Để update db, cứ viết schema r generate sẽ đè lên. DB k có trong schema sẽ bị xoá, nếu có data lost sẽ hiện cảnh báo. 
+Để tạo db test migration chỉ có cách là tạo 1 db riêng và sửa connection string cho vào env.development thôi.
+
+-> Khi có reference, dù dùng reference key thì vẫn cần định nghĩa relations trong drizzle. Nó k có ích gì trong db nhưng sẽ báo drizzle biết để truy vấn dễ dàng hơn với with
+
+-> Trong nextjs, nếu client gọi hàm trực tiếp từ server thì hàm đó k được dùng package node module, vì client k thể import package nodejs server.
+Drizzle cần dùng postgre và fs là package phía server, phải viết trong file "server only" và k thể import từ client. Buộc phải nhét vào server actions thì mới gọi được ở client
+Khi update db xong, nextjs gọi revalidatePath sẽ apply changes mà k reload pages, vì nó re-render lại toàn bộ server component liên quan hoặc có khả năng liên quan thôi.
+
+
