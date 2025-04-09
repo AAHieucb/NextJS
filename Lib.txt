@@ -64,6 +64,10 @@ md:grid-cols-4 => @media theo kích thước trong config
 </div>
 => @container là 1 container, @md sẽ dùng container query theo container bao ngoài
 
+-> Có nhiều utility class cho animation: https://tailwindcss.com/docs/animation
+Thư viện component mạnh của tailwind. URL: https://daisyui.com/docs/install/
+https://daisyui.com/docs/themes/ => trang của daisy tạo ý tưởng theme khi design website hay
+@headlessui/react: package component cơ bản đẹp tương thích với tailwind, custom thoải mái với tailwind. Lựa chọn hàng đầu khi cần tìm component
 
 
 
