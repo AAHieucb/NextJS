@@ -37,7 +37,8 @@ Trong nextjs còn có { unstable_cache } hỗ trợ request memoization và mặ
 Ta có thể tự implement hook useFetch để fetch data kèm xử lý loading, error, lưu lại request trong useRef hay useMemo coi như là cache nhưng kp là request memoization
 Nếu dùng các thư viện như swr, react-query cũng giúp tạo Request Memoization tự cache request, xử lý deduplicate trong ktg ngắn.
 
-=>*** Chốt: cứ dùng fetch GET tự có request memoization cho 1 single render pass r, với kiểu khác thì tự wrap bằng cache của react là xong.
+=>*** Chốt: cứ dùng fetch GET tự có request memoization cho 1 single render pass r, với kiểu khác thì tự wrap bằng cache của react là xong
+Luôn dùng cache của react cho các hàm server mà gọi ở client. VD middleware gọi, trong page lại gọi thì chỉ gọi 1 lần
 
 
 
@@ -135,7 +136,29 @@ FE call relative, BE call absolute.
 
 
 
-# dynamicIO và "use cache"
+#*** Bản chất rerender trong nextjs
+-> Bản chất implement debounce trong react
+- debounce nhét 1 hàm vào setTimeout, klq gì tới async await cả
+- Đảm bảo debounce tồn tại mãi chứ component rerender thì hàm tạo mới mà k clearTimeout là sai, nên phải cho vào useMemo.
+Lưu ý k dùng useCallback vì useCallback k nhận các hàm ở ngoài do k rõ ràng dependencies.
+
+--> Lưu ý dùng useOptimistics:
+- Phải kẹp trong startTransition, ngay khi ra ngoài startTransition, nó sẽ compare và update expected result với actual state theo hàm truyền vào đối số 2.
+- Mọi nơi dùng state phải dùng optimisticsValue để tránh sai.
+- useOptimistic k thể dùng với debounce vì gọi debounce trong startTransition thì ra ngoài sẽ compare luôn mà debounce chờ timeout nên k thực hiện ngay.
+=> Best practice tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi.
+
+->*** NextJS re-render:
+- Client có thể tương tác với server qua api route handler, qua server actions từ form, hoặc gọi trực tiếp hàm của server cũng được kìa (coi nó cũng là server actions)
+- Khi gọi trực tiếp hàm của server hoặc dùng server actions, mà đổi data trong cookies dù có liên quan hay không cũng sẽ render lại pages, kể cả khi component k đọc cookie gì. Còn nếu chỉ get cookie hay call external api, db thì sẽ k tự render lại.
+Nếu chủ động luôn muốn re-render lại thì dùng revalidatePath. Nếu chủ động tương tác server mà k muốn re-render lại thì dùng fetch route handler thử.
+- Chú ý khi gọi revalidatePath để invalidate cache thì nó ảnh hưởng mọi client chứ k chỉ client hiện tại, vì cache ở server dùng cho mọi client mà. Khi đó client hiện tại sẽ re-render luôn, các client khác cũng stale cache.
+- Giả sử client gọi hàm server đổi cookies khiến page render lại, thì hàm đó vẫn vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k phải gọi revalidatePath là re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies là re-render luôn.
+
+
+
+# Dừng
+-> dynamicIO và "use cache"
 Nhiều lúc cần call async function sinh data động nhưng k dùng fetch, nextjs không hiẻu mà tưởng nó là static pages. Trên bản production sẽ chạy qua async 1 lần sinh data fix cứng luôn. Khi đó buộc ta phải thêm await connection để thành pages dynamic (enable partial rendering).
 *** Khi call hàm async, nên tách riêng component và cho vào Suspense thì mọi thứ được load ngay lập tức. Nếu call async k tách riêng comp mà viết chung vào page k có Suspense thì cả pages sẽ bị lag chờ api thực hiện xong cơ.
 
