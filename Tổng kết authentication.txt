@@ -115,6 +115,13 @@ Ta có thể custom chỉ update với list user xác định. Vd lưu vào user
 Mỗi khi có login từ 1 thiết bị mới, gửi mail thông báo cho user về ip và location của thiết bị đó, để họ tự xác thực.
 Chủ động bắt hacker trong ứng dụng yêu cầu bảo mật cao: Khi AT hay RT bị hết hạn, hoặc khi RT lên server để làm mới AT, FE nên gửi cả 2 giá trị để server lưu redis (`TOKEN_BLACK_LIST_${jit}`, 1) với expire times 1 thời gian. Nếu 1 request mà dùng lại AT và RT này thì khả năng cao là token đã bị hack, server sẽ vô hiệu hoá mọi token của user vào blacklist luôn và gửi mail thông báo. 
 
+-> FE lưu refreshtoken để auto login
+- Cookie: httpOnly cookie flag làm browser k đọc được cookie bằng JS, thêm SameSite=strict và secure=true(chỉ HTTPs) để giảm thiểu CSRF.
+- Indexed DB: là 1 NoSQL DB, dùng khi cần lưu 1 lượng data lớn, kể cả file. Thường 1 app chỉ tạo 1 db dù ta có thể tạo bnh db cũng đươc.
+High performance với indexed, hỗ trợ transactions, cũng phải tạo connection, tạo object, lưu và chờ như db bth => k dùng
+- LocalStorage: phải tự chống XSS ở mọi nơi nhưng có rất nhiều FE framework chống XSS sẵn r nên k lo
+=> SSR nên dùng cookie, CSR nên dùng localStorage. Chỉ dùng indexed db khi muốn lưu như localStorage nhưng cần memory > 5MB
+
 
 
 # OAuth1.0 SAML và OpenId Connect => bỏ
