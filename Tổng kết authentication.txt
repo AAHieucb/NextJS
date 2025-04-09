@@ -17,6 +17,9 @@ Session có key là sessionId sinh random, value là user data.
 Coi là signup xong thì đã login luôn rồi.
 Session data có thể gửi trong cookies tự lưu ở client hoặc gửi trong response để user lưu localStorage ok. Nếu dùng cookie thì expiresTime của cookie và expires time của session phải ít nhất là bằng nhau.
 
+--> Chú ý xác thực mail hợp lệ, ngừoi dùng phải vào mail ấn nút sẽ call api để server đổi mailVerified thành true.
+Nếu user bỏ qua mail mà POST trực tiếp server thì phải biết được id của user. Để an toàn, k được có api get user by username mà chỉ được get user by id thôi, nếu k họ lấy id từ username rồi tự post thì toang.
+
 -> Sign in: 
 - user input username, password
 - server check username và hashed password có trong database
