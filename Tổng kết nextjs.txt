@@ -57,8 +57,7 @@ process.cwd() url relative đến dự án hiện tại. VD: /Users/mac/Desktop/
 URL: https://nextjs.org/examples chứa đủ loại example kết hợp redux với các thứ khác như threejs, redux toolkit, tailwindcss
 
 -> chakra-ui, chakra-react-select
--> *tailwind: có nhiều utility class cho animation: https://tailwindcss.com/docs/animation
-daisy: thư viện component mạnh của tailwind. URL: https://daisyui.com/docs/install/
+-> *tailwind
 
 -> SWR (stale-while-revalidate) cung react hook cho data fetching, cache, lưu async state. Ít tính năng hơn react-query nhưng đơn giản hơn.
 Redux toolkit cũng có tool query để thay thế react-query là rtk query
