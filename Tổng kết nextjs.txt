@@ -578,20 +578,6 @@ export const config = {
 - NextResponse.redirect để redirect trong middleware, nó nằm sau redirects trong next.config.js
 
 -> rewrites thì chỉ có trong next.config.js: đổi page mà k đổi url
-module.exports = {
-  async rewrites() {
-    return [
-      {
-        source: '/old-url',
-        destination: '/new-url', // URL thực tế sẽ được xử lý
-      },
-      {
-        source: '/api/:path*',
-        destination: 'https://api.example.com/:path*', // Proxy đến một API khác
-      },
-    ];
-  },
-};
 
 -> Đổi url mà k đổi page với history.pushState({},"","/newurl");
 
