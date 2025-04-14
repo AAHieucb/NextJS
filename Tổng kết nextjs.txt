@@ -92,6 +92,8 @@ Kết hợp https://enhanced-button.vercel.app/ mở rộng button cho shadcn
 Mở rộng thêm components cho shadcn: https://shadcn-extension.vercel.app/
 Mở rộng nữa nhưng khá xấu: https://shadcnui-expansions.typeart.cc/
 
+-> next-video
+
 
 
 # Environment variables

@@ -64,12 +64,12 @@ VD tự xác dịnh pglite là chạy postgre trên browser và nodejs, driver n
   "compilerOptions": {
     "target": "ES2017", // *Specifies the target JavaScript version. VD 'es5' for ECMAScript 5; "es6" for ecmascript 6
     "lib": ["dom", "dom.iterable", "esnext"], // *Specifies the library files to be included in the compilation. "es2015" fix lỗi promise, "dom" fix lỗi console
-    "allowJs": true, // *Allows JavaScript files to be compiled.
+    "allowJs": true, // *Allows JavaScript files to be compiled, jsconfig thực chất là tsconfig với option này là true
     "skipLibCheck": true, // *Skips type checking of declaration files.
     "strict": true, // *Enables all strict type-checking options.
     "noEmit": true, // *Disables emitting files from the compilation.
     "esModuleInterop": true, // *Enables interoperability between CommonJS and ES Modules, sẽ giúp việc import các mô-đun trở nên mượt mà hơn.
-    "module": "esnext", // *Specifies the module code generation: 'esnext' for modern JavaScript modules. "commonjs" là tiêu chuẩn cho nodejs.
+    "module": "esnext", // *Specifies the module code generation: 'esnext' for modern JavaScript modules. "commonjs" là tiêu chuẩn cho nodejs. 
     "moduleResolution": "bundler", // *Determines how modules are resolved. VD 'node' mimics Node.js module resolution. 
     "resolveJsonModule": true, // *Allows importing JSON files as modules.
     "isolatedModules": true, // *Đảm bảo mỗi file được xử lý như 1 module, compile độc lập k dựa vào file khác. Tức phải có ít nhất 1 export, k có sẽ báo lỗi.
