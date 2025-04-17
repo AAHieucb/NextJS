@@ -1,4 +1,5 @@
 react-query v5
+Mọi thay đổi trong 1 trường của object truyền vào queryKey của react query đều trigger refetch
 
 # useQuery
 -> isLoading (cache k có data)

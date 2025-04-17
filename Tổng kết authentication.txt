@@ -89,8 +89,10 @@ Nếu client gửi kèm refreshToken thì ta làm mới cả accessToken và ref
 - Server xoá 2 random secret key khỏi db, đảm bảo mọi token bị loại bỏ vì key để giải mã đã mất.
 
 -> Note: 
-- Mặc định jwt dùng HS256 là thuật toán dùng 1 secret key fix cứng để mã hoá thành 1 token. Ở đây ta tạo ra 2 secret key riêng cho từng user để mã hoá thành accesstoken và refreshtoken.
-Cách khác là sinh ra cặp key public và private bằng rsa cho jwt dùng thuật toán RS256, cả accessToken và refreshToken được sign bằng public key và verify bằng private key. Cách này vẫn phải bảo vệ cả 2 key vì 1 key dùng cho sign, 1 key cho verify. Nhưng tốt hơn trong hệ thống phân tán khi 1 server sign, nhiều server verify được.
+- Mặc định jwt dùng HS256 là thuật toán dùng 1 secret key fix để mã hoá thành 1 token và giải mã bằng chính secret key đó.
+Cách khác là mỗi user sinh 1 random secretkey mới cho từng ngừoi và lưu vào db chứ kp file .env. Cũng có thể hash secret key bằng key ở .env rồi mới lưu vào db tuỳ biến.
+
+Cách khác là sinh ra cặp key public và private bằng rsa cho jwt dùng thuật toán RS256. Cả accessToken và refreshToken được sign với secret là private key và server dùng public key để verify. Cách này vẫn phải bảo vệ cả 2 key vì 1 key dùng cho sign, 1 key cho verify. Nhưng tốt hơn trong hệ thống phân tán khi 1 server sign, nhiều server verify được.
 => ref tới "ECommerce"
 
 - JWT cũng dùng khi quá trình verify client server mất nhiều tg thì chỉ cho làm 1 lần rồi sau đó trao đổi qua lại an toàn với jwt cho nhanh. VD: ký message web3 rồi dùng jwt để giao tiếp.
@@ -124,6 +126,10 @@ Chủ động bắt hacker trong ứng dụng yêu cầu bảo mật cao: Khi AT
 High performance với indexed, hỗ trợ transactions, cũng phải tạo connection, tạo object, lưu và chờ như db bth => k dùng
 - LocalStorage: phải tự chống XSS ở mọi nơi nhưng có rất nhiều FE framework chống XSS sẵn r nên k lo
 => SSR nên dùng cookie, CSR nên dùng localStorage. Chỉ dùng indexed db khi muốn lưu như localStorage nhưng cần memory > 5MB
+
+
+
+# API key => ref tới ECommerce
 
 
 
