@@ -272,6 +272,9 @@ Với app router: true false sẽ prefetch or not cả dynamic và static. Để
 Thời gian nó cache prefetch là 30s, hết hạn sẽ tự prefetch tiếp luôn
 => prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch và set stale time cho đúng.
 
+--> useLinkStatus giúp lấy status khi chuyển trang. Nó chỉ dùng khi page dynamic k cần prefetch và k có loading.js tức là k có instant navigation, chỉ có từ v15.3
+Chỉ dùng trong component là con nằm trong <Link/>
+
 -> Custom 404: app router dùng notfound.js, page router dùng 404.js
 Tạo layout: cả app và page router đều có thể dùng layout.js. Nhưng cũng có thể dùng _document tạo layout thay vì dùng component layout riêng. 
 K dùng stylesheet trong <Head/> kiểu <link rel="stylesheet" .../> vì có thể bị break khi dùng các tính năng Suspense or streaming. Nếu muốn thì ta chỉ được dùng trong file _document.tsx thì để kiểu gì cũng được
@@ -771,6 +774,7 @@ const data = await res.json()
 if (!res.ok) {
   return 'There was an error.'
 }
+Nhưng kp api nào cũng trả ra như v. Vd server component page có 1 server component con call db bị lỗi throw khiến component con k render, page render error.tsx, trong khi chỉ muốn hiện lỗi cho 1 component con thôi. Thì buộc phải try catch component hiện theo ý ta
 
 -> Unexpected error
 Dùng error.js với error ở từng route (thật ra error sẽ bubble up lên parent từ từ), dùng global-error.js với error trong root layout

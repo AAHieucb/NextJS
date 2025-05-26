@@ -77,15 +77,21 @@ URL master drizzle version cũ***: https://www.youtube.com/watch?v=7-NZ0MlPpJA&t
 npx drizzle-kit generate => sinh lệnh đổi db, ghi lịch sử đổi vào thư mục migrations
 npx drizzle-kit migrate => chạy migrate trên drizzle
 npx drizzle-kit push => update migrate từ drizzle lên cloud trực tiếp. Đổi url từ 6543 thành 5432 nếu lỗi
-npx drizzle-kit studio => chạy studio cho bất cứ db nào. Dùng kèm loadEnvConfig vì dùng process.env.DBURL ngoài nextjs runtime.
+npx drizzle-kit studio => chạy studio cho bất cứ db nào. Dùng kèm loadEnvConfig trong nextjs vì dùng process.env.DBURL ngoài nextjs runtime.
 
 Để update db, cứ viết schema r generate sẽ đè lên. DB k có trong schema sẽ bị xoá, nếu có data lost sẽ hiện cảnh báo. 
-Để tạo db test migration chỉ có cách là tạo 1 db riêng và sửa connection string cho vào env.development thôi.
+Để tạo db test migration chỉ có cách là tạo 1 db riêng và sửa connection string cho vào env.development thôi chứ drizzle k hỗ trợ sẵn cho test kiểu đó.
 
--> Khi có reference, dù dùng reference key thì vẫn cần định nghĩa relations trong drizzle. Nó k có ích gì trong db nhưng sẽ báo drizzle biết để truy vấn dễ dàng hơn với with
+Khi có reference, dù dùng reference key thì vẫn cần định nghĩa relations trong drizzle. Nó k có ích gì trong db nhưng sẽ báo drizzle biết để truy vấn dễ dàng hơn với with
+Khi xoá cột, phải xoá constraints và index trên cột đó, điều này trong drizzle khá thú vị là chỉ cần xoá code trong schema chứ kp viết lệnh như fluent migration
 
--> Trong nextjs, nếu client gọi hàm trực tiếp từ server thì hàm đó k được dùng package node module, vì client k thể import package nodejs server.
+-> Trong nextjs, nếu client comp gọi hàm trực tiếp từ server thì hàm đó k được dùng package node module, vì client k thể import package nodejs server.
 Drizzle cần dùng postgre và fs là package phía server, phải viết trong file "server only" và k thể import từ client. Buộc phải nhét vào server actions thì mới gọi được ở client
-Khi update db xong, nextjs gọi revalidatePath sẽ apply changes mà k reload pages, vì nó re-render lại toàn bộ server component liên quan hoặc có khả năng liên quan thôi.
+Khi update db xong, nextjs gọi revalidatePath sẽ apply changes mà k reload pages, vì nó tự re-render lại toàn bộ server component liên quan hoặc có khả năng liên quan thôi.
 
+
+
+# zod
+Thư viện số 1 dùng cho typescript validation. Joi yếu hơn chỉ dùng cho js.
+URL master zod v3: https://www.youtube.com/watch?v=L6BE-U3oy80 => bh chỉ dùng v4
 

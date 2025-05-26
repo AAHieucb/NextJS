@@ -1,3 +1,69 @@
+-> react-query v5 useQuery:
+const { 
+  isLoading, // cache k có data
+  isFetching, // đang fetch API để cập nhập
+  isLoadingError, // khi query fail to fetch lần đầu tiên
+  isPending, data, refetch, enabled, data, isError
+  error, // bỏ onError
+} = useQuery({ // có thể query nhiều api gộp chung 1 biến với useQueries({ queries: [{ queryKey1, queryFn1, options1 }, { queryKey2, queryFn2, options2 }] })
+  queryKey, // mọi thay đổi trong 1 trường của object truyền vào queryKey của react query đều trigger refetch
+  queryFn,
+  gcTime, 
+  staleTime, 
+  initialData,
+  refetchOnMount,
+  refetchOnWindowFocus, // window unfocus r focus lại sẽ check data stale thì fetch lại
+  refetchIntervalInBackground, // control cái interval background
+  refetchInterval,
+  enabled,
+});
+Có thể cho chỉ fetch 1 lần trong react-query bằng cách cho cacheTime và staleTime là Infinity, nó vẫn đảm bảo vào lần đầu tiên là fetch
+Khi đó refetchOnWindowFocus cũng k còn tác dụng nữa vì data coi kbh stale vì cái này thì mỗi khi window focus sẽ check data stale chưa để gọi lại mà
+
+--> Có thể dùng options tương tự trong QueryClient cho vào Provider để dùng trong mọi query
+const [queryClient] = useState(() => new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false
+    },
+  }
+}));
+<QueryClientProvider client={queryClient}>
+
+--> gcTime và staleTime:
+- gcTime thay thế cacheTime, sau 1 ktg k sử dụng data sẽ bị gc collect xoá khỏi cache luôn.
+- staleTime là thời gian cache bị coi là stale. VD default 0 sẽ luôn call api khi được gọi tới bằng bất cứ cách nào (background interval, click màn hình) vì coi là stale
+Có thể cho chỉ fetch 1 lần đầu tiên trong react-query bằng cách cho cacheTime và staleTime là Infinity, khi đó refetchOnWindowFocus cũng k còn tác dụng nữa.
+
+
+
+-> react-query v5 useMutation:
+const { 
+  isPending, // hàm mutationFn reject hay resolve thì là false, đang chạy thì true
+  variables, // tham số truyền vào hàm mutate (dùng cho optimistic update) 
+  mutate // gọi mutate(newTodo) để gọi hàm mutationFn
+} = useMutation({
+  mutationKey: "ok"
+  mutationFn: async (newTodo) => { },
+  onSuccess: (data, variables, context) => { // VD viết hàm update data trên server, sau đó 10 cái API liên quan của react-query cần fetch lại thì nên dùng.
+    queryClient.invalidateQueries('yourQueryKey1'); 
+    ...
+    queryClient.invalidateQueries('yourQueryKey10');
+  },
+  onMutate: async (variables) => { }, // Trigger trước khi gọi mutate function, dùng cho optimistic updates
+  onSettled: (data, error, variables, context) => { }, // Luôn gọi khi hoàn thành bất kể error hay success
+  onError: (error, variables, context) => {
+    console.log(`rolling back optimistic update with id ${context.id}`)
+  },
+});
+
+const data = useMutationState<Todo>({
+  filters: { mutationKey: "ok", status: "pending" }, // VD lấy biến variables từ mọi mutation có mutationKey là "ok" và đang được mutate (pending)
+  select: (mutation) => mutation.state.variables as Todo,
+});
+
+
+
 -> const rawCookie = await cookies();
 rawCookie.set("lang", lang, {
   httpOnly: true,
@@ -10,22 +76,42 @@ rawCookie.set("lang", lang, {
 
 
 
--> schema.ts:
+-> drizzle schema.ts:
 const UserTable = pgTable("test", {
   id: uuid().primaryKey().defaultRandom(),
   email: text("email").notNull().unique(), // text k có tham số tự tạo cột trùng với tên trường
   role: pgEnum("user_roles", ["admin", "user"])().notNull().default("user"),
   createdAt: timestamp("created_at"), // tạo cột tên là created_at kiểu TIMESTAMP trong SQL
   updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  test: varchar('name', { length: 255 }),
+  test2: smallint(),
 });
 pgTable("user_oauth_accounts", 
   {
     userId: uuid().notNull().references(() => UserTable.id, { onDelete: "cascade" }),
     providerAccountId: serial("id"), // serial là số int tự động tăng dần
     count: integer()
-  },
-  t => [primaryKey({ columns: [t.providerAccountId, t.userId] })]
+  }, 
+  (table) => ({
+    pkTest: primaryKey({ columns: [t.providerAccountId, t.userId] }),
+    emailIndex: index("email_idx").on(table.providerAccountId) // đánh index cho providerAccountId với tên của index là email_idx
+    uniqueComposite: uniqueIndex('users_name_email_unique').on(table.providerAccountId, table.count)
+  })
+);
+relations(UserTable, ({ many }) => ({ // Tự
+  oAuthAccounts: many(UserOAuthAccountTable),
+}))
+relations(
+  UserOAuthAccountTable,
+  ({ one }) => ({
+    user: one(UserTable, {
+      fields: [UserOAuthAccountTable.userId],
+      references: [UserTable.id],
+    }),
+  })
 )
+
+
 
 
 
@@ -33,8 +119,8 @@ pgTable("user_oauth_accounts",
 export default defineConfig({
   schema: "./src/utils/drizzle/schema.ts", // Nơi ta code file schema
   out: "./src/utils/drizzle/migrations", // Nơi sinh ra code migration
-  dialect: "postgresql",
-  driver: "pglite",
+  dialect: "postgresql", // vào mẹ lib mà check list giá trị
+  driver: "pglite", 
   introspect: {
     casing: "camel", // default, lúc query column có thể dùng camel key dù cột trong db thực chất là preserve, nó sẽ tự convert chuẩn
   },
@@ -48,7 +134,7 @@ export default defineConfig({
     ssl: { // or
       rejectUnauthorized: false,
     },
-    url: process.env.DATABASE_URL!, // or // truyền 1 URL phải có password
+    url: process.env.DATABASE_URL!, // or, truyền 1 URL chứa luôn password thay thế toàn bộ options trên
   },
   verbose: true, // Hiện rõ mọi sql statement khi dùng drizzle-kit push
   strict: true, // Nếu thay đổi db mà sai trường, k có default value, xoá table thì phải đưa ra cảnh báo
