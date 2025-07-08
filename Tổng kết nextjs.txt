@@ -1,22 +1,12 @@
 # Basic
--> Server sẽ chạy qua mọi component 1 lần để build html với dữ liệu có thể từ getServerSideProps, gửi cho client sẽ chạy useEffect tiếp. 
-VD console.log trong component mà ngoài useEffect sẽ hiện ở console của server, k dùng được localStorage hay window ở ngoài.
-Có thể tạo constructor cho functional component như class component để setup các thứ ngay tại server khi chạy qua lần đầu tiên với hook useConstructor. Dùng useMemo với dependencies trống [] thì sẽ chạy ở client trước khi render DOM như constructor.
-
--> npm run build + npm run start => build từng page dạng HTML và lệnh start sẽ chạy 1 server nodejs serve các file đó là SSR
+-> npm run build + npm run start => build từng page dạng HTML và lệnh start sẽ chạy 1 server nodejs serve nếu code cần server
 npm run build + npm run export => build từng page và xuất đống đó thành html tĩnh, có thể host lên thành static web.
-
-"next dev --turbo" dùng turbopack nhanh hơn bth
-
--> Thêm font: Có thể thêm font bằng CDN thẻ link từng pages
-Dùng next/font => ưu tiên
-Dùng next/font/local => định nghĩa local font bằng js
+"next dev --turbo" => chạy development với turbopack nhanh hơn bth
+npx create-next-app -e with-tailwindcss test-nextjs => có nhiều loại example template kết hợp đủ loại thư viện
 
 -> Favicon hay các icon khác cũng có convention về file: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons
 
--> npx create-next-app -e with-tailwindcss test-nextjs => có nhiều loại example template kết hợp đủ loại thư viện
-
--> Có thể check kiểu chạy trong file config:
+-> Có thể check kiểu chạy trong file next.config:
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
 export default (phase) => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER
@@ -28,6 +18,10 @@ export default (phase) => {
 Các component dùng cookies hay searchParams đều tự là dynamic và gọi lại liên tục khi vào rồi.
 Chú ý component Page có searchParams mà chưa await nó thì vẫn là phần static, khi truyền vào con và con gọi await searchParams; thì con mới là dynamic.
 Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở build time thì k cần, khi đó mọi dynamic part cần được wrap vào Suspense nha, phần static sẽ render ngay build time, phần dynamic sẽ render ở runtime.
+
+-> Thêm font: Có thể thêm font bằng CDN thẻ link từng pages
+Dùng next/font => ưu tiên
+Dùng next/font/local => định nghĩa local font bằng js
 
 
 
@@ -77,6 +71,9 @@ K cần eslint-plugin-prettier, cái prettier/recommended thực chất là esli
 Self host CMS là loại tự cài vào dự án và tự host lên bth. SaaS CMS là loại có dịch vụ đám mây sẵn, k cần quản lý gì, chỉ cần gọi api của nó thôi. Payload là best self host CMS, Contentful là best SaaS CMS.
 NextJS có cả BE và FE rồi nhưng vẫn nên dùng thêm CMS sẽ hỗ trợ thêm các tính năng của server mạnh mẽ hơn như authen, quản lý bài viết (kiểu blog web), draftmode, đa ngôn ngữ, tích hợp với các dịch vụ ngoài như google analytics, CRM, strapi api. Nó chỉ giúp làm dễ hơn thôi.
 
+-> Keystatic là CMS dạng file-based để quản lý nội dung trong các project static-site hoặc headless mà code và content đều lưu trong Git repo.
+Ta có thể tạo một giao diện quản trị (admin UI) để chỉnh sửa nội dung (markdown, JSON, images, v.v.) ngay trong dự án Next.js và lưu file content đó trực tiếp trong repo.
+
 -> *react-next-parallax
 
 -> Trending tạo website cực nhanh:
@@ -93,6 +90,19 @@ Mở rộng thêm components cho shadcn: https://shadcn-extension.vercel.app/
 Mở rộng nữa nhưng khá xấu: https://shadcnui-expansions.typeart.cc/
 
 -> next-video
+
+-> Lib vercel/kv giúp connect và tương tác với kv db provider. Chỉ dùng ở server side nên nếu client side muốn gọi phải tạo api cho client gọi.
+Chỉ cần cài, setup biến .env là dùng được luôn.
+VD có thể dùng cho redis local, hay redis upstash chỉ cần set biến .env, nếu deploy lên vercel có thể link upstash redis vào project vercel cũng được.
+
+-> Thư viện flag sdk của vercel chỉ giúp thao tác lấy flag dễ dàng thôi, ta vẫn lưu flag và db rồi lấy như bth được. Dùng rất đơn giản là tạo 1 file flag.ts lấy flag là xong. Flag thường được lưu trong 1 file, hoặc 1 database. VD lưu vào 1 file để lên cloud S3 và lấy qua API, khi cần thì vào cloud sửa file settings là được. User phải có quyền mới đổi dược flags.
+Dùng hàm flag() của nó sẽ ép page thành dynamic rendering.
+Hàm dedupe() của nó giống y cache của react tránh gọi lại nhiều lần
+
+-> Thư viện toolbar của vercel giúp dùng toolbar của vercel ngay trong app để edit config flag ngay trên toolbar được.
+Dùng @vercel/toolbar yêu cầu phải link project với vercel và deploy lên vercel, tạo FLAG_SECRETS nữa
+URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM
+
 
 
 
@@ -244,6 +254,8 @@ const searchParams = use(searchParams)
 
 -> Page Routes: thư mục pages chứa file chia routing. 
 Fetch data qua getServerSideProps, getStaticProps, revalidate, getStaticPaths.
+Server sẽ chạy qua mọi component 1 lần để build html với dữ liệu có thể từ getServerSideProps, gửi cho client sẽ chạy useEffect tiếp. 
+VD console.log trong component mà ngoài useEffect sẽ hiện ở console của server, k dùng được localStorage hay window ở ngoài.
 
 -> App Routes: thư mục app chia tương tự nhưng khác ở chỗ fetch data => Đầy đủ: https://www.youtube.com/watch?v=gSSsZReIFRk
 Full example master routing: https://github.com/vercel/next-app-router-playground
@@ -362,7 +374,7 @@ Cái getStaticProps k truy cập được vào biến request và response ở t
 -> 1 app có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG (static HTML + JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) => khi build hiện ra ký hiệu rõ route dùng kiểu nào
 => 1 dự án thông thường cứ chơi SSR hay CSR tùy hứng thôi, page lớn có thể CSR hết. Nếu SSR mà thấy fetch lớn quá thì dùng revalidate với ISR cũng được.
 
--> Dùng next/router (page router chứ app router khác hoàn toàn)
+-> Dùng next/router (page router chứ app router khác hoàn toàn sẽ dùng next/navigation)
 VD replace url mà k chuyển trang:
 router.replace(
   {
@@ -396,6 +408,7 @@ Dùng <style jsx> phải để ở cuối component để tránh lỗi hydration
 
 # Dynamic import
 Thường dùng dynamic import cho các hàm từ thư viện lớn mà code k dùng nhiều, VD phải ấn nút mới gọi.
+Dùng cả cho client và server component. VD delay import server component trong client component.
 
 Khi compile, mỗi page của app được NextJS compile thành từng file riêng gọi là chunk, khác với ReactJS khi chỉ sinh ra 1 file html và js duy nhất
 Khi browser request 1 pages, lần lượt: 
@@ -409,8 +422,7 @@ Khi client request vào 1 url, server sẽ chạy trước quét qua tất cả 
 Khi dùng dynamic import cho 1 component, server vẫn làm như v và chạy qua cả file dynamic import, nhưng gửi về client sẽ k load các file dynamic import ngay nếu comp đó chưa cần hiển thị cho dynamic import component.
 VD: ta dùng dynamic import cho component Hello mà file chứa nó chưa được load, khi ta ấn nút nó mới hiển thị, để ý tab Network sẽ thấy nó tải file thêm JS lúc đó. Còn nếu component Hello mà import bth thì vào phát client tải luôn, ấn nút hiện ra sẽ k thấy tải thêm file js nx vì nó đã tải trước r.
 
-option ssr: false khiến dynamic client component cũng k bị pre-render và k có trong SEO luôn. Trước đó thì server vẫn chạy qua nên nó vẫn có ích cho SEO.
-Không liên quan tới prefetch, khi có thì server sẽ prefetch data như bth thôi. dynamic import chỉ delay client side và chỉ dùng với client component
+option ssr: false của hàm dynamic báo là k dùng dynamic component ở server component, khiến dynamic component k bị pre-render và k có trong SEO luôn. Trước đó thì server vẫn chạy qua nên nó vẫn có ích cho SEO. Không liên quan tới prefetch, khi có thì server sẽ prefetch data như bth thôi. 
 
 -> Có thể xử lý thêm loading cho dynamic import được với next/dynamic
 Dùng next/dynamic và React.lazy + Suspense cho kết quả như nhau
@@ -438,10 +450,10 @@ Còn có DigitalOcean, Netlify, Railway, AWS với EC2, Netcup, Hostinger VPS
 
 # Server Actions trong app router
 Tương đương với việc gọi API route từ client component của page router. Pb:
-- Page Router client trigger event -> API Route server xử lý -> Server update redis and return back JSON -> Client update UI
-- App Router client submit form -> trigger server action run on server -> server update redis, revalidate cache, update UI and return back RSC Payload -> Client got new UI
-=> App router tốt hợn có thể hoạt động tốt dù trình duyệt disable JS, check tab network sẽ thấy API trả về RSC payload. RSC payload chỉ là những phẩn cần render lại chứ kp cả pages nên tối ưu hơn, có thể revalidate khi xong để update cả pages.
-=> Route handlers của app router tương đương với API Routes của Page Router. Còn Server Action chỉ có ở App Router
+- (API route) Page Router client trigger event -> API Route server xử lý -> Server update redis and return back JSON -> Client update UI
+- (Server action) App Router client submit form -> trigger server action run on server -> server update redis, revalidate cache, update UI and return back RSC Payload -> Client got new UI => Lưu ý k hiểu nhầm vì server action k trả về UI mới ngay 
+=> App router tốt hơn có thể hoạt động tốt dù trình duyệt disable JS, check tab network sẽ thấy API trả về RSC payload. RSC payload chỉ là những phẩn cần render lại chứ kp cả pages nên tối ưu hơn, có thể revalidate khi xong để update cả pages.
+=> Route handlers của app router (gọi qua fetch) tương đương với API Routes của Page Router. Còn Server Action (import function và gọi) chỉ có ở App Router
 
 URL: https://nextjs.org/docs/app/api-reference/functions/server-actions => Setup trong next.config.js -> viết server actions -> dùng server actions trong component
 
@@ -458,44 +470,27 @@ Trong component: const updateUserWithId = updateUser.bind(null, userId);
 => Khi nào dùng? - Nếu gọi 1 hàm kp fetch API, nó vẫn gửi request tới server, server xử lý và update html trước khi gửi lại người dùng giúp SEO cho data đó
 - Kể cả không cần fetch API nhưng cần xử lý tác vụ nặng, dùng server actions sẽ khiến chúng được thao tác ở server đỡ cho người dùng. 
 - Nếu cần process thông tin nhạy cảm, để vào server actions là người dùng k thấy. Vd ta query API moralis cần API key mà frontend k được lộ cho người dùng thì có thể dùng nextjs lưu key đó là biến môi trường phía server và gọi an toàn với server actions thay vì mất thêm 1 server api trung gian.
-- Server actions call được từ client nên cho vào react query call thoải mái
-- So với route handler, server action gọn hơn và k cần xử lý cors, nên ưu tiên dùng.
-=> API route cho kết quả tương tự, server actions hơn ở chỗ nó trả về html đã được xử lý luôn và k cần phải viết 1 api route mới nên tối ưu hơn thôi.
+- Server actions call được từ client nên cho vào react query call thoải mái. Đm nó call thoải mái từ client và server mà éo cần form cũng được nha, tự gửi request POST. Khi dùng form thì có 2 cách là action của form hoặc formAction của button
+- So với route handler, server action gọn hơn vì call function trực tiếp và k cần xử lý cors, nên ưu tiên dùng.
+=> API route cho kết quả tương tự, server actions hơn ở chỗ nó trả về html đã được xử lý luôn và k cần phải viết 1 api route mới nên tối ưu hơn thôi => sai, trả về data bth thôi
 
 -> Update db trong server actions: VD update thông tin của dogs/[id] trong db
 Trước kia ta viết 1 api "api/dogs/[id].ts rồi phía "use client" fetch tới nó. Rồi call router.refresh() cả page hoặc nhận về data r update
 Nếu dùng server actions: server component fetch default value là giá trị trong db -> ấn nút thì chạy server actions update db -> revalidatePath để load lại data của server component nào 
 
--> NextJS v15 dùng await trong hàm async. Nó lấy được segment params:
-export async function GET(request: Request, segmentData: { params: Promise<{ slug: string }> }) {
-  const params = await segmentData.params
-  const slug = params.slug
-}
-
 -> URL đầy đủ: https://www.youtube.com/watch?v=BWJJwk2j-7A
 Để revalidate 1 api thì gắn tag cho nó + revalidateTag, để revalidate mọi api trong 1 route url thì dùng revalidatePath
-@vercel/postgres có sql query trực tiếp vào db có thể chống sql injection khi dùng template string tự lấy giá trị nội suy sql`lệnh{<variables}`
+@vercel/postgres có sql query trực tiếp vào db có thể chống sql injection khi dùng template string tự lấy giá trị nội suy sql`lệnh{<variables>}`
 Điều đặc biệt là "use server" dùng trong 1 function sẽ giới hạn function đó được thực hiện ở server chứ kp nó là 1 server components. Họ vẫn muốn dùng file như 1 client component nên tách phần code server đó ra file riêng.
 
--> import { cache } from "react"; kết hợp cache của react chỉ dùng ở server side giúp các request api được memoized chỉ call 1 lần khi gọi nhiều lần đồng thời. Lưu ý nó cache trong 1 session nên phải tự refresh cached. 
-VD: let fetchData = cache(async (id) => {
-});
-function refreshCache() {
-  fetchData = cache(async (id) => {
-  });
-}
-await fetchData(1); // Fetch lần đầu, lưu vào cache
-refreshCache(); // Reset cache
-await fetchData(1); // Fetch lại từ API
-
--> Khai báo server actions ở file bất kỳ trong app/api hoặc trong bất cứ folder component nào miễn là có "use server" ở đầu
-import "server-only" và còn có "client-only" bảo rằng mọi thứ export ở file hiện tại chỉ có thể được import ở server component hoặc client component. 
+-> Khai báo server actions ở file bất kỳ trong app/api hoặc trong bất cứ folder component nào miễn là có "use server" ở đầu => bh default là use server r nên k cần nữa
+import "server-only" và còn có "client-only" bảo rằng mọi thứ export ở file hiện tại chỉ có thể được import ở file server component hoặc client component. 
 Thường dùng cho server fetching actions khi tách ra 1 file riêng giúp việc call data đó được tái sử dụng ở nhiều nơi ok.
 import server-only đảm bảo hàm chỉ được import ở server side, use server đảm bảo hàm được import ở bất cứ đâu nhưng chỉ thực thi trên server
-default là "use client"
 
 -> revalidatePath và revalidateTag không giúp refresh lại khi 1 route có nhiều server component nhưng chỉ muốn refresh 1 component trong đó và k dùng fetch. 
-Giải pháp là dùng dùng refreshKey truyền vào server component, muốn refresh cho component nào thì tăng key +1 lên để nó render lại sẽ call lại api => pp này chỉ dùng khi render ít component thôi. Còn client side thì render lại ta dùng useEffect hoặc react-query có refetch lại thì render lại mà
+Giải pháp là dùng dùng refreshKey truyền vào server component, muốn refresh cho component nào thì tăng key +1 lên để nó render lại sẽ call lại api => sai vì k thể pass props vào server compoennt và đổi nó. 
+Còn client side thì render lại ta dùng useEffect hoặc react-query có refetch lại thì render lại mà
 
 
 
@@ -623,39 +618,6 @@ Mỗi lang có 1 route riêng. Dùng middleware check k có lang thì redirect l
 
 
 
-#*** Hiểu client/server component
--> Client component được server chạy qua 1 lần, nhưng k chạy code useEffect. Nếu dùng window object trong client component trực tiếp sẽ lỗi, dùng conditional check cũng lỗi hydration vì html render ở server và client phải giống nhau. Dùng trong useEffect thì ok, FE sẽ bị jump giá trị khi useEffect chạy.
-Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data. Hoặc dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh, nhưng k nên làm v.
-
---> Fix hydration error new Date() ở server: - K render time ra nữa
-- Time k đóng vai trò gì trong SEO thì cho vào useState default "", set giá trị trong useEffect chỉ dùng ở client.
-- Chỉ lấy đơn vị phút và giờ, k lấy second thì xác suất bị lỗi giảm nhưng kp là hoàn toàn. K có cách nào SEO cả time mà chuẩn từng giây được.
-
--> Kp file nào cũng cần "use client", 1 client component import 1 component khác thì component được import phải là client component, khi đó k cần "use client" ở file con. Chú ý client component cố tình import server comp gây lỗi.
-Nhưng 1 client component có thể truyền { children } là 1 server component. Do đó thêm "use client" vào provider k biến cả app thành client component
-VD: ta setup Provider của react-query là 1 client side component wrap 1 server component là layout.js, sau đó chỉ dùng các hàm react-query ở các client component bên trong ok.
-Comp ngoài cùng luôn 1 server component, VD app/layout.ts
-K có directive mặc định là 1 server component
-Server component chỉ chạy trên server, nhưng client component chạy trên cả server (first rendering pass) và client.
-
---> Hack trick là dùng dynamic import có thể import server comp trong client comp. 
-VD: 'use client'
-import dynamic from 'next/dynamic'
-import { Suspense } from 'react'
-const ServerComponentExample = dynamic(() => import('./server-component'), {
-  loading: () => <div>Đang tải...</div>,
-  ssr: true // Quan trọng: render trước ở server
-})
-export default function ClientComponent() {
-  return (
-    <Suspense fallback={<div>Đang tải...</div>}>
-      <ServerComponentExample />
-    </Suspense>
-  )
-}
-
-
-
 # next/forms
 Cung component <Form/>, thường dùng cho server actions.
 
@@ -740,29 +702,6 @@ export const config = {
 
 
 
-# Dùng lib vercel kv
-Là lib giúp connect và tương tác với kv db provider. Chỉ dùng ở server side nên nếu client side muốn gọi phải tạo api cho client gọi.
-Chỉ cần cài, setup biến .env là dùng được luôn.
-VD có thể dùng cho redis local, hay redis upstash chỉ cần set biến .env
-VD deploy lên vercel có thể link upstash redis vào project vercel cũng được.
-
-
-
-# Feature flags
-Giúp bật tắt feature mà k cần deploy lại code. 
-Flag thường được lưu trong 1 file, hoặc 1 database. VD lưu vào 1 file để lên cloud S3 và lấy qua API, khi cần thì vào cloud sửa file settings là được.
-User phải có quyền mới đổi dược flags.
-
--> Thư viện flag sdk của vercel chỉ giúp thao tác lấy flag dễ dàng thôi, ta vẫn lưu flag và db rồi lấy như bth được. Dùng rất đơn giản là tạo 1 file flag.ts lấy flag là xóng
-Dùng hàm flag() của nó sẽ ép page thành dynamic rendering.
-Hàm dedupe() của nó giống y cache của react tránh gọi lại nhiều lần
-
--> Thư viện toolbar của vercel giúp dùng toolbar của vercel ngay trong app để edit config flag ngay trên toolbar được.
-Dùng @vercel/toolbar yêu cầu phải link project với vercel và deploy lên vercel, tạo FLAG_SECRETS nữa
-URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM\
-
-
-
 # Handle error
 -> Server actions: k cần dùng try catch, cứ viết 1 hàm async bth, sau đó nhét vào useFormState (với react18) or useActionState (react19)
 const [state, formAction] = useFormState(createUser, initialState)
@@ -784,14 +723,13 @@ Còn global error sẽ replace tất cả root hay layout. Nếu có error mà e
 
 
 # Hiện loading khi server fetching
-VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
-
 -> App router dùng Suspense fallback thì server component khi load api sẽ tự hiện. Hoặc viết loading.js sẽ load ở cấp độ page.js, nếu page.js call api hoặc server child component call api mà k có boundary thì boundary ngoài cùng cũng bắt.
 Có thể trigger Suspense boundary trong React Developer Tools.
 Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
 
 -> Với pages routes: K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
 => Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
+VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
 
 
 
@@ -850,4 +788,5 @@ Nên host trên CDN khi dùng static page. Nếu dùng vercel hosting thì có t
 -> nextjs có config next.config.js để build ứng dụng như Preact, bundle size sẽ nhỏ hơn react nhưng code thì y như react, 1 số tính năng mới của react sẽ k chạy => k dùng vì sửa webpack phức tạp.
 
 -> Vercel có web analytics là package cho vào dự án để theo dõi lượt view ok. Tương tự có vercel speed insight.
+
 

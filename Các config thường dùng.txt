@@ -26,6 +26,14 @@ const [queryClient] = useState(() => new QueryClient({
     queries: {
       refetchOnWindowFocus: false
     },
+    dehydrate: {
+      shouldDehydrateQuery: (query) =>
+        defaultShouldDehydrateQuery(query) || // tương đương query.state.status === 'success'
+        query.state.status === "pending",
+      shouldRedactErrors: (error) => { // gọi khi có error query.state.status === 'error'
+        return false;
+      },
+    },
   }
 }));
 <QueryClientProvider client={queryClient}>
@@ -113,8 +121,6 @@ relations(
 
 
 
-
-
 -> drizzle.config.ts:
 export default defineConfig({
   schema: "./src/utils/drizzle/schema.ts", // Nơi ta code file schema
@@ -177,8 +183,9 @@ VD tự xác dịnh pglite là chạy postgre trên browser và nodejs, driver n
     "declaration": true, // *Generates corresponding `.d.ts` files.
     "sourceMap": true, // *Generates source map files.
     "allowSyntheticDefaultImports": true, // *Cho import từ module k có default export. VD import React from "react"; Nếu k có buộc phải dùng: import * as React from "react";
+    "plugins": [{ "name": "next" }], // Dùng typescript tốt hơn cho nextjs với plugin do nextjs cung cấp
     "forceConsistentCasingInFileNames": true, // *Disallows inconsistently-cased references to the same file.
-    "watch": true, // thay đổi file ts tự compile lại
+    "watch": true, // thay đổi file ts tự compile lại, dùng option --watch cho tsc chứ nó chả có vai trò gì
     "baseUrl": ".", // *Specifies the base directory to resolve non-relative module names.
     "paths": { => baseUrl kèm paths để thêm tiền tố
       "@/*": ["./src/*"], // Maps `@/*` to `./src/*` for module resolution.
@@ -194,10 +201,10 @@ VD tự xác dịnh pglite là chạy postgre trên browser và nodejs, driver n
 -> next.config.mjs (v15.2):
 poweredByHeader: false, // *NextJS sẽ k thêm header "X-Powered-By: Next.js" vào các response HTTP, ẩn thông tin bảo mật
 logging: { fetches: { fullUrl: true } } => *Log thông tin full URL khi fetch API bằng "fetch" của nextjs ở dev mode.
-basePath: '' => *default load static files từ folder public. Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
+basePath: '' => default load static files từ folder public. Set tự động có url prefix ở trước, mặc định là rỗng. VD: basePath: '/docs' thì <Link href="/about"> sẽ cho ra <a href="/docs/about">
 trailingSlash: true => có / ở cuối kqtr
 reactStrictMode: true, => bỏ, dùng app router tự có true luôn
-images: { => *
+images: {
   loader: "custom", // Dùng custom loader
   loaderFile: "./loader-img.ts", // File export ra function nhận { src, width, quality } trả ra 1 url ảnh đã được optimize. VD dùng cloudinary sẽ rõ
   unoptimized: true,
@@ -220,27 +227,25 @@ images: { => *
 },
 useFileSystemPublicRoutes: false, => k chia router theo cấu trúc thư mục nữa, phải tự custom server để serve.
 eslint: {
-  dirs: ['.'], => *eslint kiểm tra toàn bộ thư mục hiện tại, mặc định check trong src thôi là chuẩn rồi, chứ set như này check cả .next nữa là sai
+  dirs: ['.'], => eslint kiểm tra toàn bộ thư mục hiện tại, mặc định check trong src thôi là chuẩn rồi, chứ set như này check cả .next nữa là sai
 }, 
 appDir: true, => dùng app router => bỏ, tự dùng là được chứ k cần nx
-serverActions: true, => bỏ, v13 mới cần thôi
-serverActionsBodySizeLimit: '2mb', => v13
+serverActionsBodySizeLimit: '2mb', => v13 thôi
 serverActions: {
-  bodySizeLimit: '2mb', => v14 trở đi phải dùng như này, default 1mb
+  bodySizeLimit: '2mb', => *v14 trở đi phải dùng như này, default 1mb
 }
-staleTimes: { => Phải có mới enable client-side router cache cho pages
+staleTimes: { => *Phải có mới enable client-side router cache cho pages
   dynamic: 30, // default 0s tức nó k cache page dynamic
   static: 180, // default 5p là nó luôn cache page static, hoặc khi prefetch 1 page vào cache khi dùng <Link prefetch={true}/> hoặc gọi router.prefetch
 },
 bundlePagesRouterDependencies: true, => *bundle các page router dependencies trong quá trình build giúp tối ưu hiệu suất và kích thước, luôn dùng
 serverExternalPackages: ['lodash', 'axios'], => Các packages mà server k bundle mà sẽ lấy từ node_modules trực tiếp, qtr build nhanh hơn nhưng size lớn hơn.
 esmExternals: false => default true cho phép nextjs sử dụng cách gọi EcmaScript Module (export import) bên ngoài mà k cần chuyển đổi sang CommonJS (module.export require). Nếu là false thì nó phải chuyển hết các gói ESM về commonjs nên build sẽ lâu hơn
-experimental: { }
 devIndicators: { => liên quan đến việc hiển thị các chỉ số trong quá trình chạy app. 
   buildActivity: false, => k hiện các chỉ số khi build như khi tái biên dịch, trông clear hơn nhưng khó khăn hơn khi debug
 },
-output: "export" => sẽ "export" ra chỉ file static để host CSR thôi, "standalone" sẽ trích tất cả các file cần thiết từ mọi nơi ra tối ưu và chạy minimal server đó là được
-async headers() { => set custom header
+output: "export" => *sẽ "export" ra chỉ file static để host CSR thôi, "standalone" sẽ trích tất cả các file cần thiết từ mọi nơi ra tối ưu và chạy minimal server đó là được
+async headers() { => *set custom header
   return [
     {
       source: '/:path*',
@@ -266,7 +271,7 @@ async headers() { => set custom header
     }
   ]
 },
-async rewrites() {
+async rewrites() { //*
   return [
     {
       source: '/old-url',
@@ -278,7 +283,7 @@ async rewrites() {
     },
   ];
 },
-async redirects() {
+async redirects() { //*
   return [
     {
       source: '/blog/:slug',
@@ -290,29 +295,36 @@ async redirects() {
 assetPrefix: "https://cdn.mydomain.com",
 cacheHandler: require.resolve('./cache-handler.js'),
 cacheMaxMemorySize: 0, => disable default in-memory cache để dùng theo cacheHandler
-generateBuildId: async () => { return "xxx"; },
+generateBuildId: async () => { return "xxx"; }, //*
 compress: true,
 crossOrigin: 'anonymous', => sẽ thêm vào script tag crossOrigin="anonymous" hoặc crossOrigin="use-credentials"
-experimental: {
+experimental: { //*
+  serverActions: true, => bỏ, v13 mới cần thôi
   viewtransition: true,
-  reactCompiler: true
+  reactCompiler: true,
+  ppr: 'incremental',
 }
 
 --> compress: Mặc định true và nextjs nén với gzip. Khi host trên vercel, nó dùng brotli trước r mới gzip. Check loại thuật toán trong Accept-Encoding và Content-Encoding header
 Muốn đổi thuật toán phải tự cài và disable compress mặc định của nextjs. VD set nginx compress với brotli và disable compress của nextjs để chỉ dùng của nginx.
 
---> generateBuildId: mặc định mỗi lần build sẽ gắn với 1 build id mới được sinh ra. 2 lần build cùng build id sẽ tận dụng build cache của lần build trước và chạy cực nhanh, nếu khác build id sẽ xoá cache build lại từ đầu. 
-Nếu ta cần rebuild mà k sửa code, VD sửa env var và build lại thì nên dùng cùng build id cho nhanh. Lý tưởng nhất là gắn buildid là githash để đảm bảo code đổi mới thực sự xoá build cache. Thường sử dụng để build dự án cho nhiều môi trường khác nhau nhanh chóng.
+--> generateBuildId: mặc định mỗi lần build sẽ gắn với 1 build id mới được sinh ra. 2 lần build cùng build id sẽ tận dụng build cache của lần build trước và chạy cực nhanh, nếu khác build id sẽ xoá cache build lại từ đầu. Có thể dùng githash làm buildid.
+*Nếu cần rebuild mà k sửa code, VD sửa env var và build lại thì nên dùng cùng build id cho nhanh, thường sử dụng để build dự án cho nhiều môi trường khác nhau nhanh chóng.
 
 --> cacheHandler: mặc định cache được lưu in-memory max 50MB, nhưng nếu host lên container platform như K8s thì mỗi pod sẽ có 1 cache rời rạc k đồng nhất. cacheHandler giúp tạo 1 cache consistent duy nhất, có thể dùng S3 or redis tuỳ. Dùng nó sẽ opt out in-mem cache bth và dùng cache trong file này.
 URL: https://nextjs.org/docs/app/building-your-application/deploying#configuring-caching
 Dùng cái này vẫn đạt hiệu quả y như in-mem cache (chậm hơn tí), nó xử lý cache và ISR luôn.
 
 --> assetPrefix là url của cdn host static file nếu ta muốn host server riêng, static file ra CDN riêng thì phải thêm vào. Thì mọi request tới /_next/static/chunks/ sẽ thành https://cdn.mydomain.com/_next/static/chunks
-Sau khi build, host phần .next/static lên CDN. Nó bao gồm các file js css chunk static, k tính file trong thư mục public, nếu folder public cũng CDN thì phải thêm settings khác.
+Sau khi build, host phần .next/static lên CDN. Nó bao gồm các file js css chunk static, k tính file trong thư mục public, nếu folder public cũng CDN thì phải tự thêm prefix
 
 --> images.deviceSizes: Nếu biết trước các loại máy sử dụng thì để vào để tránh image optimizer phải optimize quá nhiều.
 images.imageSizes: Set image width, nối với deviceSizes tạo full array. imageSizes chỉ dùng cho image có prop sizes, chỉ rằng image nhỏ hơn full-width của screen.
+
+-> crossOrigin sẽ thêm thuộc tính vào mọi <script> được sinh bởi next/script component
+K set thì là "" thì y như anonymous.
+anonymous thì dùng cors header là same-origin thì thông tin credentials sẽ chỉ gửi kèm khi request tài nguyên khi query same-origin
+use-credentials tức luôn thêm use credentials mọi lúc.
 
 
 
@@ -325,7 +337,7 @@ module.exports = {
   },
   plugins: [ // or
     "tailwindcss",
-    "postcss-flexbugs-fixes",
+    "postcss-flexbugs-fixes", // Fix lỗi cú pháp @apply của tailwind
     [
       "postcss-preset-env",
       {
@@ -456,7 +468,7 @@ module.exports = {
   ]
 }
 
--> esling.config.js:
+-> esling.config.js nextjs:
 import js from '@eslint/js'
 import globals from 'globals'
 import react from 'eslint-plugin-react'
@@ -836,11 +848,11 @@ Mặc định nextjs cache mọi hàm fetch() gọi trước khi dùng dynamic a
 -> Tổng kết các hàm và file:
 route.ts:
 import { type NextRequest } from "next/server";
-export async function GET(  
+export async function GET(
   request: Request,
   segmentData: { params: Promise<{ slug: string }> }
 ) {
-  const { slug } = await segmentData.params; // nếu dùng [slug] trong path
+  const { slug } = await segmentData.params; // nếu dùng [slug] trong path thì lấy được luôn trong route handler.
   return Response.json({
     data,
   }, {

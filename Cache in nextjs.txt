@@ -37,7 +37,7 @@ Trong nextjs còn có { unstable_cache } hỗ trợ request memoization và mặ
 Ta có thể tự implement hook useFetch để fetch data kèm xử lý loading, error, lưu lại request trong useRef hay useMemo coi như là cache nhưng kp là request memoization
 Nếu dùng các thư viện như swr, react-query cũng giúp tạo Request Memoization tự cache request, xử lý deduplicate trong ktg ngắn.
 
-=>*** Chốt: cứ dùng fetch GET tự có request memoization cho 1 single render pass r, với kiểu khác thì tự wrap bằng cache của react là xong
+=>*** Chốt: cứ dùng fetch GET tự có request memoization cho 1 single render pass r, với kiểu khác thì tự wrap bằng cache của react là xong. Fetch của nextjs cũng tự động.
 Luôn dùng cache của react cho các hàm server mà gọi ở client. VD middleware gọi, trong page lại gọi thì chỉ gọi 1 lần
 
 
@@ -146,14 +146,64 @@ Lưu ý k dùng useCallback vì useCallback k nhận các hàm ở ngoài do k r
 - Phải kẹp trong startTransition, ngay khi ra ngoài startTransition, nó sẽ compare và update expected result với actual state theo hàm truyền vào đối số 2.
 - Mọi nơi dùng state phải dùng optimisticsValue để tránh sai.
 - useOptimistic k thể dùng với debounce vì gọi debounce trong startTransition thì ra ngoài sẽ compare luôn mà debounce chờ timeout nên k thực hiện ngay.
-=> Best practice tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi.
+=> Best practice khi cần debounce optimistic tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi.
 
 ->*** NextJS re-render:
 - Client có thể tương tác với server qua api route handler, qua server actions từ form, hoặc gọi trực tiếp hàm của server cũng được kìa (coi nó cũng là server actions)
 - Khi gọi trực tiếp hàm của server hoặc dùng server actions, mà đổi data trong cookies dù có liên quan hay không cũng sẽ render lại pages, kể cả khi component k đọc cookie gì. Còn nếu chỉ get cookie hay call external api, db thì sẽ k tự render lại.
 Nếu chủ động luôn muốn re-render lại thì dùng revalidatePath. Nếu chủ động tương tác server mà k muốn re-render lại thì dùng fetch route handler thử.
-- Chú ý khi gọi revalidatePath để invalidate cache thì nó ảnh hưởng mọi client chứ k chỉ client hiện tại, vì cache ở server dùng cho mọi client mà. Khi đó client hiện tại sẽ re-render luôn, các client khác cũng stale cache.
-- Giả sử client gọi hàm server đổi cookies khiến page render lại, thì hàm đó vẫn vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k phải gọi revalidatePath là re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies là re-render luôn.
+- Chú ý khi gọi revalidatePath để invalidate cache thì nó ảnh hưởng mọi client chứ k chỉ client hiện tại, vì cache ở server dùng cho mọi client mà. Khi đó client hiện tại sẽ re-render luôn, các client khác cũng stale cache khi vào page đó.
+- Giả sử client gọi hàm server đổi cookies khiến page render lại, thì hàm đó vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k phải gọi revalidatePath là re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies là re-render luôn.
+
+
+
+# TK nhanh rerender refetch
+Client thay đổi state, sẽ chỉ render lại chính nó, k render lại server component. Nếu nó wrap server component, cũng k rerender server component đó.
+Server component rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi navigate vào để render DOM ra. Thật ra cũng render khi đổi cookies, vì nó cũng là đổi state của server. 
+Đặc biệt: Khi dùng router.refresh từ useRouter, nó sẽ rerender server, nhưng client state không liên quan như scroll position hay useState k bị reset mà giữ như cũ, useEffect cx k tự chạy lại
+Server component rerender thì API sẽ k gọi lại mà tuỳ theo options của hàm fetch dùng no-store, revalidate hay gì. Nếu dùng revalidatePath hay revalidateTag chắc chắn sẽ rerender và refetch lại api vì 2 hàm này là cấp cao nhất.
+
+Truyền data từ client comp tới server comp:
+Không thể truyền trực tiếp mà phải call tới server đổi data trong db chẳng hạn rồi revalidate để server comp fetch lại state mới. 
+Truyền qua các store chung như cookies, url search params.
+
+Truyền data từ server tới client:
+Dùng các store chung như cookies, url search params.
+Dùng redux, zustand, react context.
+Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp có thể lưu vào local storage chẳng hạn để truy cập mọi cấp.
+
+
+
+#*** Hiểu client/server component
+-> Client component được server chạy qua 1 lần, nhưng k chạy code useEffect. Nếu dùng window object trong client component trực tiếp sẽ lỗi, dùng conditional check cũng lỗi hydration vì html render ở server và client phải giống nhau. Dùng trong useEffect thì ok, FE sẽ bị jump giá trị khi useEffect chạy.
+Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data. Hoặc dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh, nhưng k nên làm v.
+
+--> Fix hydration error new Date() ở server: - K render time ra nữa
+- Time k đóng vai trò gì trong SEO thì cho vào useState default "", set giá trị trong useEffect chỉ dùng ở client.
+- Chỉ lấy đơn vị phút và giờ, k lấy second thì xác suất bị lỗi giảm nhưng kp là hoàn toàn. K có cách nào SEO cả time mà chuẩn từng giây được.
+
+-> Kp file nào cũng cần "use client", 1 client component import 1 component khác thì component được import phải là client component, khi đó k cần "use client" ở file con. Chú ý client component cố tình import server comp gây lỗi.
+Nhưng 1 client component có thể truyền { children } là 1 server component. Do đó thêm "use client" vào provider k biến cả app thành client component
+VD: ta setup Provider của react-query là 1 client side component wrap 1 server component là layout.js, sau đó chỉ dùng các hàm react-query ở các client component bên trong ok.
+Comp ngoài cùng luôn 1 server component, VD app/layout.ts
+K có directive mặc định là 1 server component
+Server component chỉ chạy trên server, nhưng client component chạy trên cả server (first rendering pass) và client.
+
+--> Hack trick là dùng dynamic import có thể import server comp trong client comp. 
+VD: 'use client'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+const ServerComponentExample = dynamic(() => import('./server-component'), {
+  loading: () => <div>Đang tải...</div>,
+  ssr: true // Quan trọng: render trước ở server
+})
+export default function ClientComponent() {
+  return (
+    <Suspense fallback={<div>Đang tải...</div>}>
+      <ServerComponentExample />
+    </Suspense>
+  )
+}
 
 
 

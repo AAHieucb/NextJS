@@ -4,19 +4,17 @@ react-query v5
 
 # Hook basic
 -> useQuery useQueries
+useSuspenseQuery y hệt useQuery nhưng thiếu vài options, nên ưu tiên hơn nếu muốn dùng <Suspense> wrap component này sẽ hoạt động. K trả loading, status chỉ có success or error
 
 -> useMutation giúp call post delete api, rồi đổi data trong cache của react-query trực tiếp.
 useMutationState có thể dùng ở bất cứ components nào để lấy lấy data từ mọi mutation kèm select và filters ở bất cứ nơi nào khác.
-
 URL: https://tanstack.com/query/v4/docs/framework/react/guides/optimistic-updates => dùng onMutate cho optimistics update rồi onError để revert data back.
 
 -> const queryClient = useQueryClient(); // lấy instance truyền vào QueryClientProvider từ đầu
-await queryClient.prefetchQuery('todos', fetchTodos); // gọi prefetch thủ công, gọi queryClient.prefetchQuery trong queryFn cũng ok
-queryClient.setQueryData(['todos'], data); // set data trực tiếp
-
--> useSuspenseQuery y hệt useQuery nhưng thiếu vài options, nên ưu tiên dùng hơn nếu: 
-- cần prefetch mọi query
-- tận dụng được <Suspense> wrap component này sẽ chạy fallback khi query api đang thực thi
+URL: https://tanstack.com/query/v5/docs/reference/QueryClient
+queryClient.cancelQueries dùng cho optimistics update: cancel query tương tự -> update optimistic value thủ công -> call hàm fetch API
+await queryClient.prefetchQuery('todos', fetchTodos); // gọi prefetch thủ công, call queryClient.prefetchQuery trong queryFn cũng ok, dùng cho query sắp được query bởi useQuery
+queryClient.setQueryData(['todos'], data); // set data trực tiếp giống useMutation nhưng useMutation chuyên cho optimistics update các hàm UPDATE DELETE POST
 
 
 
@@ -32,11 +30,9 @@ export default function MyApp({ Component, pageProps }) {
     </QueryClientProvider>
   )
 }
-- VD lỗi server side của react-query: server getServerSideProps call api getPosts(), client lại call api getPosts() bằng react-query, trường initialData lấy từ getServerSideProps
-Sai vì đáng lẽ api chỉ nên call 1 lần. 
-Nếu useQuery getPosts được dùng ở nhiều component con, cũng phải truyền initialData tới từng con bị ngu.
-Giả sử navigate qua lại và getServerSideProps có giá trị mới, update vào initialData nhưng react-query vẫn k call lại api vì cache nên sai.
 
+- VD lỗi server side của react-query: server getServerSideProps call api getPosts(), client lại call api getPosts() bằng react-query, trường initialData lấy từ getServerSideProps. Nếu useQuery getPosts được dùng ở nhiều component con, cũng phải truyền initialData tới từng con bị ngu => sai vì đáng lẽ api chỉ nên call 1 lần. 
+Giả sử navigate qua lại và getServerSideProps có giá trị mới, update vào initialData nhưng react-query vẫn k call lại api vì cache nên sai.
 => Fix: server call api thì các client component nên dùng luôn coi như đã call lần đầu tiên mà k cần fetch lại. 
 Cơ chế react-query hỗ trợ sẵn là tạo biến queryClient mới ở phía server call api, rồi dehydrate cả biến đó truyền cho client hydrate lại merge với queryClient ở phía client. Client cũng cần set staleTime default > 0 để vào phát coi là đã fetch lần đầu rồi, k bị stale call lại luôn.
 VD: 
@@ -70,7 +66,7 @@ Sau đó là client rendering process nhận html từ server và merge với st
 Bản chất: Qtr dehydrate diễn ra trong cả loader function và SR process. Code như trên là tương tác với loader function, SR process tự động ta k can thiệp. 
 Tức là nó dùng 3 biến queryClient, 1 trong loader function để prefetch, 1 trong server tạo mới khi chạy từ node gốc gặp new QueryClient trong useState, 1 phía client. 
 Loader chạy lấy queryClient dehydrate. SR process render html ốp data từ queryClient vào trực tiếp. Gửi tới client lấy html hydrate ra thì giống hệt với html từ server, sau đó ốp các biến mới nhất vào html và thấy trên màn hình.
-####
+####    
 
 - Tối ưu hơn băng cách nhét 1 lần ngoài cùng thay vì component nào cũng phải thêm HydrationBoundary khi cần:
 <QueryClientProvider client={queryClient}>
@@ -80,12 +76,12 @@ Loader chạy lấy queryClient dehydrate. SR process render html ốp data từ
 </QueryClientProvider>
 
 - dehydrate chỉ include query thành công. Query failed coi như k có thì server render loading, data được fetch ở client lại như bth.
-Nếu vẫn muốn bắt lỗi để call api khác sẽ phải dùng fetchQuery thay vì prefetchQuery
+Nếu vẫn muốn bắt lỗi để làm gì đó thì phải dùng fetchQuery vì prefetchQuery lỗi sẽ bỏ qua và lúc cần sẽ fetch lại.
 try {
   result = await queryClient.fetchQuery(...)
 } catch (error) { }
 Hoặc nếu chấp nhận error là kết quả để k cần fetch lại ở client nữa thì override shouldDehydrateQuery
-dehydrate(queryClient, {
+dehydrate(queryClient, { => luôn dùng
   shouldDehydrateQuery: (query) => {
     // Mọi query kể cả query throw error.
     return true;
@@ -106,8 +102,8 @@ Tức là nó dehydrate luôn Promise chứ k chờ kết quả Promise xong. Cl
 Có thể custom quá trình serialize và deserialize nếu data fetch về kp json.
 => Bản chất là Nextjs tự động stream từng phần của app gửi cho client và hiển thị lên browser liên tục. Khi call api ở server từ pending thành success cũng v, khi success rồi cũng stream từng phần kết quả lên. Ở đây, server gửi phần HTML trước rồi tiếp tục stream dữ liệu khi API hoàn tất.
 
-- Bản chất việc dùng QueryClientProviders trực tiếp trong server component, hoặc nhét vào component Providers export ra rất khác nhau:
-Dùng QueryClientProviders trực tiếp trong server component bị sai vì queryClient cũng được tạo ở phía client. Truyền vào QueryClientProviders cũng sai luôn vì nextjs chỉ cho pass object thuần serialize được từ server sang component chứ k cho pass kiểu queryClient phức tạp, nó buộc phải làm ở client.
+- Bản chất việc dùng QueryClientProvider trực tiếp trong server component, hoặc nhét vào component Providers export ra rất khác nhau:
+Dùng QueryClientProvider trực tiếp trong server component bị sai vì queryClient cũng được tạo ở phía client. Truyền vào QueryClientProviders cũng sai luôn vì nextjs chỉ cho pass object thuần serialize được từ server sang client chứ k cho pass kiểu queryClient phức tạp, nó buộc phải làm ở client.
 Ta config cho cả server và client biến queryClient thì cách tốt nhất là gom export ra 1 file riêng và import trong cả server component và client providers. Phía client phải tạo componnent Providers và import chứ k dùng QueryClientProviders trực tiếp trong server component layout.js
 
 - Điều đb là có tới 3 instance queryClient được sinh ra: 1 là global instance trong client comp, 2 là khi server comp chạy lần đầu tiên fetch data, 3 là khi server chạy qua mọi client component trong first rendering pass.
@@ -139,7 +135,7 @@ Sau đó prefetch ở server:
 // app/posts/page.tsx
 export default function PostsPage() {
   const queryClient = getQueryClient()
-  queryClient.prefetchQuery({
+  queryClient.prefetchQuery({ // Dùng queryClient ở server
     queryKey: ['posts'],
     queryFn: getPosts,
   })
@@ -150,6 +146,12 @@ export default function PostsPage() {
   )
 }
 Rồi lấy ở client:
+export default function Providers({ children }: { children: React.ReactNode }) {
+  const queryClient = getQueryClient(); // Dùng queryClient ở client, server cũng chạy 1 lần ở SRP
+  return (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
 // app/posts/posts.tsx
 'use client'
 export default function Posts() {
