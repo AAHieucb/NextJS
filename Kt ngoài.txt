@@ -6,7 +6,7 @@ Nextjs hỗ trợ mdx, có thể viết toàn page bằng mdx rồi hiển thị
 
 
 # CSR SSG SSR hosting hydrate resumability và static web
-CSR: browser gửi request lấy htm -> render tạm loading -> download JS -> fetch data API -> render với data đủ
+CSR: browser gửi request lấy html -> render tạm loading -> download JS -> fetch data API -> render với data đủ
 SSR: browser gửi request lấy html -> server fetch data r gửi lại html -> page hiện luôn nhưng không tương tác được -> download JS event file -> thực hiện được actions
 SSG thì server fetch data lưu vào cache rồi build ra html tĩnh sẵn, cache stale thì nó tự fetch tiếp và build lại html tĩnh.
 Universal SSR là két hợp của CSR data realtime, SSR data cần SEO.
@@ -22,7 +22,7 @@ Resumability là giải pháp thay thế hydration
 => React k có resumability, Qwik* là framework thực hiện resumability có tốc độ vượt cả nextjs, được tích hợp sẵn nên chỉ cần dùng Qwik là có tốc độ nhanh => k dùng
 
 -> SS: - Ở lần load đầu tiên, SSR nhanh hơn do server xử lý html gửi lại client nhìn được ngay. Còn CSR thì người dùng nhìn thấy thanh loading cho đến khi browser xử lý DOM xong.
-- SSR thì mọi thao tác phải gửi tới server xử lý, render ra html mới. CSR thì lượng data load lần đầu khá nặng nhưng bù lại các lần sau sẽ xử lý cực nhanh do nó đã có hết trên client, k cần reload trang lại với mọi hành động.
+- SSR thì mọi thao tác phải gửi tới server xử lý, render ra html mới. CSR thì lượng data load lần đầu khá nặng nhưng bù lại các lần sau sẽ xử lý cực nhanh do nó đã có hết trên client, k cần reload trang lại với mọi hành động. NextJS xử lý hết.
 - CSR có SEO kém vì crawl vào web chả có gì, khi chuyển trang thì các thẻ metadata lại k thay đổi. Google đã giải quyết vấn đề này của search engine bằng cách cho phép crawler chạy code JS nhưng k hoàn hảo.
 
 
@@ -112,4 +112,9 @@ Có thể custom xử lý lỗi trả ra formState.pending, formState.error, for
 
 -> Có thể tích hợp được typescript vào nextjs có sẵn bằng cách thêm tsconfig.json và sửa các file js.
 
+-> nextjs có config next.config.js để build ứng dụng như Preact, bundle size sẽ nhỏ hơn react nhưng code thì y như react, 1 số tính năng mới của react sẽ k chạy => k dùng vì sửa webpack phức tạp.
+
 -> Dừng:
+- Setup dùng các tool test cypress hay jest: https://nextjs.org/docs/pages/building-your-application/testing/jest
+- Fast Refresh
+

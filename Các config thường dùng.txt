@@ -781,19 +781,6 @@ next.config.js
 jsconfig.json
 .eslintrc.json
 
-Cấu trúc code:
-<Layout>
-  <Template>
-    <ErrorBoundary fallback={<Error />}>
-      <Suspense fallback={<Loading />}>
-        <ErrorBoundary fallback={<NotFound />}>
-          <Page />
-        </ErrorBoundary>
-      </Suspense>
-    </ErrorBoundary>
-  </Template>
-</Layout>
-
 --> sitemap là file chứa các thông tin bổ sung về url kèm lastModified, changeFrequency, priority giúp crawler hiểu hơn về content.
 sitemap thường dùng cho các trang có nội dung thường đổi, web lớn phức tạp, đa ngôn ngữ vì sitemap có thể cung thông tin về ngôn ngữ cho mỗi trang giúp crawler hiểu.
 sitemap.xml phải tuân thủ:

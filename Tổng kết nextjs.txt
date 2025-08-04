@@ -4,9 +4,7 @@ npm run build + npm run export => build từng page và xuất đống đó thà
 "next dev --turbo" => chạy development với turbopack nhanh hơn bth
 npx create-next-app -e with-tailwindcss test-nextjs => có nhiều loại example template kết hợp đủ loại thư viện
 
--> Favicon hay các icon khác cũng có convention về file: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons
-
--> Có thể check kiểu chạy trong file next.config:
+-> next.config:
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
 export default (phase) => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER
@@ -19,21 +17,309 @@ Các component dùng cookies hay searchParams đều tự là dynamic và gọi 
 Chú ý component Page có searchParams mà chưa await nó thì vẫn là phần static, khi truyền vào con và con gọi await searchParams; thì con mới là dynamic.
 Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở build time thì k cần, khi đó mọi dynamic part cần được wrap vào Suspense nha, phần static sẽ render ngay build time, phần dynamic sẽ render ở runtime.
 
--> Thêm font: Có thể thêm font bằng CDN thẻ link từng pages
-Dùng next/font => ưu tiên
-Dùng next/font/local => định nghĩa local font bằng js
+
+
+# Custom code server nextjs => tốt nhất là k nên dùng
+C1: Dùng server có sẵn với next start là tốt nhất. Deploy vercel cũng giúp tận dụng nhiều tính năng tối ưu, chuyển hết thành serverless function. K hỗ trợ websocket mà phải dùng Ably, Pusher thay thế với cơ chế client lắng nghe event phát từ server.
+C2: Dùng output standalone sẽ tạo ra minimal server.js k cần cài node_modules để chạy dự án luôn, đủ tính năng. Giúp dễ deploy hơn chứ không custom gì. Không kết hợp C3 được.
+C3: Custom server nextjs sẽ k thể deploy vercel và có thể bị mất 1 vài tính năng, khi đó nên deploy lên VPS. 
+
+-> URL custom server: https://nextjs.org/docs/app/guides/custom-server
+Tạo server.js ở ngoài cùng, chỉ có vài điểm khác là server liên kết với nextjs app qua: const next = require('next'); const app = next({ }); Và app server được tạo trong app.prepapre().then(<>) như bth
+Phải chỉnh sửa cả package.json "node server.js" thay cho scripts dev và start
+
+Config useFileSystemPublicRoutes: false để disable file-system routing. Mặc định Next tuân theo cấu trúc folder pages để làm server nên nếu dùng custom server có thể disable nó rồi xử lý navigation thủ công.
+
+-> server config custom server trên page router:
+export const config = {
+  api: {
+    // bodyParser: false, // auto enabled, muốn bỏ thì set false là được
+    bodyParser: { 
+      sizeLimit: '1mb', // maximum size allow for parsed body
+    },
+    // responseLimit: false, // automatically enabled và báo warning khi response quá 4mb
+    responseLimit: '8mb', 
+    externalResolver: true // flag báo rằng route này được xử lý bởi external resolver, it disables warnings for unresolved requests
+  },
+}
 
 
 
-# Template layout trong app router
-template.js giống layout.js, layout wrap template, template wrap pages. Đb là template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. 
-Tức layout thì state được giữ nguyên khi navigate sang page khác dùng cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
+# App router dynamic routing and prefetch
+-> Static route
+Để export static trong file config thì mọi hàm fetch server side sẽ thành tĩnh cho kết quả cố định.
+
+-> Dynamic route SSR luôn fetch lại khi vào
+App router là dynamic khi dùng hàm connection, dùng fetch với các options dynamic, dùng search params.
+
+***generateStaticParams tương đương với getStaticPaths của page router. Nó trả ra tham số và lấy trong page với Page({params}), kể cả route là dynamic dùng với await params. Rồi nextjs sẽ generate trước ra hàng loạt static page sẵn tại build time => dùng lấy các page dynamic thường truy cập mà ít thay đổi
+Dùng dynamicParams để xác định khi 1 route được vào với tham số k được generate trước bởi generateStaticParams
+Dùng export const revalidate thử để revalidate
+Có thể cho generateStaticParams return empty array hoặc chỉ dùng const dynamic = 'force-static' nếu muốn mọi dynamic route đều generate static ở lần đầu tiên truy cập.
+
+-> Chuyển page: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
+useRouter, usePathname
+useSearchParams trả ra readonly version. Đổi params vẫn phải chuyển page params mới với router.push
+useSelectedLayoutSegment ít dùng, comp phải nhét vào layout.js mới hoạt động, nó trả ra các path kể từ cái layout đó đến path mới nhất
+useLinkStatus ít dùng khi k có instant navigate, tức dynamic k cần prefetch và k có loading.js. Nó dùng trong comp con nằm trong <Link/> để lấy status khi chuyển trang.
+
+-> Prefetch: 
+- Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể.
+Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào. Nó chỉ có tác dụng trên production (build r start).
+Nếu dynamic không có loading.js sẽ prefetch cache đến khi reload. Nếu dynamic có loading sẽ prefetch từ layout đến loading boundary đầu tiên trong 30s, sửa với config staleTimes
+- Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang kể cả dynamic và static.
+=> prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch và set stale time cho đúng.
+=> Có thể custom hover thì mới prefetch
+
+-> Nhanh:
+generateStaticParams giúp 1 lượng dynamic page được static generate, có revalidate và empty array để generate khi lần đầu tiên truy cập.
+prefetch page dynamic có 2 cách. Page có loading.js mới có staleTime.
+
+
+
+# Pages Router => bỏ
+Cơ chế: Server sẽ chạy qua mọi component 1 lần để build html với dữ liệu có thể từ getServerSideProps, gửi cho client sẽ chạy useEffect tiếp. 
+VD console.log trong component mà ngoài useEffect sẽ hiện ở console của server, k dùng được localStorage hay window ở ngoài.
+
+-> Dùng getInitialProps: K dùng mà thay thế bằng getStaticProps và getServerSideProps. Chỉ dùng được trong /pages ở từng file component, k được dùng ở các thư mục ngoài pages như components bth cũng k được
+Hàm này chỉ thực hiện ở server để fetch data nhét vào DOM r gửi lại cho client html đã hoàn chỉnh. Mỗi khi có request, server sẽ lại chạy nó và lại cho vào DOM.
+
+--> Thử tùy biến: Nếu ta host cả server này lên thì nó mới là Universal SSR.
+Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Hàm này chỉ chạy phía server mà export static ra thì k còn server nữa mà thành html fix. Nên next build thì server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export sẽ chạy qua getInitialProps sinh ra data luôn. Export ra tĩnh chỉ được chạy 1 lần lúc build time rồi k cần server nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi và hàm này trở nên vô dụng vì k có server.
+
+-> Dùng getStaticProps:
+Hàm chuyên dùng cho SSG, dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
+Thế nếu chỉ chạy 1 lần tức là data fix cứng, tại sao ta k viết cứng cho nó luôn? => Vì nếu có 1 triệu data thì ta đâu thể gõ cứng vào mà phải fetch r in ra chứ. Nó sẽ fetch trước mọi trang ta xác định, kể cả dynamic params page.
+
+Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ dùng web sẽ cực kỳ nhanh, cộng với bộ cache lớn thì tốc độ sẽ cực kỳ nhanh.
+Chỉ được dùng 1 loại, k được dùng kèm getInitialProps
+
+--> Dùng với dynamic params: 
+Cần tạo nhiều trang static với đường dẫn động từ dữ liệu tại thời điểm build. Ta dùng getStaticPaths định nghĩa các url muốn pre-render ngay từ lúc build. Vì dynamic thì built time nó k rõ url có giá trị gì để prefetch nên hàm này chỉ giúp điều đó thôi. Lúc build sẽ fetch tất cả và cho ra hàng loạt file html là trang tĩnh.
+
+---> Hàm getStaticPaths trả ra object có:
+Trường paths: là list các dynamic params.
+VD: pages/posts/[postId]/[commentId] thì trả về kiểu {params:{postId:1,commentId:2}} 
+VD: pages/[...slug] thì trả kiểu {params:{slug:["hello","world"]}} và sinh ra page /hello/world
+Mọi route kiểu null, [], undefined, false, VD slug:false thì Next tự cho ra "/"
+
+Trường fallback:
+- false thì mọi path k trả ra bởi getStaticPaths sẽ ra 404 page (next build chỉ build các path xđ trong getStaticPaths) => thg dùng kiểu có ít page ban đầu, dùng như v thì sau này thêm page vào thì next build phát là xong
+- true thì page k có trong getStaticPaths sẽ được fetch và trong lúc chờ loading sẽ hiển thị ra fallback page, fetch xong mới hiển thị ra page bth => thg dùng khi có rất nhiều page. VD có 1 triệu page nếu ta fetch hết sẽ có 1 triệu file html mà đâu cần mức đấy. Ta có thể fetch 3 item page đầu, các page sau ta để loading or skeleton ok.
+
+Quy trình: dùng getStaticProps và getStaticPaths cho 1 vài pages thôi, trong component check nếu router.isFallback==true là đang loading 1 page chưa từng fetch, nếu !router.isFallback&&!data thì là vào trang k tồn tại. Còn lại là vào đúng.
+fallback page ta nói ở đây chính là cái page gốc nhưng data truyền vào k có gì cả và router.isFallback là true
+=> 1 tính chất quan trọng của cái này là ta thấy ở thư mục build ra (.next) thì nó build ra từng page của trang web, nhưng khi 1 request tới 1 page k có trong getStaticPaths và nó bắt đầu fetch lần đầu tiên thì server sẽ fetch và tự rendered trong server, sau đó gửi lại cho client file html đó. File html đó được lưu lại trong server nên vào thư mục .next sẽ thấy có file mới, và kể từ lần sau trở đi tốc độ sẽ cực kỳ nhanh vì nó coi đã fetch rồi. Điều này chỉ xảy ra khi host lên có server chứ kp host tĩnh. HTML gửi từ server sẽ thay thế trang fallback.
+
+'blocking': Y hệt fallback true nhưng page k có trong getStaticPaths thì server sẽ tự fetch ngầm và nhảy lag đến chứ k có loading gì cả, router.isFallback cũng k có gì
+=> getStaticProps vốn dùng cho static build, nhưng khi có getStaticPaths với options kiểu này thì phải hosting server SSG mới được vì cần fetch lại
+=> Có thể kiểm chứng bằng tab network, khi query 1 page mới lần đầu mà server chưa có thấy tốc độ hơn 100ms, lúc đó nó được lưu lại tại server file html đó r nên khi query lần 2 page sẽ thấy tốc độ còn vài chục ms thôi.
+
+=> SSG là giải pháp load page cực nặng với tốc độ nhanh. Nếu có 1000 page thì nó cũng prefetch 1000 page lúc build time rất lâu nhưng trải nghiệm người dùng lại nhanh
+
+--> Incremental Static Regeneration
+SSG thì cơ chế cũng chỉ là html được sinh ra ngay từ build time và nó fix cứng mãi, từ đó có thể bắn lên CDN k cần tới server. Trong next ta dùng server chạy nó bằng npm run start cũng chỉ để cung website static ra thôi. Nhưng nhược điểm lớn là thời gian build tỉ lệ thuận với số page của ứng dụng; 1 page có thể bị stale trước khi ta rebuild. V nên static generation chỉ dùng làm mấy cái trang docs thôi, nhưng trong thực tế, ta vẫn cần dữ liệu real time hơn 1 chút, nên có Incremental Static Regeneration
+PP này giúp tạo được web tĩnh tốc độ cực kỳ nhanh và khá real time, phù hợp các app bth, giúp update data của page cần thiết mà k cần rebuild lại toàn bộ ứng dụng.
+
+=> Trường revalidate của getStaticProps VD set là 10 tức là: cứ mỗi 10s trôi qua, request đầu tiên tới tiếp theo sẽ trigger regenerate page đó đồng thời gửi lại page cũ cho request đó. Sau khi regenerate xong, thì các request đằng sau sẽ được serve page mới và cứ thế chu kỳ lặp lại. Phải hosting server SSG chứ k được static build.
+Đó là lý do vì sao data được update -> sau 10s request page -> vẫn nhận về page cũ -> request lại phát nữa -> nhận về page mới. Vì lần gọi vào đầu để trigger cái regenerate chứ chưa có data nên vẫn nhận stale. Có page set 1s, có pages set 60s tùy web. Nếu regeneration bị lỗi, sẽ serve page cũ ok. Thường dùng nếu data k thực sự quan trọng.
+
+=> Nhanh:
+getStaticProps fetch data lúc build time
+getStaticPaths fetch data ở mỗi initial request rồi cached vĩnh viễn
+ISR fetch data khi có request sau mỗi 1 ktg revalidate cố định nhưng chưa thực sự real time. Kể cả ta có để 1s thì nó vẫn stale-while-revalidate 
+Có thể fetch data tại client thành CSR có thể đảm bảo fetch data ở mỗi request và trả về data mới luôn nhưng SEO kém
+SSR fetch data r rerender page ở mỗi request mới và trả ra data mới luôn và đảm bảo SEO: getInitialProps, getServerSideProps
+=> Tức là ta tạo CSR, SSG, SSR hay ISR tùy ý code, nhưng khi export và deploy thì phải tùy loại mới chạy được kiểu nào cụ thể.
+
+-> Dùng getServerSideProps: Chỉ được gọi ở server, phần code viết trong getServerSideProps k được included trong JS bundle gửi tới browser. Có thể viết cả API key thoải mái. Ta có thể code như hàm xử lý middleware trong server nodejs như đọc file hay truy xuất database
+Do SSR chậm hơn SSG nên chỉ dùng khi cần thiết về độ realtime. SSR k build trước html ở build time như SSG và luôn regenerate lại ở mọi request, k lưu lại html ở server
+Cái getStaticProps k truy cập được vào biến request và response ở trong hàm nhưng getServerSideProps thì ok
+
+--> Giải quyết vđ nếu 1 page fetch lần đầu data lớn gây loading lâu. Mà để chuẩn SEO thì phải dùng SSR. Mà như thế thì mỗi lần vào page, server đều fetch chạy lại getServerSideProps rất tốn. Có nhiều cách fix tùy TH:
+- Có thể dùng CSR thuần riêng cho nó vì giả sử có 1000 items thì việc SEO cho cả 1000 items rất hiếm khi xảy ra, nếu các item giống nhau thì k cần thiết, nếu các items khác nhau thì SEO rất tạp nham chả vào chủ đề gì. Do đó có thể fix thẻ meta cho page đó or SSR fetch vài data đầu thôi, còn lại list data fetch dùng CSR. Append data từ CSR vào SSR render ra.
+- getStaticProps + ISR revalidate tầm 60s cho pages đó vì sẽ k có nh sự thay đổi. Do nếu data thay đổi nhiều mà SEO tất cả thì rất khó xảy ra vì SEO k có ý nghĩa.
+- Chia page, 1 cách để SEO tất cả là phân trang, mỗi trang là 1 router khác nhau thì SEO cho cả trang được, lượng data giảm nên fetch nhanh
+=> Cách 1 thật ra k tệ vì ta k fetch detail mà chỉ fetch qua tên và type thôi nên tốc độ nhanh vì số lượng collection cũng k có nhiều 
+
+-> 1 app có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG (static HTML + JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) => khi build hiện ra ký hiệu rõ route dùng kiểu nào
+=> 1 dự án thông thường cứ chơi SSR hay CSR tùy hứng thôi, page lớn có thể CSR hết. Nếu SSR mà thấy fetch lớn quá thì dùng revalidate với ISR cũng được.
+
+-> Dùng next/router
+VD replace url mà k chuyển trang:
+router.replace(
+  {
+    pathname: "/explore/[creator]/[collectionid]",
+    query: { creator: item.creator, collectionid: item.collectionid },
+  },
+  undefined,
+  { shallow: true }, // Do not refresh the page when the query params are removed
+);
+Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì router có option shallow true giúp đổi url vẫn trigger sự kiện nhưng k chạy lại getServerSideProps nữa => thích hợp cho url chứa filter
+
+PopState Event là event của window được kích hoạt khi user navigate qua lại giữa các page và history entry được push vào history stack.
+Dùng router.beforePopState có thể thao tác với 2 button navigate của browser, khi click 2 nút đó thì làm gì trước khi chuyển page.
+
+
+
+
+# Route Handlers
+Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
+Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+
+-> Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để luôn cache, export const revalidate=60 để revalidate với request GET. Mọi method khác luôn k được cache.
+VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được khi update, kể cả thêm vào server actions
+Lưu ý Request Memoization chỉ dùng cho GET trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree tức nó dùng fetch bth của browser thôi.
+
+-> Pb: 
+Routing: app/<>/pages.js
+Route handler: app/<>/route.js
+Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js 
+FE call relative, BE call absolute.
+
+
+
+#*** Master client / server nextjs
+URL khi nào dùng client comp hay server comp: https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns
+App router mặc định mọi component là server side, chỉ khi có "use client" mới là client side.
+
+-> Server component chỉ chạy trên server, nhưng client component chạy trên cả server (first rendering pass) và client.
+Client component được server chạy qua 1 lần, nhưng k chạy code useEffect. Nếu dùng window object trong client component trực tiếp sẽ lỗi, dùng conditional check cũng lỗi hydration vì html render ở server và client phải giống nhau. Dùng trong useEffect thì ok, FE sẽ bị jump giá trị khi useEffect chạy.
+Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data => dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh
+VD fix hydration error new Date() ở server: 
+- K render time ra nữa
+- Time k đóng vai trò gì trong SEO thì cho vào useState default "", set giá trị trong useEffect chỉ dùng ở client.
+- Chỉ lấy đơn vị phút và giờ, k lấy second thì xác suất bị lỗi giảm nhưng kp là hoàn toàn. K có cách nào SEO cả time mà chuẩn từng giây được => kết hợp suppressHydrationWarning
+
+-> Có thể import client comp trong server comp, ngược lại thì không. Nhưng client component có thể truyền { children } là 1 server component. 
+VD: ta setup Provider của react-query là 1 client side component wrap 1 server component là layout.js, sau đó chỉ dùng các hàm react-query ở các client component bên trong ok.
+
+--> Hack trick là dùng dynamic import có thể import server comp trong client comp => ít dùng
+VD: 'use client'
+import dynamic from 'next/dynamic'
+import { Suspense } from 'react'
+const ServerComponentExample = dynamic(() => import('./server-component'), {
+  loading: () => <div>Đang tải...</div>,
+  ssr: true // Quan trọng: render trước ở server
+})
+export default function ClientComponent() {
+  return (
+    <Suspense fallback={<div>Đang tải...</div>}>
+      <ServerComponentExample />
+    </Suspense>
+  )
+}
+
+-> Truyền data từ client comp tới server comp:
+Truyền qua các store chung như cookies, url search params.
+Client tương tác với server qua api route handler, qua server actions từ form, hoặc gọi trực tiếp hàm của server cũng được kìa (coi nó cũng là server actions). Từ đó đổi db rồi revalidate path là được.
+Client có thể tương tác với server thực sự đổi data mà k muốn re-render lại thì dùng fetch route handler thử.
+
+Truyền data từ server tới client:
+Dùng các store chung như cookies, url search params.
+Dùng redux, zustand, react context.
+Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp có thể lưu vào local storage chẳng hạn để truy cập mọi cấp.
+
+-> Nhanh:
+- Turn off hydration warning
+- Client chỉ bao server comp qua { children }. Client vẫn có mẹo import server comp là dùng dynamic import.
+- Client truyền cho server qua server action, server truyền cho client qua props. Hoặc qua cookies, url.
+
+
+
+#*** Master rerender / refetch nextjs 
+-> Rerender client:
+Client thay đổi state, sẽ chỉ render lại chính nó, k render lại server component. Nếu nó wrap server component, cũng k rerender server component đó.
+
+-> Rerender server:
+Server comp rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi mới navigate vào để render DOM ra. Thật ra cũng render khi đổi cookies, vì nó cũng là đổi state của server, kể cả khi sêrver comp đó k cần đọc cookies.
+Đặc biệt là khi dùng router.refresh từ useRouter ở client side, nó sẽ rerender server, nhưng client state không liên quan như scroll position hay useState k bị reset mà giữ như cũ, useEffect cx k tự chạy lại
+
+-> Refetch:
+Client rerender thì có refetch lại hay không phụ thuộc vào useEffect phụ thuộc vào biến nào chứ
+Server rerender thì API sẽ k gọi lại mà tuỳ theo options của hàm fetch dùng no-store, revalidate hay gì. Nếu dùng revalidatePath hay revalidateTag chắc chắn sẽ chạy cả rerender và refetch vì 2 hàm này là cấp cao nhất.
+
+-> revalidate:
+revalidatePath/revalidateTag sẽ invalidate mọi loại cache ở 1 url cụ thể, đồng thời rerender và refetch server comp. 
+Client side mà muốn rerender server phải dùng qua server actions or route handlers, hoặc gọi router.refresh().
+Chú ý khi gọi revalidatePath để invalidate cache thì nó ảnh hưởng mọi client chứ k chỉ client hiện tại, vì cache ở server dùng cho mọi client mà. Khi đó client hiện tại sẽ re-render luôn, các client khác cũng stale cache khi vào page đó.
+Giả sử client gọi hàm server revalidatePath hay đổi cookies khiến page render lại, thì hàm đó vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies là re-render luôn.
+
+-> 3 case debounce optimisitics:
+Bản chất implement debounce trong react
+- debounce nhét 1 hàm vào setTimeout, klq gì tới async await cả
+- Đảm bảo debounce tồn tại mãi chứ component rerender thì hàm tạo mới mà k clearTimeout là sai, nên phải cho vào useMemo.
+Lưu ý k dùng useCallback vì useCallback k nhận các hàm ở ngoài do k rõ ràng dependencies.
+
+Lưu ý dùng useOptimistics:
+- Phải kẹp trong startTransition, ngay khi ra ngoài startTransition, nó sẽ compare và update expected result với actual state theo hàm truyền vào đối số 2.
+- Mọi nơi dùng state phải dùng optimisticsValue để tránh sai.
+- useOptimistic k thể dùng với debounce vì gọi debounce trong startTransition thì ra ngoài sẽ compare luôn mà debounce chờ timeout nên k thực hiện ngay.
+
+Có case kết hợp cả 2, ta phải tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi.
+Vd: button đổi status của workflow trong untrest => giống kiểu debounce mở rộng hơn là optimistics
+
+-> Nhanh:
+Server chỉ rerender khi vào lần đầu
+Dùng router.refresh render lại server, k render client.
+Dùng revalidatePath/revalidateTag
+
+
+
+# File structure
+Full example master routing: https://github.com/vercel/next-app-router-playground
+Thường dùng src nếu có cả src/app và src/page cùng lúc
+Có thể viết common comp ở các vị trí mà next ignore for routing: apps/components; bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; dùng src/components cùng cấp src/apps. VD để components trong app k tính routing nếu folder k có page.js
+
+<Layout>
+  <Template>
+    <ErrorBoundary fallback={<Error />}>
+      <Suspense fallback={<Loading />}>
+        <ErrorBoundary fallback={<NotFound />}>
+          <Page />
+        </ErrorBoundary>
+      </Suspense>
+    </ErrorBoundary>
+  </Template>
+</Layout>
+
+-> Favicon hay các icon khác có convention về file: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons
+
+-> Template khác layout ở chỗ, template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. Tức layout thì state được giữ nguyên khi navigate sang page khác cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
 VD: layout chỉ hiện fallback của Suspense ở lần đầu vào, các lần sau quay lại k hiện vì nó preserve state rồi, template sẽ hiện Suspense mọi lúc navigate tới.
 
 layout.tsx thay thế _app.tsx và _document.tsx của pages router
 Thẻ để trong <head> trong layout sẽ tự chuyển xuống cuối của <head> trong html đích
 
 -> default.js sẽ thay thế slots. Buộc phải có nếu route thiếu nested slots, k sẽ lỗi 404.
+
+-> Intercept route: ghi đè hiển thị khi navigate từ 1 route sang 1 route khác, nó sẽ hiển thị khác đi trong case đó, VD hiển thị dạng modal preview, khi close sẽ vẫn ở trang gốc.
+Chú ý phải xoá .next folder và chạy lại mới ăn.
+
+-> Dùng router group: đặt tên folder trong () sẽ k ảnh hưởng đến routing, nó coi như k mất phần url folder đó trong path.
+URL: https://nextjs.org/docs/app/getting-started/project-structure#route-groups
+
+
+
+# Handle loading api
+App router dùng Suspense fallback thì server component khi load api sẽ tự hiện, nó bắt lên dần Suspense theo cấp độ. 
+Còn dùng loading.js chỉ hiện nếu k Suspense gì cả sẽ hiện thay thế cả route đó.
+Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
+Có thể trigger Suspense boundary trong React Developer Tools.
+
+-> Page router => bỏ
+K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
+=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
+VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
+
+
+
+# Dùng font
+Thêm font bằng css bth
+Có thể thêm font bằng CDN thẻ link từng pages
+Dùng next/font => ưu tiên
+Dùng next/font/local => định nghĩa local font bằng js
+
 
 
 
@@ -103,6 +389,7 @@ Hàm dedupe() của nó giống y cache của react tránh gọi lại nhiều l
 Dùng @vercel/toolbar yêu cầu phải link project với vercel và deploy lên vercel, tạo FLAG_SECRETS nữa
 URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM
 
+->*** HeroUI: lib mạnh có cả AI design hộ luôn
 
 
 
@@ -189,8 +476,20 @@ Phía client thường k cần truy cập, dùng document.cookies để acccess 
 
 
 # Metadata => bỏ next-seo
-export metadata => fix metadata
+export metadata => fixed metadata
 export generateMetadata({params}) => dynamic metadata
+
+export async function generateMetadata(
+  { params, searchParams }: { params: Promise<{ slug: string }, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }
+) {
+  const { slug } = await params
+  const searchParams = await searchParams
+}
+Nếu sync usage: 
+const params = use(params)
+const searchParams = use(searchParams)
+
+=>*** Điều đặc biệt là params truy cập ở server phải dùng await và khi await thì kể cả page là static dùng static build cũng thành dynamic build. Còn client truy cập lại éo cần await gì cả, useParams luôn.
 
 -> NextJS có ImageResponse giúp tạo component hiển thị Image động là code html css. Ta tạo 1 api route trả về ImageResponse và dùng nó trong src của <Image>, nhận tham số và trả ra data tương ứng với tham số (tức là data động theo url đó). Hoặc tạo icon.tsx export default hàm trả ra ImageResponse tương tự.
 export generateImageMetadata k có tác dụng gì cho SEO, chỉ cung thêm thông tin cho image động.
@@ -229,162 +528,6 @@ Hoặc ảnh k rõ kích thước và ta k muốn dùng optimizer thì dùng tag
 
 -> Có thể quản lý cache của optimized image nhưng chắc chẳng bh dùng: https://nextjs.org/docs/app/api-reference/components/image#caching-behavior\
 Mặc định image được cache trong memory của server sau khi optimize bất kể image từ ngoài hay local, đến khi expires mới xoá.
-
-
-
-# Routing
-Routing chia theo cấu trúc file thư mục, cả be và fe. 
-
--> Dynamic route
-Page router dùng getServerSideProps, getStaticProps như bth. App router dùng fetch và các options đi kèm.
-getStaticPaths thay thế bằng generateStaticParams giúp xđ tham số cho dynamic routes ở server side mà async, VD fetch API ra list params rồi cho vào page.tsx hoặc layout.tsx lấy Page({params}). Sau đó sẽ dùng để generate ra STATIC SITE. VD hàm sinh ra 10 tham số để build ra 10 pages.
-
-NextJS v15 dùng await khi gọi trong hàm async. VD page.ts:
-export async function generateMetadata(
-  { params, searchParams }: { params: Promise<{ slug: string }, searchParams: Promise<{ [key: string]: string | string[] | undefined }> }
-) {
-  const { slug } = await params
-  const searchParams = await searchParams
-}
-Nếu sync usage: 
-const params = use(params)
-const searchParams = use(searchParams)
-
-=>*** Điều đặc biệt là params truy cập ở server phải dùng await và khi await thì kể cả page là static dùng static build cũng thành dynamic build. Còn client truy cập lại éo cần await gì cả, useParams luôn.
-
--> Page Routes: thư mục pages chứa file chia routing. 
-Fetch data qua getServerSideProps, getStaticProps, revalidate, getStaticPaths.
-Server sẽ chạy qua mọi component 1 lần để build html với dữ liệu có thể từ getServerSideProps, gửi cho client sẽ chạy useEffect tiếp. 
-VD console.log trong component mà ngoài useEffect sẽ hiện ở console của server, k dùng được localStorage hay window ở ngoài.
-
--> App Routes: thư mục app chia tương tự nhưng khác ở chỗ fetch data => Đầy đủ: https://www.youtube.com/watch?v=gSSsZReIFRk
-Full example master routing: https://github.com/vercel/next-app-router-playground
-K cần dùng folder src nữa vì sẽ thành src/apps thôi, trừ khi muốn dùng cả src/apps và src/pages 1 lúc.
-
-Mặc định mọi component là server side, chỉ khi có "use client" mới là client side. Khác với page routes có thể viết client side fetching và server side fetching chung 1 file component thì ở app router, mỗi loại phải chia file riêng. Bắt đầu từ 1 server side component ở node gốc của cây, có thể import client side comp vào server comp nhưng k thể ngược lại.
-VD khi để export static trong file config, mọi hàm fetch server side sẽ thành tĩnh cho kết quả cố định, hàm fetch client vẫn ok. 
-VD dùng react-query ở client side thì vẫn share state cho nhau bth thôi. 
-VD server muốn truyền state cho client component, phải truyền vào props. VD 1 file vừa có getStaticParams, vừa có "use client" là sai ngay với app router vì k thể mix trong 1 file.
-
-Để fetch data server side, dùng async function component với await fetch() bên trong, default là static web tức gọi lúc build và fix cứng. Dùng thêm options như cache:"no-store" để fetch lại liên tục như SSR hay next:{revalidate:5} để làm mới sau mỗi mỗi 5s => tức thay thế getServerSideProps và revalidate của pages router
-Để thêm loading cho server side fetching, wrap lại với Suspense fallback là được.
-URL khi nào dùng client comp hay server comp: https://nextjs.org/docs/app/building-your-application/rendering/composition-patterns
-Có thể viết common component ở các vị trí mà next ignore for routing: apps/components; bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; dùng src/components cùng cấp src/apps. VD để components trong app k tính routing nếu folder k có page.js
-Dù nói là App Router dùng Server Component nhưng k có việc đổi props mà phải chạy fetch lại, nó chỉ là kiểu thay thế các hàm fetch phía server của Page Router thôi.
-
--> Chuyển trang đâu cần chia CSR hay SSR: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter và Router chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
-next/navigation cung redirect dùng ở server component, cũng cung hàng loạt hook như useRouter, usePathname, useSelectedLayoutSegment cho CSR.
-useSelectedLayoutSegment thì client component phải nhét vào layout.js mới hoạt động, nó trả ra các path kể từ cái layout đó đến path mới nhất => ít dùng
-useSearchParams trả ra readonly version thôi
-
--> Prefetch: - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể. Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào => prefetch chỉ có tác dụng trên production (build r start), k test được ở dev.
-- Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang. URL là trang muốn prefetch chơi cả router fix or dynamic routes như /product/[id]
-Với page router: Chỉ prefetch static pages chứ SSR pages vẫn fetch lại delay như thường.
-Với app router: true false sẽ prefetch or not cả dynamic và static. Để default null là hay nhất vì static route sẽ prefetch hết bao gồm cả data bên trong. Còn dynamic route thì 1 phần route từ gốc cho tới phần segment gần nhất dùng loading.js sẽ được prefetch (phần segment là các cục /segment1/segment2/...) tức nó prefetch phần tĩnh nh nhất có thể.
-Thời gian nó cache prefetch là 30s, hết hạn sẽ tự prefetch tiếp luôn
-=> prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch và set stale time cho đúng.
-
---> useLinkStatus giúp lấy status khi chuyển trang. Nó chỉ dùng khi page dynamic k cần prefetch và k có loading.js tức là k có instant navigation, chỉ có từ v15.3
-Chỉ dùng trong component là con nằm trong <Link/>
-
--> Custom 404: app router dùng notfound.js, page router dùng 404.js
-Tạo layout: cả app và page router đều có thể dùng layout.js. Nhưng cũng có thể dùng _document tạo layout thay vì dùng component layout riêng. 
-K dùng stylesheet trong <Head/> kiểu <link rel="stylesheet" .../> vì có thể bị break khi dùng các tính năng Suspense or streaming. Nếu muốn thì ta chỉ được dùng trong file _document.tsx thì để kiểu gì cũng được
-
--> PopState Event là event của window được kích hoạt khi user navigate qua lại giữa các page và history entry được push vào history stack.
-Dùng router.beforePopState có thể thao tác với 2 button navigate của browser
-
-Dùng router group: đặt tên folder trong () sẽ k ảnh hưởng đến routing, nó coi như k mất phần url folder đó trong path.
-URL: https://nextjs.org/docs/app/getting-started/project-structure#route-groups
-
--> Nó chia route theo phạm vi từng component là từng thư mục riêng sẽ hiển thị khác nhau theo các route khác nhau.
-Nếu wrap bằng Suspense trong layout thì sẽ hiện component loading trong fallback. Nếu k thì phải tạo loading.js sẽ tự hiện loading component khi server fetch api.
-Đầu tiên nó luôn hiện layout.js với children hoặc là page.js hoặc là nested route folder bên trong. 
-Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa sẽ tìm dần tới cha đến khi gặp not-found.tsx 
-Lỗi thì error.tsx
-=> Ref tới "Projects / Portfolio"
-
--> intercept route: ghi đè hiển thị khi navigate từ 1 route sang 1 route khác, nó sẽ hiển thị khác đi trong case đó, VD hiển thị dạng modal preview, khi close sẽ vẫn ở trang gốc.
-Chú ý phải xoá .next folder và chạy lại mới ăn.
-
-
-
-# Pages router và hiểu SSR trong nextjs
--> Dùng getInitialProps: K dùng mà thay thế bằng getStaticProps và getServerSideProps. Chỉ dùng được trong /pages ở từng file component, k được dùng ở các thư mục ngoài pages như components bth cũng k được
-Hàm này chỉ thực hiện ở server để fetch data nhét vào DOM r gửi lại cho client html đã hoàn chỉnh. Mỗi khi có request, server sẽ lại chạy nó và lại cho vào DOM.
-
---> Thử tùy biến: Nếu ta host cả server này lên thì nó mới là Universal SSR.
-Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Hàm này chỉ chạy phía server mà export static ra thì k còn server nữa mà thành html fix. Nên next build thì server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export sẽ chạy qua getInitialProps sinh ra data luôn. Export ra tĩnh chỉ được chạy 1 lần lúc build time rồi k cần server nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi và hàm này trở nên vô dụng vì k có server.
-
--> Dùng getStaticProps:
-Hàm chuyên dùng cho SSG, dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
-Thế tại nếu chỉ chạy 1 lần tức là data fix cứng, tại sao ta k viết cứng cho nó luôn? => Vì nếu có 1 triệu data thì ta đâu thể gõ cứng vào mà phải fetch r in ra chứ. Nó sẽ fetch trước mọi trang ta xác định, kể cả dynamic params page.
-
-Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ dùng web sẽ cực kỳ nhanh, cộng với bộ cache lớn thì tốc độ sẽ cực kỳ nhanh.
-Chỉ được dùng 1 loại, k được dùng kèm getInitialProps
-
---> Dùng với dynamic params: 
-Cần tạo nhiều trang static với đường dẫn động từ dữ liệu tại thời điểm build. Ta dùng getStaticPaths định nghĩa các url muốn pre-render ngay từ lúc build. Vì dynamic thì built time nó k rõ url có giá trị gì để prefetch nên hàm này chỉ giúp điều đó thôi. Lúc build sẽ fetch tất cả và cho ra hàng loạt file html là trang tĩnh.
-
----> Hàm getStaticPaths trả ra object có:
-Trường paths: là list các dynamic params.
-VD: pages/posts/[postId]/[commentId] thì trả về kiểu {params:{postId:1,commentId:2}} 
-VD: pages/[...slug] thì trả kiểu {params:{slug:["hello","world"]}} và sinh ra page /hello/world
-Mọi route kiểu null, [], undefined, false, VD slug:false thì Next tự cho ra "/"
-
-Trường fallback:
-- false thì mọi path k trả ra bởi getStaticPaths sẽ ra 404 page (next build chỉ build các path xđ trong getStaticPaths) => thg dùng kiểu có ít page ban đầu, dùng như v thì sau này thêm page vào thì next build phát là xong
-- true thì page k có trong getStaticPaths sẽ được fetch và trong lúc chờ loading sẽ hiển thị ra fallback page, fetch xong mới hiển thị ra page bth => thg dùng khi có rất nhiều page. VD có 1 triệu page nếu ta fetch hết sẽ có 1 triệu file html mà đâu cần mức đấy. Ta có thể fetch 3 item page đầu, các page sau ta để loading or skeleton ok.
-
-Quy trình: dùng getStaticProps và getStaticPaths cho 1 vài pages thôi, trong component check nếu router.isFallback==true là đang loading 1 page chưa từng fetch, nếu !router.isFallback&&!data thì là vào trang k tồn tại. Còn lại là vào đúng.
-fallback page ta nói ở đây chính là cái page gốc nhưng data truyền vào k có gì cả và router.isFallback là true
-=> 1 tính chất quan trọng của cái này là ta thấy ở thư mục build ra (.next) thì nó build ra từng page của trang web, nhưng khi 1 request tới 1 page k có trong getStaticPaths và nó bắt đầu fetch lần đầu tiên thì server sẽ fetch và tự rendered trong server, sau đó gửi lại cho client file html đó. File html đó được lưu lại trong server nên vào thư mục .next sẽ thấy có file mới, và kể từ lần sau trở đi tốc độ sẽ cực kỳ nhanh vì nó coi đã fetch rồi. Điều này chỉ xảy ra khi host lên có server chứ kp host tĩnh. HTML gửi từ server sẽ thay thế trang fallback.
-
-'blocking': Y hệt fallback true nhưng page k có trong getStaticPaths thì server sẽ tự fetch ngầm và nhảy lag đến chứ k có loading gì cả, router.isFallback cũng k có gì
-=> getStaticProps vốn dùng cho static build, nhưng khi có getStaticPaths với options kiểu này thì phải hosting server SSG mới được vì cần fetch lại
-=> Có thể kiểm chứng bằng tab network, khi query 1 page mới lần đầu mà server chưa có thấy tốc độ hơn 100ms, lúc đó nó được lưu lại tại server file html đó r nên khi query lần 2 page sẽ thấy tốc độ còn vài chục ms thôi.
-
-=> SSG là giải pháp load page cực nặng với tốc độ nhanh. Nếu có 1000 page thì nó cũng prefetch 1000 page lúc build time rất lâu nhưng trải nghiệm người dùng lại nhanh
-
---> Incremental Static Regeneration
-SSG thì cơ chế cũng chỉ là html được sinh ra ngay từ build time và nó fix cứng mãi, từ đó có thể bắn lên CDN k cần tới server. Trong next ta dùng server chạy nó bằng npm run start cũng chỉ để cung website static ra thôi. Nhưng nhược điểm lớn là thời gian build tỉ lệ thuận với số page của ứng dụng; 1 page có thể bị stale trước khi ta rebuild. V nên static generation chỉ dùng làm mấy cái trang docs thôi, nhưng trong thực tế, ta vẫn cần dữ liệu real time hơn 1 chút, nên có Incremental Static Regeneration
-PP này giúp tạo được web tĩnh tốc độ cực kỳ nhanh và khá real time, phù hợp các app bth, giúp update data của page cần thiết mà k cần rebuild lại toàn bộ ứng dụng.
-
-=> Trường revalidate của getStaticProps VD set là 10 tức là: cứ mỗi 10s trôi qua, request đầu tiên tới tiếp theo sẽ trigger regenerate page đó đồng thời gửi lại page cũ cho request đó. Sau khi regenerate xong, thì các request đằng sau sẽ được serve page mới và cứ thế chu kỳ lặp lại. Phải hosting server SSG chứ k được static build.
-Đó là lý do vì sao data được update -> sau 10s request page -> vẫn nhận về page cũ -> request lại phát nữa -> nhận về page mới. Vì lần gọi vào đầu để trigger cái regenerate chứ chưa có data nên vẫn nhận stale. Có page set 1s, có pages set 60s tùy web. Nếu regeneration bị lỗi, sẽ serve page cũ ok. Thường dùng nếu data k thực sự quan trọng.
-
-=> Nhanh:
-getStaticProps fetch data lúc build time
-getStaticPaths fetch data ở mỗi initial request rồi cached vĩnh viễn
-ISR fetch data khi có request sau mỗi 1 ktg revalidate cố định nhưng chưa thực sự real time. Kể cả ta có để 1s thì nó vẫn stale-while-revalidate 
-Có thể fetch data tại client thành CSR có thể đảm bảo fetch data ở mỗi request và trả về data mới luôn nhưng SEO kém
-SSR fetch data r rerender page ở mỗi request mới và trả ra data mới luôn và đảm bảo SEO: getInitialProps, getServerSideProps
-=> Tức là ta tạo CSR, SSG, SSR hay ISR tùy ý code, nhưng khi export và deploy thì phải tùy loại mới chạy được kiểu nào cụ thể.
-
--> Dùng getServerSideProps: Chỉ được gọi ở server, phần code viết trong getServerSideProps k được included trong JS bundle gửi tới browser. Có thể viết cả API key thoải mái. Ta có thể code như hàm xử lý middleware trong server nodejs như đọc file hay truy xuất database
-Do SSR chậm hơn SSG nên chỉ dùng khi cần thiết về độ realtime. SSR k build trước html ở build time như SSG và luôn regenerate lại ở mọi request, k lưu lại html ở server
-Cái getStaticProps k truy cập được vào biến request và response ở trong hàm nhưng getServerSideProps thì ok
-
---> Giải quyết vđ nếu 1 page fetch lần đầu data lớn gây loading lâu. Mà để chuẩn SEO thì phải dùng SSR. Mà như thế thì mỗi lần vào page, server đều fetch chạy lại getServerSideProps rất tốn. Có nhiều cách fix tùy TH:
-- Có thể dùng CSR thuần riêng cho nó vì giả sử có 1000 items thì việc SEO cho cả 1000 items rất hiếm khi xảy ra, nếu các item giống nhau thì k cần thiết, nếu các items khác nhau thì SEO rất tạp nham chả vào chủ đề gì. Do đó có thể fix thẻ meta cho page đó or SSR fetch vài data đầu thôi, còn lại list data fetch dùng CSR. Append data từ CSR vào SSR render ra.
-- getStaticProps + ISR revalidate tầm 60s cho pages đó vì sẽ k có nh sự thay đổi. Do nếu data thay đổi nhiều mà SEO tất cả thì rất khó xảy ra vì SEO k có ý nghĩa.
-- Chia page, 1 cách để SEO tất cả là phân trang, mỗi trang là 1 router khác nhau thì SEO cho cả trang được, lượng data giảm nên fetch nhanh
-=> Cách 1 thật ra k tệ vì ta k fetch detail mà chỉ fetch qua tên và type thôi nên tốc độ nhanh vì số lượng collection cũng k có nhiều 
-
--> 1 app có thể kết hợp nhiều kiểu: VD 1 pages dùng SSG (static HTML + JSON dùng getStaticProps vì phần data lấy từ getStaticProps được lưu vào file json), 1 page dùng ISR, 1 page dùng SSR, 1 page Static(chỉ có static HTML, k dùng getStateProps), 1 page dùng CSR (client fetching) => khi build hiện ra ký hiệu rõ route dùng kiểu nào
-=> 1 dự án thông thường cứ chơi SSR hay CSR tùy hứng thôi, page lớn có thể CSR hết. Nếu SSR mà thấy fetch lớn quá thì dùng revalidate với ISR cũng được.
-
--> Dùng next/router (page router chứ app router khác hoàn toàn sẽ dùng next/navigation)
-VD replace url mà k chuyển trang:
-router.replace(
-  {
-    pathname: "/explore/[creator]/[collectionid]",
-    query: { creator: item.creator, collectionid: item.collectionid },
-  },
-  undefined,
-  { shallow: true }, // Do not refresh the page when the query params are removed
-);
-Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì router có option shallow true giúp đổi url vẫn trigger sự kiện nhưng k chạy lại getServerSideProps nữa => thích hợp cho url chứa filter
 
 
 
@@ -675,34 +818,11 @@ const [data, submitAction, isPending] = useActionState(
 
 
 
-# Custom code server nextjs => tốt nhất là k nên dùng
-Dùng next start tự chạy server nodejs để serve dự án. Nếu chỉ tạo route api thì k cần vì nextjs có sẵn, nhưng muốn custom chi tiết thì vẫn được.
-router.beforePopState
-custom server làm mất đi nhiều tính năng tối ưu của nextjs và k thể deploy lên vercel, khi đó nên deploy lên VPS riêng => thay vì vậy, nếu cần server express riêng hãy tạo thêm 1 server rời.
-NextJS hỗ trợ deploy nodejs nhưng sẽ chuyển hết thành serverless function. K hỗ trợ websocket mà phải dùng Ably, Pusher thay thế với cơ chế client lắng nghe event phát từ server
-
--> URL custom server: https://nextjs.org/docs/pages/building-your-application/configuring/custom-server
-Tạo server.js ở ngoài cùng, chỉ có vài điểm khác là server liên kết với nextjs app qua: const next = require('next'); const app = next({ }); Và app server được tạo trong app.prepapre().then(<>) như bth
-Phải chỉnh sửa cả package.json "node server.js" thay cho scripts dev và start
-
--> Disable file-system routing: Mặc định Next tuân theo cấu trúc folder pages để làm server nên nếu dùng custom server có thể disable nó với useFileSystemPublicRoutes: false => client route có thể vẫn access được và phải xử lý bằng navigation thủ công
-
--> server config:
-export const config = {
-  api: {
-    // bodyParser: false, // auto enabled, muốn bỏ thì set false là được
-    bodyParser: { 
-      sizeLimit: '1mb', // maximum size allow for parsed body
-    },
-    // responseLimit: false, // automatically enabled và báo warning khi response quá 4mb
-    responseLimit: '8mb', 
-    externalResolver: true // flag báo rằng route này được xử lý bởi external resolver, it disables warnings for unresolved requests
-  },
-}
-
-
-
 # Handle error
+-> Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa sẽ tìm dần tới cha đến khi gặp not-found.tsx 
+Lỗi thì error.tsx
+=> Ref tới "Projects / Portfolio"
+
 -> Server actions: k cần dùng try catch, cứ viết 1 hàm async bth, sau đó nhét vào useFormState (với react18) or useActionState (react19)
 const [state, formAction] = useFormState(createUser, initialState)
 => state sẽ tự trả về error message với state.message
@@ -719,17 +839,6 @@ Nhưng kp api nào cũng trả ra như v. Vd server component page có 1 server 
 Dùng error.js với error ở từng route (thật ra error sẽ bubble up lên parent từ từ), dùng global-error.js với error trong root layout
 error.js là client side comps.
 Còn global error sẽ replace tất cả root hay layout. Nếu có error mà error.ts k bắt thì global-error sẽ bắt.
-
-
-
-# Hiện loading khi server fetching
--> App router dùng Suspense fallback thì server component khi load api sẽ tự hiện. Hoặc viết loading.js sẽ load ở cấp độ page.js, nếu page.js call api hoặc server child component call api mà k có boundary thì boundary ngoài cùng cũng bắt.
-Có thể trigger Suspense boundary trong React Developer Tools.
-Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
-
--> Với pages routes: K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
-=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
-VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
 
 
 
@@ -756,11 +865,10 @@ URL từng bước: https://nextjs.org/docs/app/building-your-application/config
 
 
 # Other
--> Setup dùng các tool test cypress hay jest: https://nextjs.org/docs/pages/building-your-application/testing/jest
-
 -> Debug server side: Chạy "NODE_OPTIONS='--inspect' npm run dev" -> mở browser chrome://inspect/#devices tương tự nodejs
 
--> Chỉ số TTI và FID: TTI là Time To Interactive đo từ lúc trang bắt đầu tải cho đến khi có khả năng xử lý sự kiện của người dùng. FID là First Input Delay đo ktg chờ đợi từ khi user tương tác đầu tiên cho đến khi trang phản hồi tương tác đó
+-> Tăng TTI và FID 1 xíu k đáng kể
+TTI là Time To Interactive đo từ lúc trang bắt đầu tải cho đến khi có khả năng xử lý sự kiện của người dùng. FID là First Input Delay đo ktg chờ đợi từ khi user tương tác đầu tiên cho đến khi trang phản hồi tương tác đó
 URL: https://pagespeed.web.dev/ giúp đo tốc độ của trang web và các thông số giống tool light house
 
 Khi có 1 landing page dài viết bằng nextjs thì khi gõ url r ấn enter, phía client side sẽ:
@@ -772,7 +880,7 @@ Khi có 1 landing page dài viết bằng nextjs thì khi gõ url r ấn enter, 
 Mặc định next nó luôn tuân thủ 3 bước đó. Nhưng thực tế, trong TH trang landing page toàn component tĩnh ít tương tác với user hoặc có tương tác nhưng ít mà ta muốn chơi kiểu "chỉ khi component đó hiển thị ra cho user thì mới cần hydrate để tương tác được JS" thì vẫn có thể optimize được:
 - Thư viện react-hydration-on-demand giúp mọi phần code JS vẫn được download và parsed ở bước 2 như bth nhưng đến bước 3 chỉ thực hiện khi component đó visible trên màn hình
 - Lib next-lazy-hydrate giúp cả phần download, parsed và executed JS chỉ thực hiện khi component visible
-=> Người dùng muốn tương tác sẽ lâu hơn 1 tí ở trang landing page nhưng tốc độ load trang và performance rất nhanh.
+=> CPU rảnh nhanh hơn vì bước 3 được delay cho các component visible trên màn hình
 => Dùng dynamic import khác là nó sẽ delay cả 3 bước cho đến khi component được render trên DOM tree chứ k chỉ visible.
 
 -> Tổng kết tối ưu SEO và performance NextJS => ref tới "Projects / MoveWorld"
@@ -784,9 +892,5 @@ Tối ưu dùng JS và css thuần, xóa bỏ các file không dùng. Dùng tree
 Dùng dynamic import cho các phần tử k chắc chắn dùng luôn khi vào page (React thì là React.lazy). Nên dùng thẻ Link của nextjs để tận dụng prefetch hoặc router.prefetch(url) thủ công.
 Dùng getStaticProps nhiều nhất có thể, dùng getServerSideProps với request nhẹ lấy data chỉ cần cho SEO thôi, k cần quá realtime thì nên dùng revalidate + getStaticProps, lại còn tận dụng được prefetch có sẵn của nextjs nữa.
 Nên host trên CDN khi dùng static page. Nếu dùng vercel hosting thì có thể đảm bảo mọi thứ đều ổn.
-
--> nextjs có config next.config.js để build ứng dụng như Preact, bundle size sẽ nhỏ hơn react nhưng code thì y như react, 1 số tính năng mới của react sẽ k chạy => k dùng vì sửa webpack phức tạp.
-
--> Vercel có web analytics là package cho vào dự án để theo dõi lượt view ok. Tương tự có vercel speed insight.
 
 
