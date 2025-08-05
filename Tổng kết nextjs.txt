@@ -1,8 +1,8 @@
 # Basic
--> npm run build + npm run start => build từng page dạng HTML và lệnh start sẽ chạy 1 server nodejs serve nếu code cần server
-npm run build + npm run export => build từng page và xuất đống đó thành html tĩnh, có thể host lên thành static web.
+-> npx create-next-app -e with-tailwindcss test-nextjs => có nhiều loại example template kết hợp đủ loại thư viện
 "next dev --turbo" => chạy development với turbopack nhanh hơn bth
-npx create-next-app -e with-tailwindcss test-nextjs => có nhiều loại example template kết hợp đủ loại thư viện
+npm run build + npm run start => build từng page dạng HTML và lệnh start sẽ chạy 1 server nodejs serve nếu code cần server
+npm run build + npm run export => build từng page và xuất đống đó thành html tĩnh, có thể host lên thành static web.
 
 -> next.config:
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants.js'
@@ -13,7 +13,7 @@ export default (phase) => {
 } => npm run dev thì isDev mới = true, k check được trong component
 
 -> Partial rendering: https://www.youtube.com/watch?v=MTcPrTIBkpA
-Các component dùng cookies hay searchParams đều tự là dynamic và gọi lại liên tục khi vào rồi.
+Các component dùng cookies hay searchParams đều tự là dynamic và gọi lại liên tục khi vào rồi. 
 Chú ý component Page có searchParams mà chưa await nó thì vẫn là phần static, khi truyền vào con và con gọi await searchParams; thì con mới là dynamic.
 Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở build time thì k cần, khi đó mọi dynamic part cần được wrap vào Suspense nha, phần static sẽ render ngay build time, phần dynamic sẽ render ở runtime.
 
@@ -232,7 +232,7 @@ Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp 
 Client thay đổi state, sẽ chỉ render lại chính nó, k render lại server component. Nếu nó wrap server component, cũng k rerender server component đó.
 
 -> Rerender server:
-Server comp rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi mới navigate vào để render DOM ra. Thật ra cũng render khi đổi cookies, vì nó cũng là đổi state của server, kể cả khi sêrver comp đó k cần đọc cookies.
+Server comp rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi mới navigate vào để render DOM ra. Thật ra cũng render khi đổi cookies, vì nó cũng là đổi state của server, kể cả khi server comp đó k cần đọc cookies.
 Đặc biệt là khi dùng router.refresh từ useRouter ở client side, nó sẽ rerender server, nhưng client state không liên quan như scroll position hay useState k bị reset mà giữ như cũ, useEffect cx k tự chạy lại
 
 -> Refetch:
