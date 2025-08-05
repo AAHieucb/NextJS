@@ -179,7 +179,7 @@ VD fix hydration error new Date() ở server:
 -> Có thể import client comp trong server comp, ngược lại thì không. Nhưng client component có thể truyền { children } là 1 server component. 
 VD: ta setup Provider của react-query là 1 client side component wrap 1 server component là layout.js, sau đó chỉ dùng các hàm react-query ở các client component bên trong ok.
 
---> Hack trick là dùng dynamic import có thể import server comp trong client comp => ít dùng
+--> Hack trick là dùng dynamic import có thể import server comp trong client comp => bỏ k dùng
 VD: 'use client'
 import dynamic from 'next/dynamic'
 import { Suspense } from 'react'
@@ -206,9 +206,9 @@ Dùng redux, zustand, react context.
 Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp có thể lưu vào local storage chẳng hạn để truy cập mọi cấp.
 
 -> Nhanh:
-- Turn off hydration warning
-- Client chỉ bao server comp qua { children }. Client vẫn có mẹo import server comp là dùng dynamic import.
-- Client truyền cho server qua server action, server truyền cho client qua props. Hoặc qua cookies, url.
+- Date hay window client comp chỉ dùng trong useEffect tránh lỗi hydration. suppressHydrationWarning ở tag html ngoài cùng.
+- Server import client ok, client chỉ bao server qua { children }
+- Client truyền cho server qua server action, server truyền cho client qua props và react context. Hoặc share hết qua cookies, url.
 
 
 
@@ -222,13 +222,13 @@ Server comp rerender chỉ khi cả component render lại, vì bth k có cách 
 
 -> Refetch:
 Client rerender thì có refetch lại hay không phụ thuộc vào useEffect phụ thuộc vào biến nào chứ
-Server rerender thì API sẽ k gọi lại mà tuỳ theo options của hàm fetch dùng no-store, revalidate hay gì. Nếu dùng revalidatePath hay revalidateTag chắc chắn sẽ chạy cả rerender và refetch vì 2 hàm này là cấp cao nhất.
+Server rerender thì API sẽ k gọi lại mà tuỳ theo options của hàm fetch dùng no-store, revalidate hay gì. Nếu dùng revalidatePath hay revalidateTag chắc chắn sẽ chạy cả rerender và refetch vì 2 hàm này là cấp cao nhất, kể cả fetch cache vẫn còn.
 
 -> revalidate:
 revalidatePath/revalidateTag sẽ invalidate mọi loại cache ở 1 url cụ thể, đồng thời rerender và refetch server comp. 
 Client side mà muốn rerender server phải dùng qua server actions or route handlers, hoặc gọi router.refresh().
 Chú ý khi gọi revalidatePath để invalidate cache thì nó ảnh hưởng mọi client chứ k chỉ client hiện tại, vì cache ở server dùng cho mọi client mà. Khi đó client hiện tại sẽ re-render luôn, các client khác cũng stale cache khi vào page đó.
-Giả sử client gọi hàm server revalidatePath hay đổi cookies khiến page render lại, thì hàm đó vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies là re-render luôn.
+Giả sử client gọi hàm server revalidatePath hay đổi cookies khiến page render lại, thì hàm đó vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies phát là re-render luôn.
 
 -> 3 case debounce optimisitics:
 Bản chất implement debounce trong react
@@ -241,30 +241,14 @@ Lưu ý dùng useOptimistics:
 - Mọi nơi dùng state phải dùng optimisticsValue để tránh sai.
 - useOptimistic k thể dùng với debounce vì gọi debounce trong startTransition thì ra ngoài sẽ compare luôn mà debounce chờ timeout nên k thực hiện ngay.
 
-Có case kết hợp cả 2, ta phải tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi.
-Vd: button đổi status của workflow trong untrest => giống kiểu debounce mở rộng hơn là optimistics
+Có case kết hợp cả 2, ta phải tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi => giống kiểu debounce mở rộng hơn là optimistics
+Vd: button đổi status của workflow trong untrest 
 
 -> Nhanh:
-Server chỉ rerender khi vào lần đầu
-Dùng router.refresh render lại server, k render client.
-Dùng revalidatePath/revalidateTag
-
-
-
-# Route Handlers
-Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
-Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
-
--> Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để luôn cache, export const revalidate=60 để revalidate với request GET. Mọi method khác luôn k được cache.
-VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được khi update, kể cả thêm vào server actions
-Lưu ý Request Memoization chỉ dùng cho GET trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree tức nó dùng fetch bth của browser thôi.
-
--> Pb: 
-Routing: app/<>/pages.js
-Route handler: app/<>/route.js
-Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js 
-FE call relative, BE call absolute.
-
+Client đổi state thì rerender. Server đổi cookies params thì rerender. Dùng router.refresh đặc biệt rerender server mà k rerender client.
+Client thì refetch phụ thuộc useEffect, chứ server refetch phụ thuộc vào options hàm fetch.
+revalidatePath/revalidateTag chắc chắn rerender và refetch, nhưng vẫn trả về result cho FE như bth trước.
+Có 3 kiểu: debounce, useOptimistics, debounce mở rộng optimistics
 
 
 
@@ -300,6 +284,22 @@ Chú ý phải xoá .next folder và chạy lại mới ăn.
 
 -> Dùng router group: đặt tên folder trong () sẽ k ảnh hưởng đến routing, nó coi như k mất phần url folder đó trong path.
 URL: https://nextjs.org/docs/app/getting-started/project-structure#route-groups
+
+
+
+# Route Handlers
+Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
+Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+
+-> Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để luôn cache, export const revalidate=60 để revalidate với request GET. Mọi method khác luôn k được cache.
+VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được khi update, kể cả thêm vào server actions
+Lưu ý Request Memoization chỉ dùng cho GET trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree tức nó dùng fetch bth của browser thôi.
+
+-> Pb: 
+Routing: app/<>/pages.js
+Route handler: app/<>/route.js
+Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js 
+FE call relative, BE call absolute.
 
 
 
