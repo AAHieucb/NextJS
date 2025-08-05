@@ -46,33 +46,36 @@ export const config = {
 
 
 # App router dynamic routing and prefetch
--> Static route
-Để export static trong file config thì mọi hàm fetch server side sẽ thành tĩnh cho kết quả cố định.
+-> Static route: 
+Khi export static trong file config thì mọi hàm fetch server side sẽ thành tĩnh cho kết quả cố định.
 
--> Dynamic route SSR luôn fetch lại khi vào
-App router là dynamic khi dùng hàm connection, dùng fetch với các options dynamic, dùng search params.
+-> Dynamic route: SSR luôn fetch lại khi vào
+App router là dynamic khi dùng hàm connection, dùng fetch với các options dynamic, dùng await search params, dùng await cookies
 
-***generateStaticParams tương đương với getStaticPaths của page router. Nó trả ra tham số và lấy trong page với Page({params}), kể cả route là dynamic dùng với await params. Rồi nextjs sẽ generate trước ra hàng loạt static page sẵn tại build time => dùng lấy các page dynamic thường truy cập mà ít thay đổi
+--> ***Dynamic route nhưng statically generated:
+generateStaticParams tương đương với getStaticPaths của page router. Nó trả ra tham số và lấy trong dynamic route với với Page({params}). Dùng như v thì nextjs sẽ generate trước ra hàng loạt page sẵn tại build time => dùng lấy các page dynamic thường truy cập mà ít thay đổi
 Dùng dynamicParams để xác định khi 1 route được vào với tham số k được generate trước bởi generateStaticParams
 Dùng export const revalidate thử để revalidate
-Có thể cho generateStaticParams return empty array hoặc chỉ dùng const dynamic = 'force-static' nếu muốn mọi dynamic route đều generate static ở lần đầu tiên truy cập.
+Có thể cho generateStaticParams return empty array hoặc dùng const dynamic = 'force-static' nếu muốn mọi dynamic route đều generate static ở lần đầu tiên truy cập.
 
 -> Chuyển page: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
 useRouter, usePathname
-useSearchParams trả ra readonly version. Đổi params vẫn phải chuyển page params mới với router.push
+useSearchParams trả ra readonly version. Muốn đổi params thì phải chuyển page params mới với router.push
 useSelectedLayoutSegment ít dùng, comp phải nhét vào layout.js mới hoạt động, nó trả ra các path kể từ cái layout đó đến path mới nhất
-useLinkStatus ít dùng khi k có instant navigate, tức dynamic k cần prefetch và k có loading.js. Nó dùng trong comp con nằm trong <Link/> để lấy status khi chuyển trang.
+useLinkStatus ít dùng, chỉ khi k có instant navigate, tức dynamic k cần prefetch và k có loading.js. Nó dùng trong comp con nằm trong <Link/> để lấy status khi chuyển trang.
 
 -> Prefetch: 
 - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể.
-Có thể chặn khi dùng <Link/> với prefetch={false} để cản với các trang ít khi người dùng vào. Nó chỉ có tác dụng trên production (build r start).
-Nếu dynamic không có loading.js sẽ prefetch cache đến khi reload. Nếu dynamic có loading sẽ prefetch từ layout đến loading boundary đầu tiên trong 30s, sửa với config staleTimes
+Có thể chặn với <Link prefetch={false}/> để cản với các trang ít người vào or muốn realtime. Nó chỉ có tác dụng trên production (build r start).
+Khi prefetch vào 1 dynamic route. Nếu dynamic route không có loading.js sẽ prefetch cả page cho đến khi reload. Nếu dynamic có loading.js sẽ prefetch từ layout đến loading boundary đầu tiên trong 30s, sửa với config staleTimes, chú ý reload vẫn k stale nếu chưa đến hạn.
 - Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang kể cả dynamic và static.
-=> prefetch phải dùng cẩn thận vì nó gây ra nhiều behavior k tốt. Vd nó prefetch 1 route từ server, nhưng ta lại đổi data lúc vào pages thì server k fetch lại nữa là sai, phải đảm bảo page hiện tại k thay đổi data của page đang prefetch và set stale time cho đúng.
-=> Có thể custom hover thì mới prefetch
+=> prefetch nguy hiểm vì data có thể mất realtime nên chỉ làm với page k cần realtime cao. Đặc biệt là nên dùng loading.js với dynamic thì <Link/> sẽ k prefetch API ok.
+=> Có thể custom hover thì mới prefetch: https://nextjs.org/docs/app/guides/prefetching#hover-triggered-prefetch
 
 -> Nhanh:
+Khi nào 1 page là dynamic và luôn fetch lại
 generateStaticParams giúp 1 lượng dynamic page được static generate, có revalidate và empty array để generate khi lần đầu tiên truy cập.
+Navigate bằng CSR or thẻ link
 prefetch page dynamic có 2 cách. Page có loading.js mới có staleTime.
 
 
@@ -91,14 +94,13 @@ Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện
 Hàm chuyên dùng cho SSG, dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
 Thế nếu chỉ chạy 1 lần tức là data fix cứng, tại sao ta k viết cứng cho nó luôn? => Vì nếu có 1 triệu data thì ta đâu thể gõ cứng vào mà phải fetch r in ra chứ. Nó sẽ fetch trước mọi trang ta xác định, kể cả dynamic params page.
 
-Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ dùng web sẽ cực kỳ nhanh, cộng với bộ cache lớn thì tốc độ sẽ cực kỳ nhanh.
+Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ cực kỳ nhanh.
 Chỉ được dùng 1 loại, k được dùng kèm getInitialProps
 
 --> Dùng với dynamic params: 
 Cần tạo nhiều trang static với đường dẫn động từ dữ liệu tại thời điểm build. Ta dùng getStaticPaths định nghĩa các url muốn pre-render ngay từ lúc build. Vì dynamic thì built time nó k rõ url có giá trị gì để prefetch nên hàm này chỉ giúp điều đó thôi. Lúc build sẽ fetch tất cả và cho ra hàng loạt file html là trang tĩnh.
 
----> Hàm getStaticPaths trả ra object có:
-Trường paths: là list các dynamic params.
+Hàm getStaticPaths trả ra object có trường paths là list các dynamic params.
 VD: pages/posts/[postId]/[commentId] thì trả về kiểu {params:{postId:1,commentId:2}} 
 VD: pages/[...slug] thì trả kiểu {params:{slug:["hello","world"]}} và sinh ra page /hello/world
 Mọi route kiểu null, [], undefined, false, VD slug:false thì Next tự cho ra "/"
@@ -159,23 +161,6 @@ Trong _app.tsx dùng router.on để bắt sự kiện khi router đổi, thì r
 
 PopState Event là event của window được kích hoạt khi user navigate qua lại giữa các page và history entry được push vào history stack.
 Dùng router.beforePopState có thể thao tác với 2 button navigate của browser, khi click 2 nút đó thì làm gì trước khi chuyển page.
-
-
-
-
-# Route Handlers
-Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
-Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
-
--> Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để luôn cache, export const revalidate=60 để revalidate với request GET. Mọi method khác luôn k được cache.
-VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được khi update, kể cả thêm vào server actions
-Lưu ý Request Memoization chỉ dùng cho GET trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree tức nó dùng fetch bth của browser thôi.
-
--> Pb: 
-Routing: app/<>/pages.js
-Route handler: app/<>/route.js
-Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js 
-FE call relative, BE call absolute.
 
 
 
@@ -263,6 +248,23 @@ Vd: button đổi status của workflow trong untrest => giống kiểu debounce
 Server chỉ rerender khi vào lần đầu
 Dùng router.refresh render lại server, k render client.
 Dùng revalidatePath/revalidateTag
+
+
+
+# Route Handlers
+Do là server nên set được mọi thứ như dynamic function, cookie, headers, cors, FormData, body, query. 
+Route Handlers giúp tạo API BFF: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+
+-> Route Handlers mặc định k được cache. VD Có thể dùng export const dynamic='force-static' để luôn cache, export const revalidate=60 để revalidate với request GET. Mọi method khác luôn k được cache.
+VD đang hiện 1 trường db lên UI có cache, external system gọi vào API của Route Handlers update trường đó, user refresh sẽ k thấy data mới nhất vì cache data cũ => thêm revalidateTag ngay trong Route Handlers để invalidate cache được khi update, kể cả thêm vào server actions
+Lưu ý Request Memoization chỉ dùng cho GET trong React Component tree và k extends fetch request trong Route Handlers vì nó ngoài React Component tree tức nó dùng fetch bth của browser thôi.
+
+-> Pb: 
+Routing: app/<>/pages.js
+Route handler: app/<>/route.js
+Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js 
+FE call relative, BE call absolute.
+
 
 
 

@@ -11,8 +11,7 @@ SSR: browser gửi request lấy html -> server fetch data r gửi lại html ->
 SSG thì server fetch data lưu vào cache rồi build ra html tĩnh sẵn, cache stale thì nó tự fetch tiếp và build lại html tĩnh.
 Universal SSR là két hợp của CSR data realtime, SSR data cần SEO.
 => Dùng nextjs SSR có nh điểm lợi k thể thay thế bằng CSR. BFF server khi api bên thứ 3 dùng cookies httponly cản k truy cập từ FE thì server của SSR lại call đc. Biến môi trường secret ở component cần che giấu thì phải dùng SSR mới ẩn được.
-
-Hosting CSR cũng như các file tĩnh. Còn hosting SSR hay SSG đều cần hosting 1 server nodejs lên serve file.
+=> Hosting CSR cũng như các file tĩnh. Còn hosting SSR hay SSG đều cần hosting 1 server nodejs lên serve file.
 
 -> Khi hydrate, client tải code JS và thực thi để biết có event nào gắn vào component nào. Việc này server đã làm rồi nhưng k gửi cho client được nên client phải hydrate lại.
 Resumability là giải pháp thay thế hydration
