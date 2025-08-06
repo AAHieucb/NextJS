@@ -255,7 +255,7 @@ Có 3 kiểu: debounce, useOptimistics, debounce mở rộng optimistics
 # File structure
 Full example master routing: https://github.com/vercel/next-app-router-playground
 Thường dùng src nếu có cả src/app và src/page cùng lúc
-Có thể viết common comp ở các vị trí mà next ignore for routing: apps/components; bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; dùng src/components cùng cấp src/apps. VD để components trong app k tính routing nếu folder k có page.js
+Viết common comp ở các vị trí mà next ignore for routing: bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; để ở bất cứ folder nào trong app k tính routing nếu folder k có page.js, VD app/components; dùng src/components cùng cấp src/apps
 
 <Layout>
   <Template>
@@ -269,21 +269,56 @@ Có thể viết common comp ở các vị trí mà next ignore for routing: app
   </Template>
 </Layout>
 
--> Favicon hay các icon khác có convention về file: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons
-
 -> Template khác layout ở chỗ, template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. Tức layout thì state được giữ nguyên khi navigate sang page khác cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
 VD: layout chỉ hiện fallback của Suspense ở lần đầu vào, các lần sau quay lại k hiện vì nó preserve state rồi, template sẽ hiện Suspense mọi lúc navigate tới.
 
 layout.tsx thay thế _app.tsx và _document.tsx của pages router
 Thẻ để trong <head> trong layout sẽ tự chuyển xuống cuối của <head> trong html đích
 
--> default.js sẽ thay thế slots. Buộc phải có nếu route thiếu nested slots, k sẽ lỗi 404.
-
--> Intercept route: ghi đè hiển thị khi navigate từ 1 route sang 1 route khác, nó sẽ hiển thị khác đi trong case đó, VD hiển thị dạng modal preview, khi close sẽ vẫn ở trang gốc.
+-> Intercept route: ghi đè hiển thị khi navigate từ 1 route sang 1 route khác, nó sẽ hiển thị khác đi trong case đó, VD hiển thị modal preview, khi close sẽ vẫn ở trang gốc.
 Chú ý phải xoá .next folder và chạy lại mới ăn.
 
--> Dùng router group: đặt tên folder trong () sẽ k ảnh hưởng đến routing, nó coi như k mất phần url folder đó trong path.
-URL: https://nextjs.org/docs/app/getting-started/project-structure#route-groups
+-> Nhanh hiểu qua về:
+Vị trí file common comp
+Phân biệt template layout
+Cấu trúc file, intercept route, slots, route group, private folder, [[...routing]], icon, sitemap
+
+
+
+# Handle loading api
+App router dùng Suspense fallback thì server component khi load api sẽ tự hiện, nó bắt lên dần Suspense theo cấp độ. 
+Còn dùng loading.js chỉ hiện nếu k Suspense gì cả sẽ hiện thay thế cả route đó.
+Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
+Có thể trigger Suspense boundary trong React Developer Tools.
+
+-> Page router => bỏ
+K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
+=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
+VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
+
+
+
+# Handle error
+-> Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa sẽ tìm dần tới cha đến khi gặp not-found.tsx 
+Lỗi thì error.tsx
+=> Ref tới "Projects / Portfolio"
+
+-> Server actions: k cần dùng try catch, cứ viết 1 hàm async bth, sau đó nhét vào useFormState (với react18) or useActionState (react19)
+const [state, formAction] = useFormState(createUser, initialState)
+=> state sẽ tự trả về error message với state.message
+
+-> Server components: 
+const res = await fetch(`https://...`)
+const data = await res.json()
+if (!res.ok) {
+  return 'There was an error.'
+}
+Nhưng kp api nào cũng trả ra như v. Vd server component page có 1 server component con call db bị lỗi throw khiến component con k render, page render error.tsx, trong khi chỉ muốn hiện lỗi cho 1 component con thôi. Thì buộc phải try catch component hiện theo ý ta
+
+-> Unexpected error
+Dùng error.js với error ở từng route (thật ra error sẽ bubble up lên parent từ từ), dùng global-error.js với error trong root layout
+error.js là client side comps.
+Còn global error sẽ replace tất cả root hay layout. Nếu có error mà error.ts k bắt thì global-error sẽ bắt.
 
 
 
@@ -301,18 +336,6 @@ Route handler: app/<>/route.js
 Server actions: tuỳ biến bất cứ nơi nào khác. VD: server/api/post.js 
 FE call relative, BE call absolute.
 
-
-
-# Handle loading api
-App router dùng Suspense fallback thì server component khi load api sẽ tự hiện, nó bắt lên dần Suspense theo cấp độ. 
-Còn dùng loading.js chỉ hiện nếu k Suspense gì cả sẽ hiện thay thế cả route đó.
-Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
-Có thể trigger Suspense boundary trong React Developer Tools.
-
--> Page router => bỏ
-K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
-=> Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
-VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
 
 
 
@@ -817,30 +840,6 @@ const [data, submitAction, isPending] = useActionState(
 => Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi. K lưu state, k render lại mỗi khi gõ vào
 => async (previousState: FormField, formData: FormData): Promise<FormField> vì previousState và return field phải giống nhau
 => Tham số 3 kbh dùng: https://www.youtube.com/watch?v=-aBKrvK5Vn8
-
-
-
-# Handle error
--> Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa sẽ tìm dần tới cha đến khi gặp not-found.tsx 
-Lỗi thì error.tsx
-=> Ref tới "Projects / Portfolio"
-
--> Server actions: k cần dùng try catch, cứ viết 1 hàm async bth, sau đó nhét vào useFormState (với react18) or useActionState (react19)
-const [state, formAction] = useFormState(createUser, initialState)
-=> state sẽ tự trả về error message với state.message
-
--> Server components: 
-const res = await fetch(`https://...`)
-const data = await res.json()
-if (!res.ok) {
-  return 'There was an error.'
-}
-Nhưng kp api nào cũng trả ra như v. Vd server component page có 1 server component con call db bị lỗi throw khiến component con k render, page render error.tsx, trong khi chỉ muốn hiện lỗi cho 1 component con thôi. Thì buộc phải try catch component hiện theo ý ta
-
--> Unexpected error
-Dùng error.js với error ở từng route (thật ra error sẽ bubble up lên parent từ từ), dùng global-error.js với error trong root layout
-error.js là client side comps.
-Còn global error sẽ replace tất cả root hay layout. Nếu có error mà error.ts k bắt thì global-error sẽ bắt.
 
 
 

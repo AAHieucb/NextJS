@@ -736,14 +736,14 @@ src
         route.js => /api/hello
     dashboard
       layout.js
+      template.js
       loading.js
       not-found.js
       error.js
-      template.js
-      default.js => fallback nếu k có slot khi cần thế vào layout
+      default.js => fallback nếu k có slot khi cần thế vào layout. Buộc phải có nếu route thiếu nested slots, k sẽ lỗi 404.
       @testslot
         page.js => slots chỉ là 1 phần thế vào layout
-      (settings)
+      (settings) => route group, đặt tên folder trong () sẽ k ảnh hưởng đến routing, nó coi như k mất phần url folder đó trong path.
         test
           page.js => /dashboard/test
       [slug]
@@ -767,7 +767,7 @@ src
       twitter-image.png
       twitter-image.alt.txt
     global-error.js
-    favicon.ico
+    favicon.ico => các kiểu icon có convention: https://nextjs.org/docs/app/api-reference/file-conventions/metadata/app-icons
     icon.ico
     apple-icon.png
     sitemap.xml
