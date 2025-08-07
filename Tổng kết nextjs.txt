@@ -13,9 +13,9 @@ export default (phase) => {
 } => npm run dev thì isDev mới = true, k check được trong component
 
 -> Partial rendering: https://www.youtube.com/watch?v=MTcPrTIBkpA
-Các component dùng cookies hay searchParams đều tự là dynamic và gọi lại liên tục khi vào rồi. 
-Chú ý component Page có searchParams mà chưa await nó thì vẫn là phần static, khi truyền vào con và con gọi await searchParams; thì con mới là dynamic.
+Các component dùng cookies hay searchParams đều tự là dynamic và gọi lại liên tục khi vào rồi. Nhưng chú ý component Page có searchParams mà chưa await nó thì vẫn là phần static, khi truyền vào con và con gọi await searchParams; thì con mới là dynamic.
 Chỉ các component dynamic mới cần dùng prr chứ static xây hết ở build time thì k cần, khi đó mọi dynamic part cần được wrap vào Suspense nha, phần static sẽ render ngay build time, phần dynamic sẽ render ở runtime.
+Mặc định dynamic có static part cũng k tự động build ở buildtime, nhưng ppr cho phép làm điều đó, giống prefetch dynamic comp với <Link/> sẽ prefetch phần static ấy.
 
 
 
