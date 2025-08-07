@@ -286,15 +286,16 @@ Cấu trúc file, intercept route, slots, route group, private folder, [[...rout
 
 
 # Handle loading
-App router dùng Suspense fallback thì server component khi load api sẽ tự hiện, nó bắt lên dần Suspense theo cấp độ. 
-Còn dùng loading.js chỉ hiện nếu k Suspense gì cả sẽ hiện thay thế cả route đó.
-Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
+Dùng Suspense fallback sẽ bắt hiện dần lên theo cấp độ khi server component load api. Dùng loading.js sẽ hiện cho cả route đó khi k có Suspense thôi. 
+Khi đó, nextjs tự động streaming, BE gửi cho FE hiện loading trước, server component xử lý xong sẽ gửi kết quả streaming từng phần cho client thế vào.
 Có thể trigger Suspense boundary trong React Developer Tools.
 
 -> Page router => bỏ
 K thể bắt được getServerSideProps để loading phía client nhưng có thể bắt sự kiện đổi router với Router.events nhưng sẽ k ổn vì mọi component trong page sẽ bị rerender khi hiển thị thanh loading ở giữa page. Hơn nữa khi k cần loading mà bất cứ khi nào router đổi k chạy getServerSideProps thì nó vẫn chạy loading k cần thiết
 => Lib NProgress sẽ tạo loading hiển thị cục trên mà k rerender lại các components page nên vẫn ok, dùng với Router.events => ref tới "Projects / MoveWorld"
-VD khi chuyển page thì thì chạy getServerSideProps phải chờ thì nên hiện loading
+
+-> Nhanh:
+Suspense và loading.js
 
 
 
