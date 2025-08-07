@@ -285,7 +285,7 @@ Cấu trúc file, intercept route, slots, route group, private folder, [[...rout
 
 
 
-# Handle loading api
+# Handle loading
 App router dùng Suspense fallback thì server component khi load api sẽ tự hiện, nó bắt lên dần Suspense theo cấp độ. 
 Còn dùng loading.js chỉ hiện nếu k Suspense gì cả sẽ hiện thay thế cả route đó.
 Dùng loading là nextjs tự động streaming rồi, BE cứ gửi cho FE hiện loading trước, component server xử lý xong sẽ streaming gửi cho client thay thế Suspense fallback thoi.
