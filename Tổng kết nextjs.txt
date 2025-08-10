@@ -170,7 +170,7 @@ App router mặc định mọi component là server side, chỉ khi có "use cli
 
 -> Server component chỉ chạy trên server, nhưng client component chạy trên cả server (first rendering pass) và client.
 Client component được server chạy qua 1 lần, nhưng k chạy code useEffect. Nếu dùng window object trong client component trực tiếp sẽ lỗi, dùng conditional check cũng lỗi hydration vì html render ở server và client phải giống nhau. Dùng trong useEffect thì ok, FE sẽ bị jump giá trị khi useEffect chạy.
-Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data => dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh
+Để fix jump, có thể hiển thị loading nếu useEffect chưa chạy, đảm bảo chạy xong mới có data => chỉ dùng suppressHydrationWarning ở tag html ngoài cùng sẽ bỏ báo lỗi client và server mismatch khi biết việc này là k thể tránh
 VD fix hydration error new Date() ở server: 
 - K render time ra nữa
 - Time k đóng vai trò gì trong SEO thì cho vào useState default "", set giá trị trong useEffect chỉ dùng ở client.
@@ -212,21 +212,21 @@ Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp 
 
 
 
-#*** Master rerender / refetch nextjs 
+#*** Master rerender / refetch nextjs
 -> Rerender client:
 Client thay đổi state, sẽ chỉ render lại chính nó, k render lại server component. Nếu nó wrap server component, cũng k rerender server component đó.
 
 -> Rerender server:
 Server comp rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi mới navigate vào để render DOM ra. Thật ra cũng render khi đổi cookies, vì nó cũng là đổi state của server, kể cả khi server comp đó k cần đọc cookies.
-Đặc biệt là khi dùng router.refresh từ useRouter ở client side, nó sẽ rerender server, nhưng client state không liên quan như scroll position hay useState k bị reset mà giữ như cũ, useEffect cx k tự chạy lại
+Đặc biệt là khi dùng router.refresh từ useRouter ở client side sẽ invalidate client side router cache, k ảnh hưởng data full route cache ở server. Client request lại pages từ server và rerender server, nhưng client thì react state vẫn được giữ, ví dụ scroll position hay useState vẫn giữ giá trị cũ, useEffect k tự chạy lại.
 
 -> Refetch:
-Client rerender thì có refetch lại hay không phụ thuộc vào useEffect phụ thuộc vào biến nào chứ
+Client rerender thì có refetch lại hay không phụ thuộc vào useEffect có dependencies là biến nào.
 Server rerender thì API sẽ k gọi lại mà tuỳ theo options của hàm fetch dùng no-store, revalidate hay gì. Nếu dùng revalidatePath hay revalidateTag chắc chắn sẽ chạy cả rerender và refetch vì 2 hàm này là cấp cao nhất, kể cả fetch cache vẫn còn.
 
 -> revalidate:
 revalidatePath/revalidateTag sẽ invalidate mọi loại cache ở 1 url cụ thể, đồng thời rerender và refetch server comp. 
-Client side mà muốn rerender server phải dùng qua server actions or route handlers, hoặc gọi router.refresh().
+Client side mà muốn rerender server phải dùng qua server actions or route handlers, hoặc gọi router.refresh(), server có thể vẫn k refetch nếu có cache.
 Chú ý khi gọi revalidatePath để invalidate cache thì nó ảnh hưởng mọi client chứ k chỉ client hiện tại, vì cache ở server dùng cho mọi client mà. Khi đó client hiện tại sẽ re-render luôn, các client khác cũng stale cache khi vào page đó.
 Giả sử client gọi hàm server revalidatePath hay đổi cookies khiến page render lại, thì hàm đó vẫn trả về giá trị cho FE xử lý xong, ổn định r mới re-render chứ k re-render ngay. Ktg này rất ngắn. Do đó giá trị trả về của hàm vẫn có thể dùng để update state chứ kp cứ đổi cookies phát là re-render luôn.
 
@@ -242,10 +242,12 @@ Lưu ý dùng useOptimistics:
 - useOptimistic k thể dùng với debounce vì gọi debounce trong startTransition thì ra ngoài sẽ compare luôn mà debounce chờ timeout nên k thực hiện ngay.
 
 Có case kết hợp cả 2, ta phải tự implement optimistics trong debounce: dùng 1 biến state lưu giá trị, khi gọi hàm thì update state local luôn, thực hiện side effect trong debounce xong sẽ update lần nữa, nếu fail thì viết update state trong catch quay lại giá trị cũ thôi => giống kiểu debounce mở rộng hơn là optimistics
-Vd: button đổi status của workflow trong untrest 
+Vd: gõ và search nên dùng debounce
+Vd: button like thì dùng debounce mở rộng
+Vd: hành động k lặp lại như comment, chat message, tạo đơn hàng mà thường k có lỗi thì dùng useOptimistics
 
 -> Nhanh:
-Client đổi state thì rerender. Server đổi cookies params thì rerender. Dùng router.refresh đặc biệt rerender server mà k rerender client.
+Client đổi state thì rerender. Server đổi cookies params thì rerender. Dùng router.refresh đặc biệt rerender server và preserve client state.
 Client thì refetch phụ thuộc useEffect, chứ server refetch phụ thuộc vào options hàm fetch.
 revalidatePath/revalidateTag chắc chắn rerender và refetch, nhưng vẫn trả về result cho FE như bth trước.
 Có 3 kiểu: debounce, useOptimistics, debounce mở rộng optimistics
