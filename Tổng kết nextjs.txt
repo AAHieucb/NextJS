@@ -53,10 +53,10 @@ Khi export static trong file config thì mọi hàm fetch server side sẽ thàn
 App router là dynamic khi dùng hàm connection, dùng fetch với các options dynamic, dùng await search params, dùng await cookies
 
 --> ***Dynamic route nhưng statically generated:
-generateStaticParams tương đương với getStaticPaths của page router. Nó trả ra tham số và lấy trong dynamic route với với Page({params}). Dùng như v thì nextjs sẽ generate trước ra hàng loạt page sẵn tại build time => dùng lấy các page dynamic thường truy cập mà ít thay đổi
-Dùng dynamicParams để xác định khi 1 route được vào với tham số k được generate trước bởi generateStaticParams
+generateStaticParams tương đương với getStaticPaths của page router. Nó trả ra tham số và lấy trong dynamic route với với Page({params}). Dùng như v thì nextjs sẽ generate trước ra hàng loạt page sẵn tại build time => dùng lấy các page dynamic thường truy cập mà ít thay đổi or k thực sự quá realtime
+Dùng dynamicParams cho 1 route vào với tham số k được generate trước bởi generateStaticParams, true thì generate on demand, false thì 404
 Dùng export const revalidate thử để revalidate
-Có thể cho generateStaticParams return empty array hoặc dùng const dynamic = 'force-static' nếu muốn mọi dynamic route đều generate static ở lần đầu tiên truy cập.
+Có thể cho generateStaticParams return empty array hoặc dùng const dynamic = 'force-static' nếu muốn dynamic route được generate static ở lần đầu tiên truy cập.
 
 -> Chuyển page: Dùng thẻ <a> ref ra link ngoài; Dùng useRouter chuyển trang CSR; Dùng next/link cho <Link/> chuyển trang CSR
 useRouter, usePathname
@@ -67,14 +67,14 @@ useLinkStatus ít dùng, chỉ khi k có instant navigate, tức dynamic k cần
 -> Prefetch: 
 - Dùng <Link> từ next/link tự động prefetch pages trong href nếu rảnh giúp tăng tốc nextJS => Luôn dùng <Link> trong mọi TH có thể.
 Có thể chặn với <Link prefetch={false}/> để cản với các trang ít người vào or muốn realtime. Nó chỉ có tác dụng trên production (build r start).
-Khi prefetch vào 1 dynamic route. Nếu dynamic route không có loading.js sẽ prefetch cả page cho đến khi reload. Nếu dynamic có loading.js sẽ prefetch từ layout đến loading boundary đầu tiên trong 30s, sửa với config staleTimes, chú ý reload vẫn k stale nếu chưa đến hạn.
+Khi prefetch vào 1 dynamic route. Nếu dynamic route không có loading.js sẽ prefetch cả page cho đến khi reload. Nếu dynamic có loading.js sẽ prefetch từ layout đến loading boundary đầu tiên trong 30s, sửa với config staleTimes, chú ý reload vẫn k stale nếu chưa đến hạn. Đó là thứ khiến nó khác với PPR.
 - Dùng useRouter có router.prefetch(url, as, options) để tùy biến prefetch với mọi trang kể cả dynamic và static.
-=> prefetch nguy hiểm vì data có thể mất realtime nên chỉ làm với page k cần realtime cao. Đặc biệt là nên dùng loading.js với dynamic thì <Link/> sẽ k prefetch API ok.
+=> prefetch nguy hiểm vì data có thể mất realtime nên chỉ làm với page k cần realtime cao. Đặc biệt là dùng loading.js với dynamic thì <Link/> sẽ k prefetch API ok.
 => Có thể custom hover thì mới prefetch: https://nextjs.org/docs/app/guides/prefetching#hover-triggered-prefetch
 
 -> Nhanh:
 Khi nào 1 page là dynamic và luôn fetch lại
-generateStaticParams giúp 1 lượng dynamic page được static generate, có revalidate và empty array để generate khi lần đầu tiên truy cập.
+generateStaticParams giúp 1 lượng dynamic page được static genhểerate, có revalidate và empty array để generate khi lần đầu tiên truy cập.
 Navigate bằng CSR or thẻ link
 prefetch page dynamic có 2 cách. Page có loading.js mới có staleTime.
 
