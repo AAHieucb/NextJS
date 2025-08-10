@@ -37,7 +37,7 @@ export const config = {
     bodyParser: { 
       sizeLimit: '1mb', // maximum size allow for parsed body
     },
-    // responseLimit: false, // automatically enabled và báo warning khi response quá 4mb
+    // responseLimit: false, // mặc định enabled và báo warning khi response quá 4mb
     responseLimit: '8mb', 
     externalResolver: true // flag báo rằng route này được xử lý bởi external resolver, it disables warnings for unresolved requests
   },
@@ -88,10 +88,10 @@ VD console.log trong component mà ngoài useEffect sẽ hiện ở console củ
 Hàm này chỉ thực hiện ở server để fetch data nhét vào DOM r gửi lại cho client html đã hoàn chỉnh. Mỗi khi có request, server sẽ lại chạy nó và lại cho vào DOM.
 
 --> Thử tùy biến: Nếu ta host cả server này lên thì nó mới là Universal SSR.
-Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Hàm này chỉ chạy phía server mà export static ra thì k còn server nữa mà thành html fix. Nên next build thì server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export sẽ chạy qua getInitialProps sinh ra data luôn. Export ra tĩnh chỉ được chạy 1 lần lúc build time rồi k cần server nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi và hàm này trở nên vô dụng vì k có server.
+Nếu ta build và export thành html tĩnh và host lên firebase thì chuyện gì xảy ra? Hàm này chỉ chạy phía server mà export static ra thì k còn server nữa mà thành html fix. Nên next build thì server sẽ thực hiện 1 lần duy nhất chạy qua tất cả, đến khi export sẽ chạy qua getInitialProps sinh ra data luôn. Export ra tĩnh chỉ được chạy 1 lần lúc build time rồi k cần server nên nó chạy qua và cứ chơi các giá trị mặc định nên data sau khi host lên sẽ kbh đổi.
 
 -> Dùng getStaticProps:
-Hàm chuyên dùng cho SSG, dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
+Dùng để fetch data lúc đầu tiên vào web. Khi ta build web, nó sẽ fetch data 1 lần duy nhất và thành file html cứng luôn cho ta, khác với getInitialProps thì mỗi lần có request nó sẽ chạy lại thì cái này chỉ chạy 1 lần.
 Thế nếu chỉ chạy 1 lần tức là data fix cứng, tại sao ta k viết cứng cho nó luôn? => Vì nếu có 1 triệu data thì ta đâu thể gõ cứng vào mà phải fetch r in ra chứ. Nó sẽ fetch trước mọi trang ta xác định, kể cả dynamic params page.
 
 Hàm này chỉ được thực hiện ở phía server vào lúc build time, nếu muốn update data đương nhiên phải build lại r export lại và host lên. Sau khi build, tốc độ cực kỳ nhanh.
@@ -106,7 +106,7 @@ VD: pages/[...slug] thì trả kiểu {params:{slug:["hello","world"]}} và sinh
 Mọi route kiểu null, [], undefined, false, VD slug:false thì Next tự cho ra "/"
 
 Trường fallback:
-- false thì mọi path k trả ra bởi getStaticPaths sẽ ra 404 page (next build chỉ build các path xđ trong getStaticPaths) => thg dùng kiểu có ít page ban đầu, dùng như v thì sau này thêm page vào thì next build phát là xong
+- false thì mọi path k trả ra bởi getStaticPaths sẽ ra 404 page (next build chỉ build các path xđ trong getStaticPaths) => sau này thêm page vào thì next build phát là xong
 - true thì page k có trong getStaticPaths sẽ được fetch và trong lúc chờ loading sẽ hiển thị ra fallback page, fetch xong mới hiển thị ra page bth => thg dùng khi có rất nhiều page. VD có 1 triệu page nếu ta fetch hết sẽ có 1 triệu file html mà đâu cần mức đấy. Ta có thể fetch 3 item page đầu, các page sau ta để loading or skeleton ok.
 
 Quy trình: dùng getStaticProps và getStaticPaths cho 1 vài pages thôi, trong component check nếu router.isFallback==true là đang loading 1 page chưa từng fetch, nếu !router.isFallback&&!data thì là vào trang k tồn tại. Còn lại là vào đúng.
@@ -746,6 +746,7 @@ export const config = {
 - NextResponse.redirect để redirect trong middleware, nó nằm sau redirects trong next.config.js
 
 -> rewrites thì chỉ có trong next.config.js: đổi page mà k đổi url
+Hiểu rewrite và redirect và redirect permantnent
 
 -> Đổi url mà k đổi page với history.pushState({},"","/newurl");
 

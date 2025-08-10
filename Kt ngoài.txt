@@ -18,7 +18,7 @@ Resumability là giải pháp thay thế hydration
 - Server serialize thông tin "event nào gắn với component nào" gửi cho client k cần tính toán lại.
 - Sử dụng lazy load, để khi user tương tác mới cần load thông tin event đó thôi. Khi trigger event, client biết sẵn nó cần event handler nào thì load về thực hiện luôn.
 - Sử dụng 1 global event handler bắt mọi event, k cần chờ event gắn vào element mới chạy được nữa. Vì hydration lưu hết event handler vào bộ nhớ rất tốn, cách này chỉ cần 1 global handler, user tương tác event nào mới load event đó.
-=> React k có resumability, Qwik* là framework thực hiện resumability có tốc độ vượt cả nextjs, được tích hợp sẵn nên chỉ cần dùng Qwik là có tốc độ nhanh => k dùng
+=> React k có resumability, Qwik* là framework thực hiện resumability có tốc độ vượt cả nextjs, được tích hợp sẵn nên chỉ cần dùng Qwik là có tốc độ nhanh
 
 -> SS: - Ở lần load đầu tiên, SSR nhanh hơn do server xử lý html gửi lại client nhìn được ngay. Còn CSR thì người dùng nhìn thấy thanh loading cho đến khi browser xử lý DOM xong.
 - SSR thì mọi thao tác phải gửi tới server xử lý, render ra html mới. CSR thì lượng data load lần đầu khá nặng nhưng bù lại các lần sau sẽ xử lý cực nhanh do nó đã có hết trên client, k cần reload trang lại với mọi hành động. NextJS xử lý hết.

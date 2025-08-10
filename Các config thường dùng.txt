@@ -217,7 +217,7 @@ images: {
       search: "", // để trống thì url ảnh k được có search params nào cả mới optimize
     },
   ],
-  domains: [ // y hẹt remotePatterns nhưng k dùng wildcard mà fix cứng
+  domains: [ // y hệt remotePatterns nhưng k dùng wildcard mà fix cứng
     "aptos-api-testnet.bluemove.net",
     "aptos.dev",
   ],
@@ -321,9 +321,8 @@ Sau khi build, host phần .next/static lên CDN. Nó bao gồm các file js css
 --> images.deviceSizes: Nếu biết trước các loại máy sử dụng thì để vào để tránh image optimizer phải optimize quá nhiều.
 images.imageSizes: Set image width, nối với deviceSizes tạo full array. imageSizes chỉ dùng cho image có prop sizes, chỉ rằng image nhỏ hơn full-width của screen.
 
--> crossOrigin sẽ thêm thuộc tính vào mọi <script> được sinh bởi next/script component
-K set thì là "" thì y như anonymous.
-anonymous thì dùng cors header là same-origin thì thông tin credentials sẽ chỉ gửi kèm khi request tài nguyên khi query same-origin
+-> crossOrigin sẽ thêm thuộc tính vào mọi <script> được sinh bởi next/script component. Phải có khi load file JS từ domain khác, chứ script mà có fetch bên trong klq.
+K set thì là "" thì y như anonymous, anonymous thì dùng cors header là same-origin sẽ chỉ gửi user credentials khi load file js cùng domain.
 use-credentials tức luôn thêm use credentials mọi lúc.
 
 
