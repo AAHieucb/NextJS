@@ -797,7 +797,10 @@ sitemap.ts khi cần generate bằng code chỉ cần export ra 1 hàm return ra
   changeFrequency: 'weekly',
   priority: 0.5,
 }
+=> changefreq always không khiến gg crawl web thường xuyên hơn mà chỉ là gợi ý thôi. Crawler thường có xu hướng dựa vào lastModified hơn
+
 VD: https://github.com/nodejs/nodejs.org/blob/main/apps/site/app/sitemap.ts => codebase chuẩn cho static site generation
+Thực tế không đúng vì external link đáng ra k cần include thì nó lại includes, external link k đem lại giá trị SEO thực tế.
 
 
 

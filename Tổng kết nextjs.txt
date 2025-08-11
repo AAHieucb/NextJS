@@ -257,7 +257,7 @@ Có 3 kiểu: debounce, useOptimistics, debounce mở rộng optimistics
 # File structure
 Full example master routing: https://github.com/vercel/next-app-router-playground
 Thường dùng src nếu có cả src/app và src/page cùng lúc
-Viết common comp ở các vị trí mà next ignore for routing: bất cứ thư mục nào có _ prefix; file ở cấp ngoài cùng của apps mà khác các tên đặc biệt như layouts, pages; để ở bất cứ folder nào trong app k tính routing nếu folder k có page.js, VD app/components; dùng src/components cùng cấp src/apps
+Viết common comp ở các vị trí mà next ignore for routing: bất cứ thư mục nào có _ prefix; để ở bất cứ folder nào trong app k tính routing nếu folder k có page.js, VD app/components; dùng src/components cùng cấp src/apps
 
 <Layout>
   <Template>
@@ -271,8 +271,8 @@ Viết common comp ở các vị trí mà next ignore for routing: bất cứ th
   </Template>
 </Layout>
 
--> Template khác layout ở chỗ, template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. Tức layout thì state được giữ nguyên khi navigate sang page khác cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template.
-VD: layout chỉ hiện fallback của Suspense ở lần đầu vào, các lần sau quay lại k hiện vì nó preserve state rồi, template sẽ hiện Suspense mọi lúc navigate tới.
+-> Template khác layout ở chỗ, template sẽ reset state bên trong khi navigate, còn layout sẽ preserve state. Tức layout thì state được giữ nguyên khi navigate sang page khác cùng layout, nhưng template thì state reset khi navigate sang page khác dùng cùng template. Chú ý chỉ là client state.
+VD: 1 button bấm là tăng count, khi navigate sang page khác cùng layout mà vẫn có button đó thì state k đổi, với template thì state count reset về default.
 
 layout.tsx thay thế _app.tsx và _document.tsx của pages router
 Thẻ để trong <head> trong layout sẽ tự chuyển xuống cuối của <head> trong html đích
@@ -288,7 +288,7 @@ Cấu trúc file, intercept route, slots, route group, private folder, [[...rout
 
 
 # Handle loading
-Dùng Suspense fallback sẽ bắt hiện dần lên theo cấp độ khi server component load api. Dùng loading.js sẽ hiện cho cả route đó khi k có Suspense thôi. 
+Dùng Suspense fallback sẽ bắt dần lên theo cấp độ khi server component load api. Dùng loading.js sẽ hiện cho cả route đó khi k có Suspense thôi. 
 Khi đó, nextjs tự động streaming, BE gửi cho FE hiện loading trước, server component xử lý xong sẽ gửi kết quả streaming từng phần cho client thế vào.
 Có thể trigger Suspense boundary trong React Developer Tools.
 
@@ -302,26 +302,22 @@ Suspense và loading.js
 
 
 # Handle error
--> Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa sẽ tìm dần tới cha đến khi gặp not-found.tsx 
-Lỗi thì error.tsx
-=> Ref tới "Projects / Portfolio"
+Nếu tìm 1 route k có, sẽ tìm default.tsx để thay thế, k có nữa sẽ tìm dần tới cha đến khi gặp not-found.tsx 
+Dùng error.tsx là client side comp sẽ bắt dần lên từng level và thế vào component lỗi. error.tsx k bắt thì global-error.tsx sẽ bắt => luôn dùng
+ErrorBoundary bắt lỗi cũng chỉ là dùng try catch thôi => ít dùng.
 
--> Server actions: k cần dùng try catch, cứ viết 1 hàm async bth, sau đó nhét vào useFormState (với react18) or useActionState (react19)
-const [state, formAction] = useFormState(createUser, initialState)
-=> state sẽ tự trả về error message với state.message
+-> Với server action, có thể dùng try catch bao hàm, hoặc dùng useFormState (với react18) or useActionState (react19)
+VD: const [state, formAction] = useFormState(createUser, initialState) => state sẽ tự trả về error message với state.message
 
--> Server components: 
-const res = await fetch(`https://...`)
+-> Server components fetch API mà không throw error.
+VD: const res = await fetch(`https://...`)
 const data = await res.json()
 if (!res.ok) {
   return 'There was an error.'
 }
-Nhưng kp api nào cũng trả ra như v. Vd server component page có 1 server component con call db bị lỗi throw khiến component con k render, page render error.tsx, trong khi chỉ muốn hiện lỗi cho 1 component con thôi. Thì buộc phải try catch component hiện theo ý ta
 
--> Unexpected error
-Dùng error.js với error ở từng route (thật ra error sẽ bubble up lên parent từ từ), dùng global-error.js với error trong root layout
-error.js là client side comps.
-Còn global error sẽ replace tất cả root hay layout. Nếu có error mà error.ts k bắt thì global-error sẽ bắt.
+-> Nhanh:
+Nên dùng not-found.tsx, error.tsx, try catch hơn là ErrorBoundary.
 
 
 
