@@ -823,11 +823,9 @@ Bth chỉ có static site generation build hoàn toàn ở build time. SSR là s
 Parial Prerendering là việc server vẫn build trước 1 phần tĩnh vào CDN, có request sẽ kết hợp phần động vào hoàn chỉnh.
 Dùng trong next: Phải enable option thì mọi component sẽ prerender hết trong lúc build. Các component dynamic cần fetch API cần wrap lại trong Suspense và fallback của Suspense phải là static component để nó prerender luôn.
 
---> revalidate = false => set giá trị default cho revalidation time của pages, layout, dùng cho router handler thì là thời gian sống của cache lưu data.
-Nó là thời gian phải làm mới lại pages, nếu dùng với static site sẽ biến thành static site increment. K dùng được khi dùng runtime = 'edge'
-Nó k override revalidate của hàm fetch mà chỉ sửa đổi giá trị default thôi. Khi kích hoạt nó fetch lại cả pages và cả api fetch luôn.
-Set là false (default) tương đương Infinity. Set là 0 thì luôn dynamic render lại dù pages k dùng dynamic apis, điều đb là case này sẽ ghi đè nếu fetch dùng force-cache or revalidate (vì nextjs luôn ưu tiên settings k cache). Set là 1 số sẽ đảm bảo endpoint invalidated và re-executed mỗi X phút.
----> Dynamic APIs là sử dụng các hàm cookies, headers, connection, draftMode, searchParams prop
+--> revalidate => set default revalidation time của pages, layout (Data Cache), k override option fetch. Dùng cho router handler thì là thời gian sống của cache lưu data.
+VD set là 1 số thì nó là default của fetch revalidate. Nếu set cho static site sẽ biến thành static site increment. K dùng được khi dùng runtime = 'edge' vì cần server
+Set là false (default) tương đương Infinity. Set là 0 thì luôn dynamic render lại dù pages k dùng dynamic apis. VD dùng fetch no-store or revalidate sẽ đè lên luôn. 
 
 --> fetchCache ít dùng vì nó override default options của hàm fetch trong toàn pages.
 Mặc định nextjs cache mọi hàm fetch() gọi trước khi dùng dynamic apis, k cache các hàm fetch() gọi sau dynamic apis.

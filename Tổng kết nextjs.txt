@@ -74,7 +74,7 @@ Khi prefetch vào 1 dynamic route. Nếu dynamic route không có loading.js s�
 
 -> Nhanh:
 Khi nào 1 page là dynamic và luôn fetch lại
-generateStaticParams giúp 1 lượng dynamic page được static genhểerate, có revalidate và empty array để generate khi lần đầu tiên truy cập.
+generateStaticParams giúp 1 lượng dynamic page được static generate, có revalidate và empty array để generate khi lần đầu tiên truy cập.
 Navigate bằng CSR or thẻ link
 prefetch page dynamic có 2 cách. Page có loading.js mới có staleTime.
 
@@ -206,7 +206,7 @@ Dùng redux, zustand, react context.
 Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp có thể lưu vào local storage chẳng hạn để truy cập mọi cấp.
 
 -> Nhanh:
-- Date hay window client comp chỉ dùng trong useEffect tránh lỗi hydration. suppressHydrationWarning ở tag html ngoài cùng.
+- Date hay window client comp chỉ dùng trong useEffect tránh lỗi hydration, nhưng bị jump. suppressHydrationWarning ở tag html ngoài cùng.
 - Server import client ok, client chỉ bao server qua { children }
 - Client truyền cho server qua server action, server truyền cho client qua props và react context. Hoặc share hết qua cookies, url.
 
@@ -217,7 +217,7 @@ Truyền trực tiếp qua props nếu là con trực tiếp. Con trực tiếp 
 Client thay đổi state, sẽ chỉ render lại chính nó, k render lại server component. Nếu nó wrap server component, cũng k rerender server component đó.
 
 -> Rerender server:
-Server comp rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi mới navigate vào để render DOM ra. Thật ra cũng render khi đổi cookies, vì nó cũng là đổi state của server, kể cả khi server comp đó k cần đọc cookies.
+Server comp rerender chỉ khi cả component render lại, vì bth k có cách nào đổi props của server component được. Tức nó chỉ render khi mới navigate vào để render DOM ra. Thật ra cũng render khi dùng cookies, headers, connection, draftMode, searchParams prop, unstable_noStore, vì nó cũng là đổi state của server. Chỉ cần lấy ra thôi cũng rerender, kể cả khi server comp đó k cần đọc cookies.
 Đặc biệt là khi dùng router.refresh từ useRouter ở client side sẽ invalidate client side router cache, k ảnh hưởng data full route cache ở server. Client request lại pages từ server và rerender server, nhưng client thì react state vẫn được giữ, ví dụ scroll position hay useState vẫn giữ giá trị cũ, useEffect k tự chạy lại.
 
 -> Refetch:
@@ -248,7 +248,7 @@ Vd: hành động k lặp lại như comment, chat message, tạo đơn hàng m�
 
 -> Nhanh:
 Client đổi state thì rerender. Server đổi cookies params thì rerender. Dùng router.refresh đặc biệt rerender server và preserve client state.
-Client thì refetch phụ thuộc useEffect, chứ server refetch phụ thuộc vào options hàm fetch.
+Client thì refetch phụ thuộc useEffect, chứ server refetch phụ thuộc vào options hàm fetch. VD server rerender mà options fetch no-cache thì sẽ fetch lại.
 revalidatePath/revalidateTag chắc chắn rerender và refetch, nhưng vẫn trả về result cho FE như bth trước.
 Có 3 kiểu: debounce, useOptimistics, debounce mở rộng optimistics
 

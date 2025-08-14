@@ -182,6 +182,12 @@ Có thể lưu tiếp vào redis (random session id, user) và set vào cookie c
 --> Bản chất chống giả mạo với cookie state thì khi tạo redirect url, tạo 1 random state lưu vào cookies và gửi kèm url, khi trả về code sẽ kèm state đó. Check ss state trong cookies là được. Nó đảm bảo từ lúc login đến lúc nhận về token đều trong cùng phiên đăng nhập của 1 ngừoi, chứ kp 1 người login xong gửi url cho người khác lấy token.
 Tương tự bảo mật với code verifier cũng sinh random lưu vào cookie và gửi, nhưng oauth provider sẽ lưu nó và lấy ra check.
 
+--> Bản chất ta gửi kèm redirectUrl cho authorization server để lấy về authorization code nhưng authorization server k tự query vào cái redirectUrl để gửi code cho ta, mà sau khi login thì nó trả lại response cho browser là "redirectUrl?code=ABC123&state=random_string", rồi browser mới call vào cái redirecturl kia để server lấy code rồi query token.
+Cái redirecturl đó chỉ góp 1 phần vào việc xác thực. Khi query token cũng gửi lại redirectUrl phải trùng với redirectUrl gửi lúc lấy code, và phải trùng với redirectUrl đã set trong app.
+Do đó khi ta dùng POSTMAN, ta tự lấy được code, rồi dùng lấy token luôn mà k cần dựng 1 server bắt redirectUrl, chỉ truyền redirectUrl rác vào trùng với redirectUrl đã set trong app thôi. Vì auth server trả response cho POSTMAN "redirectUrl?code=ABC123&state=random_string" tự lấy code r lấy token luôn để test, POSTMAN hỗ trợ sẵn k cần dựng server.
+
+--> Scope có thể chứa cả url chỉ định resource nào và quyền gì chứ k chỉ chứa quyền.
+
 -> Logout: 
 - Khi jwt token ta cung cho user hết hạn, hoặc khi session hết hạn, hoặc chủ động ấn logout thì phải xóa hết session và token và login lại.
 - Nếu cần tương tác OAuth thì có thể lưu lại accessToken và refreshToken tùy ý quản lý. Logout phải xóa cả 2 token đi.
