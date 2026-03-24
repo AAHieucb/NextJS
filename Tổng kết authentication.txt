@@ -60,6 +60,10 @@ Nếu không phải xử lý routing 1 user luôn tới 1 server.
 - Có thể sinh cả refreshToken có hạn lớn để lấy accessToken khi hết hạn.
 - Server k cần lưu data ở db hay gì cả mà chỉ cần client lưu token thôi.
 
+Session based thì server phải lưu data, nếu request của user đi tới 2 server khác nhau sẽ phải login 2 lần. JWT là 1 cách thay thế mà các server chỉ cần lưu chung 1 secret để sinh JWT, authen data được lưu trong JWT token ở phía client => JWT tiện hơn trong hệ thống nhiều server.
+
+JWT chỉ có 2 hàm sign và verify, chả có gì phức tạp
+
 
 
 # Dùng token jwt v2 dự án lớn chuẩn
@@ -110,6 +114,10 @@ Sau đó lưu redis (userid_deviceid, <jit của token trên thiết bị đó>)
 C2: Vì ta muốn check token nhanh và tự xóa theo expireTime nên mỗi token nên là 1 key riêng trong redis, ta lưu: (`TOKEN_BLACK_LIST_${userid}_{token_jit}`, true); 
 => Lưu ý ta vẫn lưu userid vào key blacklist để làm nhiều tính năng như: đổi password ở 1 thiết bị thì tất cả thiết bị của user đó đều phải vô hiệu hóa token.
 
+- Detect token bị hack, hacker hack được token nhưng k biết tk mk, thì đến khi token hết hạn sẽ lấy lại cả accesstoken và refreshtoken mới. Nếu access token và refreshtoken cũ vẫn được gửi thì logout hết và gửi mail cho user báo có hành động bất thường. Vì khi đó ta kb được là hacker hay user đã lấy token.
+
+Check Bạn vừa đăng nhập ở 1 thiết bị lạ????
+
 - Bài toán: ứng dụng cập nhật có tính năng mới, chỉ ai có accesstoken mới mới dùng được, mọi accesstoken cũ cần bị hủy, tức buộc người dùng phải đăng nhập lại.
 C1: Kể từ lúc cập nhật, mọi request của người dùng lên server lần đầu đều báo lỗi token k hợp lệ, yêu cầu login lại và lưu vào blacklist. Bất cứ ai chưa có trong blacklist đều báo k hợp lệ => K ổn nếu người dùng đăng nhập trên nhiều thiết bị và có nhiều token thì cái này chỉ báo có 1 lần là sai, các thiết bị khác sẽ pass cái blacklist => bỏ
 C2: Thay đổi cấu trúc token. 
@@ -130,6 +138,14 @@ High performance với indexed, hỗ trợ transactions, cũng phải tạo conn
 
 
 # API key => ref tới ECommerce
+API key là 1 loại mã độc nhất được cung ra để cấp quyền truy cập API của server. Nó giúp server xác thực nguồn gửi yêu cầu API, phân quyền truy cập, theo dõi thống kê API, kiểm soát giới hạn lượng yêu cầu mà 1 key có thể gửi đến server trong 1 ktg cụ thể, lưu ngày tháng đăng ký. Accesstoken không làm được điều đó.
+Nó rất phù hợp khi ta cung cấp dịch vụ cho nhiều đối tác. Mỗi customer sẽ dùng 1 API key riêng để phân quyền. VD hết tiền thì ta chặn API key nào lại là xong. 
+
+Best practice là API key được lưu ở proxy server do ta setup, api key truyền tới server cũng qua 1 connection HTTPS:
+Frontend --password--> Proxy server --APIKey+password--> Server
+Frontend <--accesstoken-- Proxy server <--accesstoken-- Server
+Frontend --accesstoken--> Proxy server --APIKey+accesstoken--> Server
+Nhiều dự án chỉ cần code server và cung api-key, khách hàng là dev tự dựng proxy server hoặc dùng api đó bảo mật như nào tùy ý họ.
 
 
 
@@ -153,25 +169,25 @@ Phiên bản mới nhất của OpenID là OpenID Connect, nó kết hợp OpenI
 
 
 # OAuth2.0
-Là chuẩn để authorization, không phải chuẩn để authentication như OpenId Connect. 
-Vd OAuth2 chia quyền token dùng được các data nào: Alice vào NewsApp và có tính năng tùy chọn xem ai là bạn bè cũng dùng NewsApp để kết nối với họ. Alice chọn login bằng facebook và được hỏi có muốn chia sẻ list bạn trên Facebook với NewsApp không. Nếu chọn có sẽ điều hướng trở lại NewsApp với 1 token, NewsApp dùng token này để lấy list friends. 
-Tuy nhiên hầu hết ứng dụng chỉ dùng OAuth để login chứng minh là có tk chứ k tương tác hẳn với data của github, gmail hay google làm gì. Do đó họ coi việc ủy quyền read thông tin cơ bản của user cũng là 1 hình thức xác thực chứng minh đã có tk, nên dùng OAuth2 login ok.
-=> OAuth còn có Device Flow dành riêng cho client app only, ở đây k dùng vì ta có 1 server
+Là chuẩn để authorization, không phải chuẩn để authentication như OpenId Connect, nhưng vẫn có thể dùng để authen.
+VD OAuth2 chia quyền token dùng được các data nào: Alice vào NewsApp và có tính năng tùy chọn xem ai là bạn bè cũng dùng NewsApp để kết nối với họ. Alice chọn login bằng facebook và được hỏi có muốn chia sẻ list bạn trên Facebook với NewsApp không. Nếu chọn có sẽ điều hướng trở lại NewsApp với 1 token, NewsApp dùng token này để lấy list friends. 
+Tuy nhiên hầu hết ứng dụng chỉ dùng OAuth để login chứng minh là có tk chứ k tương tác hẳn với data của github, gmail hay google làm gì. Do đó họ coi việc ủy quyền read thông tin cơ bản của user cũng là 1 hình thức authen chứng minh đã có tk, nên dùng OAuth2 để login ok.
 
--> Login bằng Authorization Code Flow:
-- User ấn login bằng discord
-- Server tạo ra 1 url và redirect user đến sign in của provider
-Phải tạo 1 application trong nền tảng đó, lưu lại clientid và clientsecret.
-URL để redirect là base authentication url `/authorize?client_id=${clientid}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}` => redirectUrl là url provider gửi code về server của ta sau khi login, scope là quyền ngăn cách bằng dấu cách, scope phải tra trong docs quyền tối thiểu để lấy được user.
-redirectUrl của server phải được thêm vào trong application của provider.
-Dùng cookie state để tránh giả mạo provider: tạo random state 64bytes hex lưu vào cookie (sameSite lax để provider lấy được) và thêm vào authentication url `?state=${state}`
-Dùng code verifier để tránh giả mạo server: tạo random state 64bytes hex lưu vào cookie sameSite lax, codeVerifier phải mã hóa giá trị đó với sha256 trả về dạng base64, và thêm vào url `?code_challenge=${code_verifier}&code_challenge_method=S256`
-- Tạo route là GET redirectUrl trên server nhận về code, fetch token, fetch user.
+-> Device Flow: dùng cho client app only => bỏ vì chỉ dùng với web server
+
+-> Authorization Code Flow: login chuẩn RFC
+- User ấn login bằng discord và redirect user đến trang sign in của provider
+Phải tạo 1 application từ trước trong nền tảng đó, lưu lại clientid và clientsecret.
+URL để redirect là base authentication url `/authorize?client_id=${clientid}&redirect_uri=${redirectUrl}&response_type=code&scope=${scope}` => redirectUrl là url để provider gửi mã code về cho server của ta sau khi login. scope là quyền ngăn cách bằng dấu cách, scope phải tra trong docs quyền tối thiểu để lấy được user, scope cũng có thể chứa cả url chỉ định có quyền với resource nào.
+redirectUrl của server cũng phải được thêm vào trong application của provider.
+Có thể dùng cookie state để tránh giả mạo provider: tạo random state 64bytes hex lưu vào cookie (sameSite lax để provider lấy được) và thêm vào url trang sign-in của provider `?state=${state}`
+Có thể dùng code verifier để tránh giả mạo server: tạo random state 64bytes hex lưu vào cookie sameSite lax, codeVerifier phải mã hóa giá trị đó với sha256 trả về dạng base64, và thêm vào url `?code_challenge=${code_verifier}&code_challenge_method=S256`
+- Server phải có route GET redirectUrl nhận về code, rồi fetch token, fetch user.
 Check cookie state hợp lệ trước khi fetch token: sẽ nhận về cả code cùng với state, check state nhận về trùng với state trong cookie là được. Nếu sai phải redirect về trang lỗi
-Url để fetch token là "/token" dùng x-wwww-form-urlencoded, body gồm: code (nhận về), redirect_uri(url hiẹn tại), grant_type "authorization_code", client_id, client_secret. Trả về nhiều thứ nhưng chỉ cần quan tâm access_token và token_type.
+Url để fetch token là "/token" dùng x-wwww-form-urlencoded, body gồm: code (nhận về), redirect_uri(url hiẹn tại), grant_type "authorization_code", client_id, client_secret. Provider sẽ trả về nhiều thứ nhưng chỉ cần quan tâm access_token và token_type.
 Nếu dùng code verifier phải gửi vào "/token" kèm code_verifier từ cookie, provider server sẽ nhận và xác thực vì chỉ server của ta gửi cookie mới có code_verifier đó.
-Dùng để fetch user data, request có header là `{token_type} {access_token}`. Trả về thông tin user chắc chắn có id và email ở mọi loại OAuth. Chú ý email cũng là duy nhất và tìm trong db cũng dựa vào mail thôi.
-Do ta k có nhu cầu thao tác với nền tảng github lâu dài nên k cần lưu accesstoken hay refreshtoken mà chỉ fetch user là xong. Nếu thực sự muốn tương tác phải lưu lại và chỉnh scope đủ quyền để làm mọi thứ.
+Dùng để fetch user data, request có header là `{token_type} {access_token}`. Provider trả về thông tin user chắc chắn có id và email.
+Do ta k có nhu cầu thao tác với nền tảng discord lâu dài nên k cần lưu accesstoken hay refreshtoken mà chỉ fetch user là xong. Nếu thực sự muốn dùng data khác của discord thì phải lưu lại và chỉnh scope đủ quyền để làm mọi thứ.
 - Lưu user vào db kèm provider.
 1 user có thể login bằng nhiều cách nhưng cách nào thì vẫn chỉ là 1 user đó.
 Bên cạnh bảng user lưu thông tin user, còn phải lưu 1 bảng khác: userId, providerAccountId, providerName
@@ -179,27 +195,79 @@ Bên cạnh bảng user lưu thông tin user, còn phải lưu 1 bảng khác: u
 Bản chất khi login OAuth chỉ để xác thực rằng họ có tài khoản đó, lấy được thông tin của user, chứ thực tế user vẫn phải tương tác với hệ thống của ta nên vẫn phải dùng session hoặc jwt token do server ta tạo ra. Login OAuth đã thay thế việc nhập mk rồi check hashedPassword của user thôi.
 Có thể lưu tiếp vào redis (random session id, user) và set vào cookie cho user trùng expires times, r redirect user về trang chủ. Cookie toàn bộ qtr sẽ gửi qua cả provider và client browser luôn, redirectUrl cũng hiện ở browser.
 
---> Bản chất chống giả mạo với cookie state thì khi tạo redirect url, tạo 1 random state lưu vào cookies và gửi kèm url, khi trả về code sẽ kèm state đó. Check ss state trong cookies là được. Nó đảm bảo từ lúc login đến lúc nhận về token đều trong cùng phiên đăng nhập của 1 ngừoi, chứ kp 1 người login xong gửi url cho người khác lấy token.
+--> Bản chất chống giả mạo với cookie state thì khi tạo redirect url, tạo 1 random state lưu vào cookies và gửi kèm trong url, khi trả về code sẽ kèm state đó. Check ss state trong cookies là được. Nó đảm bảo từ lúc login đến lúc nhận về token đều trong cùng phiên đăng nhập của 1 ngừoi, chứ kp 1 người login xong gửi url cho người khác lấy token.
 Tương tự bảo mật với code verifier cũng sinh random lưu vào cookie và gửi, nhưng oauth provider sẽ lưu nó và lấy ra check.
 
---> Bản chất ta gửi kèm redirectUrl cho authorization server để lấy về authorization code nhưng authorization server k tự query vào cái redirectUrl để gửi code cho ta, mà sau khi login thì nó trả lại response cho browser là "redirectUrl?code=ABC123&state=random_string", rồi browser mới call vào cái redirecturl kia để server lấy code rồi query token.
-Cái redirecturl đó chỉ góp 1 phần vào việc xác thực. Khi query token cũng gửi lại redirectUrl phải trùng với redirectUrl gửi lúc lấy code, và phải trùng với redirectUrl đã set trong app.
-Do đó khi ta dùng POSTMAN, ta tự lấy được code, rồi dùng lấy token luôn mà k cần dựng 1 server bắt redirectUrl, chỉ truyền redirectUrl rác vào trùng với redirectUrl đã set trong app thôi. Vì auth server trả response cho POSTMAN "redirectUrl?code=ABC123&state=random_string" tự lấy code r lấy token luôn để test, POSTMAN hỗ trợ sẵn k cần dựng server.
+--> Bản chất ta gửi kèm redirectUrl cho authorization server để lấy về authorization code nhưng authorization server k tự query vào cái redirectUrl để gửi code cho ta, mà sau khi login thì nó trả lại response cho browser là "redirectUrl?code=ABC123&state=random_string", rồi browser mới call vào cái redirectUrl kia để server lấy code rồi query token.
+Cái redirectUrl đó chỉ góp 1 phần vào việc xác thực. Khi query token cũng gửi lại redirectUrl phải trùng với redirectUrl gửi lúc lấy code, và phải trùng với redirectUrl đã set trong app.
+Do đó khi ta dùng POSTMAN, ta tự lấy được code, rồi dùng lấy token luôn mà k cần dựng 1 server bắt redirectUrl, chỉ truyền redirectUrl rác vào trùng với redirectUrl đã set trong app thôi. Vì auth server trả response cho POSTMAN "redirectUrl?code=ABC123&state=random_string" tự lấy code r lấy token luôn để test => POSTMAN có hỗ trợ sẵn k cần dựng server.
 
---> Scope có thể chứa cả url chỉ định resource nào và quyền gì chứ k chỉ chứa quyền.
+=> Tổng kết flow login:
+Browser /authorize (clientid, redirectUrl, scope, state, codeVerifier) -> Provider (redirectUrl, code) -> Browser (redirectUrl, code) -> Server /token (code, redirectUrl, clientid, client_secret) -> Provider (access_token, token_type) -> Server /user (token_type, access_token) -> Provider (userId, userEmail) -> Server (JWT token) -> Browser
 
--> Logout: 
-- Khi jwt token ta cung cho user hết hạn, hoặc khi session hết hạn, hoặc chủ động ấn logout thì phải xóa hết session và token và login lại.
-- Nếu cần tương tác OAuth thì có thể lưu lại accessToken và refreshToken tùy ý quản lý. Logout phải xóa cả 2 token đi.
+-> Logout Authorization Code:
+- Khi jwt token ta cung cho user hết hạn, hoặc khi session hết hạn, hoặc chủ động ấn logout thì phải xóa hết session và token và cần login provider lại.
+- Nếu cần tương tác data của provider thì có thể lưu lại accessToken và refreshToken của provider tùy ý quản lý. Logout phải xóa cả 2 token đi.
 - Về bảo mật: 
 Mã code nhận về trong redirectUrl có thể k an toàn chỉ dùng 1 lần, sau khi dùng để sinh accesstoken thì code cũng hết giá trị.
 Khi lấy token cần clientSecret vì nếu lộ code, hacker kb clientSecret sẽ k lấy được token.
 - Bản chất cho appA dùng data của appB mà k cần phải input mật khẩu appB vào appA, mà appA chỉ cần implement flow trên là đươc.
 
+-> Client Credentials Flow: Có thể login k cần ngừoi dùng đăng nhập, chỉ cần server gửi client id, client secret là identity server trả access token. 
+Chỉ dùng khi truy cập k cần dữ liệu cá nhân của ngừoi dùng, job chạy nền k cần user login.
+
+- Luồng dùng client_secret => phổ biến
+Lấy client_id và client_secret khi tạo app profile trong provider
+Server POST https://auth-server.com/token
+Header:
+Authorization: Basic base64(client_id:client_secret)
+Content-Type: application/x-www-form-urlencoded
+Params: 
+grant_type=client_credentials&scope=api.read
+
+- Luồng dùng cert => bảo mật cao hơn
+Server POST https://auth-server.com/token
+Header:
+Content-Type: application/x-www-form-urlencoded
+Params:
+grant_type=client_credentials& => fix cứng
+client_id=abc&
+scope=api.read&
+client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&
+client_assertion=eyJhbGciOiJSUzI1NiIs...
+Với client_assertion là JWT dạng header.payload.signature
+Header: {
+  "alg": "RS256",
+  "typ": "JWT"
+}
+Payload: {
+  "iss": "client_id",
+  "sub": "client_id",
+  "aud": "https://auth-server.com/token",
+  "exp": 1710000000,
+  "jti": "random-id"
+}
+Signature: ký bằng private key
+Trước đó cần tạo private key lưu trong máy và cũng dùng để ký ra signature, tạo cert từ private key và upload cert lên auth provider server. Server dùng cert để verify data mà ta ký bằng private key
+
+-> VD OAuth2 của microsoft Entra: nhiều tính năng phức tạp hơn
+- Tạo app có thể chọn single tenant or multiple tenant
+Single tenant phù hợp cho app nội bộ. Multiple tenant dùng công khai hỗ trợ nhiều tổ chức, mỗi tenant phải có 1 user consent riêng.
+User tenant chỉ cần clientid của app là có url consent cho app đó, consent xong thì app sẽ xuất hiện là 1 service principal trong Enterprise Application của họ. Họ có thể sửa quyền tuỳ ý.
+- Tạo app xong có thể chọn thêm application permission và delegated permission trên từng resource cụ thể như sharepoint, powerapp.
+Application permission là các quyền toàn tenant, k dùng thông tin cá nhân của user, k cần user login. Lúc tạo app chỉ cần cho admin consent là grant for tenant luôn.
+Delegated permission là các quyền thay mặt ngừoi dùng cần user sign in, 1 số quyền đặc biệt cần tới quyền như 1 ngừoi dùng.
+Lúc lấy token phải điền quyền trong scope thì tuỳ, nếu quyền delegated thì phải login
+- User consent khi nào? 
+Nếu application permission thì sẽ dùng client credentials, khi đó chỉ cần admin consent 1 lần lúc tạo app.
+Nếu delegated permission thì sẽ dùng authorization flow, khi đó user sẽ consent 1 lần đầu tiên sign in thôi. Nếu là admin consent thì user k cần consent gì nữa.
+Vẫn consent lại nếu sửa permission của app, hoặc dùng multi-tenant thì mỗi tenant là độc lập.
+
 
 
 # 2FA
-Mỗi lần login sau 1 ktg thì nhập 1 mã gửi về từ gmail, sms, authenticator application.
+Mỗi lần login thì nhập 1 mã gửi về từ gmail, sms. 
+Có thể dùng authenticator app tiện và mã thay đổi liên tục mỗi 10s, an toàn cho ứng dụng cần bảo mật cao.
 
 
 
@@ -228,24 +296,40 @@ Bảng này có thể k cần thiết mà gán trực tiếp quyền cho user gr
 
 
 
-# VD OAuth2 google truy cập gmail api
-Doc URL setup production: https://developers.google.com/gmail/api/auth/scopes
-Doc viết api: https://developers.google.com/gmail/api/reference/rest/v1/users.messages/get
+# Thiết kế FE cho handling permission
+-> Dự án nhỏ với vài role cơ bản có thể check trực tiếp ở mọi chỗ
+{ user.role == "admin" && <></>} => chỉ admin mới hiện component
+{ user.role == "admin" || user.role == "moderator" || user.id == authorId && <></>} => mở rộng để moderator và chủ của bài viết cũng có thể xem component
 
-Setup: 
-- Vào https://console.cloud.google.com/
-- Tạo 1 project mới nếu chưa có
-- Search Gmail API và Enable nó. Thực tế có nhiều loại API và ở đây ta đang chỉ dùng dịch vụ Gmail.
-- Setup từng bước
-Phần url phải ủy quyền localhost:5000 chẳng hạn nếu cho phép app chạy ở local như v
-Phần scope là các mức độ mà ta muốn app truy cập. VD chọn https://mail.google.com/ sẽ có full access như gửi mail nhưng k có nghĩa là có mọi thứ. VD muốn xem các email gửi thì phải thêm scope https://www.googleapis.com/auth/gmail.readonly
-- App chạy được trong 2 môi trường là testing và production. Đổi môi trường trong OAuth consent screen. 
+-> RBAC: User gắn với nhiều roles. Roles có nhiều permission. 1 permission gồm action:resource.
+Sửa quyền của role chỉ cần sửa ở 1 nơi duy nhất, và cung ra hàm check 1 role có quyền gì.
+VD https://github.com/WebDevSimplified/permission-system/blob/main/auth-rbac.ts
 
--> Gmail API có 3 loại scope:
-Recommended là scope cơ bản nhất bất cứ ai cũng ok
-Sensitive và Restricted là 2 scope truy cập data quan trọng cần sự đồng ý của người dùng. Và developer cũng phải cho app đi qua Google Verification Process mới dùng được 2 loại scope này. Google Verification Process phải trả phí hàng tháng và phải quay video cam kết sẽ dùng thông tin nhạy cảm của user để làm gì.
+Có nhiều cách nâng cấp trong hệ thống lớn:
+- User có thể thuộc 1 group, gán quyền cho group thì mọi user trong group sẽ có quyền đó
+- Data cũng có thể chia theo container, gán container cho user để chỉ dịnh user đó được quyền truy cập vào các data nào.
+- VD untrest họ chia role chính là permission groups, dùng 1 bảng ánh xạ user với 1 permission group, còn tài nguyên chia theo tenant và container. Khi check sẽ check user có gán cho permission group chứa container của data và action permission k.
+User / Group -- [UserRoles] -- Role -- [RolePermissions] -- Permission
 
--> Tương tự có thể tạo ứng dụng nhúng video youtube dạng mp3 qua YoutubeAPI: Có thể nhúng 1 video youtube bất kỳ vào web dạng video nhét vào src, phát nhạc, tua bài, tìm kiếm bài hát, lấy thumbnail. 
-Phải đăng ký project tương tự trong google cloud platform và enable youtubeAPI (thay vì gmail api bên trên) và tạo 1 api key mới là được, k cần config gì thêm.
+RBAC khó mở rộng trong vài TH:
+Nếu muốn chủ của comment có thể xoá comment thì phải thêm vào 1 permision mới là delete:ownedComments, mọi nơi vẫn phải check thủ công user.id==authorId. 
+Nếu user và moderator đều có quyền đó sẽ phải thêm delete:ownedComments ở cả 2 roles.
+
+--> Clerk giúp authorization RBAC chuẩn cho FE: https://www.youtube.com/watch?v=5GG-VUvruzE&list=WL&t=1011s => Clerk sẽ lo logic signin provider, organization, gán roles cho user, user login sẽ lưu vào clerk và ta tuỳ ý chỉnh, lấy roles ở FE dễ dàng. Còn roles gắn với permission nào vẫn lưu ở DB của ta.
+Clerk dùng webhook, là 1 cơ chế giao tiếp realtime không cần polling. Tạo 1 url listen sẵn, khi có update thì gửi vào đó là xong. Webhook 1 chiều, muốn 2 chiều thì 2 bên đều phai là server lắng nghe 1 port.
+
+--> Mở rộng RBAC như gg drive, nó còn cho phép user share người khác edit và view docs file.
+Giải pháp là vẫn dùng như trên, nhưng mỗi 1 tài nguyên có thể chia sẻ sẽ có role riêng. VD:
+Shared File -- [UserFileRole] -- FileRole -- [FileRolePermission] -- Permission
+                    |                                                   /
+                  User -- [UserRoles] -- Role -- [RolePermissions] ---
+                              |
+                          Organization(tenant, container)
+=> Mỗi khi user tương tác 1 file, sẽ check user có role nào đối với file không: fileid - userid - filerole
+
+-> ABAC: Subject thực hiện Action tương tác Resource.
+URL: https://github.com/WebDevSimplified/permission-system/blob/main/auth-abac.ts
+Cơ chế check dựa vào hàm tính toán giữa các thuộc tính của object và user. Export ra 1 hàm duy nhất gọi các hàm check đó với từng resource. Có cả blockUsers, inviteUsers
+
 
 

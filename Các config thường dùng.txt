@@ -303,6 +303,14 @@ experimental: { //*
   viewtransition: true,
   reactCompiler: true,
   ppr: 'incremental',
+  dynamicIO: true,
+  cacheLife: {
+    custom: { // Define để dùng sẵn với cacheLife("custom"); khi dùng dynamicIO 
+      stale: 5,
+      revalidate: 10,
+      expire: 20
+    }
+  }
 }
 
 --> compress: Mặc định true và nextjs nén với gzip. Khi host trên vercel, nó dùng brotli trước r mới gzip. Check loại thuật toán trong Accept-Encoding và Content-Encoding header

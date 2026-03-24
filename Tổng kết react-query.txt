@@ -1,4 +1,19 @@
 react-query v5
+-> VD cách dùng chuẩn:
+export const AUTH_QUERY_KEY = {
+  currentUser: "currentUser"
+};
+export const createCurrentUserQueryOptions = ({ id }) => 
+  queryOptions({
+    queryKey: [`${AUTH_QUERY_KEY.currentUser}_{id}`],
+    queryFunc: getUserById,
+    gcTime: 0,
+    staleTime: 0
+  });
+- Thay vì export 1 customHook lấy user, ta chỉ export phần options, vì customHook có nhược điểm k thể tuỳ biến đổi useQuery, useSuspenseQuery, useMutation
+- Bất cứ phần nào tái sử dụng đều cần export ra, VD cần invalidate currentUser thì export key string ra
+
+-> Thay vì cứ isPending, isError thì if else trong component, nên move logic ra ngoài navigation và dùng useSuspenseQuery
 
 
 

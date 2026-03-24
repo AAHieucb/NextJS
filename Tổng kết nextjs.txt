@@ -195,6 +195,8 @@ export default function ClientComponent() {
   )
 }
 
+-> Ở 1 server component tự dưng muốn có 1 button click vào thì làm gì đó, có thể nhét vào 1 form và viết hàm action thoải mái khi ấn nút thì làm gì
+
 -> Truyền data từ client comp tới server comp:
 Truyền qua các store chung như cookies, url search params.
 Client tương tác với server qua api route handler, qua server actions từ form, hoặc gọi trực tiếp hàm của server cũng được kìa (coi nó cũng là server actions). Từ đó đổi db rồi revalidate path là được.
@@ -384,11 +386,15 @@ NextJS có cả BE và FE rồi nhưng vẫn nên dùng thêm CMS sẽ hỗ tr�
 -> Keystatic là CMS dạng file-based để quản lý nội dung trong các project static-site hoặc headless mà code và content đều lưu trong Git repo.
 Ta có thể tạo một giao diện quản trị (admin UI) để chỉnh sửa nội dung (markdown, JSON, images, v.v.) ngay trong dự án Next.js và lưu file content đó trực tiếp trong repo.
 
--> *react-next-parallax
+-> *react-next-parallax: Chỉ cần bao bằng thẻ <Parallax> của thư viện là tự có hiệu ứng.
+Dùng astro: thư viện tương tự tạo parallax nhưng dùng rất dễ, có mỗi 1 component, docs có mỗi 1 trang duy nhất và dùng cho react ok
 
 -> Trending tạo website cực nhanh:
 *shadcn: thư viện giúp xây component, nó có re-usable component và code sẵn dùng các lib khác để ta tự copy paste và custom chứ kp component sẵn. shadcn có components, blocks, charts, themes, colors sẵn tuỳ ý custom. Kết hợp với cursor và v0 nữa. Nó khiến bước tự code design trở nên nhanh và dễ dàng.
-=> shadcn thay thế bằng https://originui.com/ tương tự nhưng lại có nhiều variants hơn
+Có https://originui.com/ tương tự nhưng lại có nhiều variants hơn
+Có shadcn create giúp tự tạo custom component cho shadcn và dùng trong dự án theo các theme và setup sẵn có
+URL: https://www.youtube.com/watch?v=pwpCNEROEZc => multiselect component
+URL: https://www.youtube.com/watch?v=gjrXeqgxbas => cách dùng form component 
 Kết hợp tailwinds và components của tailwind nữa là được => luôn phải có tailwinds, k cần tải thêm lib mà chỉ cần code thuần components dùng tailwind thôi.
 Kết hợp shadcn template, tailwinds template để có website ui luôn.
 Kết hợp *magic ui cho components độc lạ: https://magicui.design/
@@ -523,6 +529,8 @@ generateImageMetadata trả ra 1 mảng là nhiều version khác nhau của ima
 opengraph-image.tsx thì font lấy từ chuẩn gg, lấy font trang khác bị lỗi khi build
 
 -> Nếu cấp ngoài cùng có metadata, thì it nhất cũng phải có export metadataBase ở cấp ngoài cùng để tránh warning k có canonical url. Rồi metadata ở con sẽ đè hoặc thêm vào cha dần khi set.
+
+-> Streaming và Suspense k hại SEO, nó vẫn server side render thôi
 
 
 
@@ -818,28 +826,6 @@ client component gọi hàm async sẽ mặc định là hàm của client side.
 Trong nextjs <Form> mà action là string thì dùng được trong server component, còn truyền vào hàm server thì nó phải nằm ở client component, nếu k sẽ lỗi.
 Khi dùng server actions, hãy thêm "use server" ở function để tránh nó nhầm rằng client side tự gọi hàm phía client.
 Chú ý file "use server" chỉ cho export các hàm là async
-
--> Các form hooks thường dùng chỉ dùng ở client component:
-- useFormStatus cung status của last form submission: https://react.dev/reference/react-dom/hooks/useFormStatus
-Dùng trong 1 client component (nằm trong 1 form) sẽ tự detect component hiẹn tại ở trong form nào và cung status của form đó:
-const { pending, data, method, action } = useFormStatus();
-
-- useFormState => deprecated thay bằng useActionState
-
-- useActionState => dùng ở component chứa cái form để truyền vào form
-const [data, submitAction, isPending] = useActionState(
-  async (prevState, queryData) => {
-    const itemID = queryData.get("itemID"); return { itemID };
-  },
-  { itemID: "" }
-)
-<form action={submitAction}>
-  <input type="text" name="itemID" />
-  <button type="submit" disabled={isPending}>Update</button>
-</form>
-=> Điều đb là k cần biết lưu state của input mà lấy được luôn trong hàm. Submit sẽ reset các trường của form, thêm defaultValue={data?.itemID} để cản điều đó, thực tế là reset về giá trị default là chính cái data lần cuối submit thôi. K lưu state, k render lại mỗi khi gõ vào
-=> async (previousState: FormField, formData: FormData): Promise<FormField> vì previousState và return field phải giống nhau
-=> Tham số 3 kbh dùng: https://www.youtube.com/watch?v=-aBKrvK5Vn8
 
 
 
