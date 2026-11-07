@@ -71,7 +71,7 @@ https://daisyui.com/docs/themes/ => trang của daisy tạo ý tưởng theme kh
 
 
 
-# Dùng drizzle orm
+# Dùng drizzle orm (thay thế prisma)
 URL master drizzle version cũ***: https://www.youtube.com/watch?v=7-NZ0MlPpJA&t=523s
 
 npx drizzle-kit generate => sinh lệnh đổi db, ghi lịch sử đổi vào thư mục migrations

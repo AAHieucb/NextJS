@@ -421,6 +421,8 @@ URL: https://www.youtube.com/watch?v=M1Rj1xSm3SM
 
 ->*** HeroUI: lib mạnh có cả AI design hộ luôn
 
+-> @ai-sdk của vercel rất mạnh giúp xây dựng ứng dụng AI, có thể tích hợp vào nextjs.
+
 
 
 # Environment variables

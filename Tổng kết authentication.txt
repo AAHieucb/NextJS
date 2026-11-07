@@ -296,7 +296,7 @@ Bảng này có thể k cần thiết mà gán trực tiếp quyền cho user gr
 
 
 
-# Thiết kế FE cho handling permission
+# Thiết kế FE handle permission
 -> Dự án nhỏ với vài role cơ bản có thể check trực tiếp ở mọi chỗ
 { user.role == "admin" && <></>} => chỉ admin mới hiện component
 { user.role == "admin" || user.role == "moderator" || user.id == authorId && <></>} => mở rộng để moderator và chủ của bài viết cũng có thể xem component
